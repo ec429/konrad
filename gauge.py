@@ -37,6 +37,11 @@ class Gauge(object):
     def post_draw(self):
         self.cw.refresh()
 
+class VLine(Gauge):
+    def draw(self):
+        super(VLine, self).draw()
+        self.cw.vline(0, 0, curses.ACS_VLINE, self.height)
+
 class OneLineGauge(Gauge):
     def __init__(self, dl, cw):
         super(OneLineGauge, self).__init__(dl, cw)
@@ -65,6 +70,14 @@ class OneLineGauge(Gauge):
         num = min(num, self.olg_width - xoff)
         if num > 0:
             self.cw.chgat(off, off + xoff, num, attr)
+
+class FixedLabel(OneLineGauge):
+    def __init__(self, dl, cw, text):
+        super(FixedLabel, self).__init__(dl, cw)
+        self.text = text
+    def draw(self):
+        super(FixedLabel, self).draw()
+        self.addstr(self.text)
 
 class StatusReadout(OneLineGauge):
     def __init__(self, dl, cw, label):
@@ -282,6 +295,18 @@ class FuelGauge(PercentageGauge):
                 return '%s exhausted'%(self.resource,)
         else:
             self.zero = False
+
+class Light(OneLineGauge):
+    def __init__(self, dl, cw, text, api):
+        super(Light, self).__init__(dl, cw)
+        self.text = text
+        self.add_prop('val', api)
+    def draw(self):
+        super(Light, self).draw()
+        val = bool(int(self.get('val')))
+        flag = ' ' if val else '!'
+        self.addstr(self.centext(flag + self.text))
+        self.chgat(0, self.width, curses.color_pair(2 if val else 0))
 
 global fallover
 

@@ -28,10 +28,15 @@ def fd_main(opts, scr, dl):
         gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
         gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
         ], 'Stresses')
-    capsys = scr.derwin(4, 27, 14, 1)
+    capsys = scr.derwin(6, 27, 14, 1)
     capsysgroup = gauge.GaugeGroup(capsys, [
         gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
         gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
+        gauge.Light(dl, capsys.derwin(1, 12, 3, 1), 'SAS', 'v.sasValue'),
+        gauge.VLine(dl, capsys.derwin(2, 1, 3, 13)),
+        gauge.Light(dl, capsys.derwin(1, 12, 3, 14), 'RCS', 'v.rcsValue'),
+        gauge.Light(dl, capsys.derwin(1, 12, 4, 1), 'GEAR', 'v.gearValue'),
+        gauge.Light(dl, capsys.derwin(1, 12, 4, 14), 'BRK', 'v.brakeValue'),
         ], 'CapSys')
     orient = scr.derwin(12, 24, 10, 28)
     origroup = gauge.GaugeGroup(orient, [], 'Orientation')
