@@ -48,6 +48,8 @@ class Downlink(object):
 		d = self.listen()
 		self.data.update(d)
 		return self.data
+	def get(self, key, default=None):
+		return self.data.get(key, default)
 	def subscribe(self, key):
 		self.subscriptions[key] = self.subscriptions.get(key, 0) + 1
 		self._subscribe(key)
@@ -60,6 +62,10 @@ class Downlink(object):
 			self.subscriptions.pop(key, None)
 			self.data.pop(key, None)
 			self.send_msg({'-':[key]})
+	def __del__(self):
+		# Make sure we disconnect cleanly, or telemachus gets unhappy
+		if getattr(self, 'ws', None) is not None:
+			self.disconnect()
 
 def connect_default():
 	return Downlink(DEFAULT_HOST, DEFAULT_PORT, DEFAULT_RATE)
