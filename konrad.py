@@ -7,24 +7,38 @@ import optparse
 
 def fd_main(opts, scr, dl):
     """Flight Director's console"""
-    fuel = scr.derwin(5, 27, 10, 52)
+    fuel = scr.derwin(6, 27, 10, 52)
     fuelgroup = gauge.GaugeGroup(fuel, [
         gauge.FuelGauge(dl, fuel.derwin(1, 25, 1, 1), 'LiquidFuel'),
         gauge.FuelGauge(dl, fuel.derwin(1, 25, 2, 1), 'Oxidizer'),
         gauge.FuelGauge(dl, fuel.derwin(1, 25, 3, 1), 'SolidFuel'),
-        ], 'Stage Propellant')
+        gauge.FuelGauge(dl, fuel.derwin(1, 25, 4, 1), 'MonoPropellant'),
+        ], 'Propellants')
     status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
-    status.push("Nominal")
-    obt = scr.derwin(5, 27, 15, 52)
+    status.push("Telemetry active")
+    obt = scr.derwin(6, 27, 16, 52)
     obtgroup = gauge.GaugeGroup(obt, [
         gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body),
         gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body),
         gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
+        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1)),
         ], 'Orbital')
+    strs = scr.derwin(4, 27, 10, 1)
+    strsgroup = gauge.GaugeGroup(strs, [
+        gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
+        gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
+        ], 'Stresses')
+    capsys = scr.derwin(4, 27, 14, 1)
+    capsysgroup = gauge.GaugeGroup(capsys, [
+        gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
+        gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
+        ], 'CapSys')
+    orient = scr.derwin(12, 24, 10, 28)
+    origroup = gauge.GaugeGroup(orient, [], 'Orientation')
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
     return (status, gauge.GaugeGroup(scr,
-                [fuelgroup, status, obtgroup, body, time],
+                [fuelgroup, status, obtgroup, strsgroup, capsysgroup, origroup, body, time],
                 "KONRAD: FD Console"))
 
 consoles = {'fd': fd_main,}

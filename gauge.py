@@ -6,6 +6,7 @@ import math
 def initialise():
     register_colours()
     curses.nonl()
+    curses.curs_set(0)
 
 def register_colours():
     curses.start_color()
@@ -176,6 +177,64 @@ class ApoapsisGauge(SIGauge):
     def draw(self):
         super(ApoapsisGauge, self).draw(self.get('apo'))
 
+class ObtVelocityGauge(SIGauge):
+    unit = 'm/s'
+    label = 'Velocity'
+    def __init__(self, dl, cw):
+        super(ObtVelocityGauge, self).__init__(dl, cw)
+        self.add_prop('orbV', 'v.orbitalVelocity')
+    def draw(self):
+        super(ObtVelocityGauge, self).draw(self.get('orbV'))
+
+class DynPresGauge(SIGauge):
+    unit = 'Pa'
+    label = 'Dyn.Pres.'
+    def __init__(self, dl, cw):
+        super(DynPresGauge, self).__init__(dl, cw)
+        self.add_prop('q', 'v.dynamicPressure')
+        self.warn = False
+    def draw(self):
+        dyn_pres = self.get('q')
+        super(DynPresGauge, self).draw(dyn_pres)
+        col = 3
+        if dyn_pres > 40000:
+            col = 2
+        if dyn_pres > 80000:
+            col = 1
+        self.chgat(0, self.width, curses.color_pair(col))
+        if dyn_pres > 40000:
+            if not self.warn:
+                self.warn = True
+                return 'High dynamic pressure'
+        else:
+            self.warn = False
+
+class GeeGauge(OneLineGauge):
+    unit = 'g'
+    label = 'g-Force'
+    def __init__(self, dl, cw):
+        super(GeeGauge, self).__init__(dl, cw)
+        self.add_prop('g', 'v.geeForce')
+        self.warn = False
+    def draw(self):
+        super(GeeGauge, self).draw()
+        gee = self.get('g')
+        width = self.width - len(self.label) - len(self.unit) - 1
+        prec = min(3, width - 3)
+        self.addstr('%s:%+*.*f%s'%(self.label, width, prec, gee, self.unit))
+        col = 3
+        if gee > 6 or gee < 0:
+            col = 2
+        if gee > 10 or gee < -3:
+            col = 1
+        self.chgat(0, self.width, curses.color_pair(col))
+        if gee > 6 or gee < -3:
+            if not self.warn:
+                self.warn = True
+                return 'High g forces'
+        else:
+            self.warn = False
+
 class PercentageGauge(OneLineGauge):
     def draw(self, n, d, s):
         super(PercentageGauge, self).draw()
@@ -210,8 +269,8 @@ class FuelGauge(PercentageGauge):
     def __init__(self, dl, cw, resource):
         super(FuelGauge, self).__init__(dl, cw)
         self.resource = resource
-        self.add_prop('current', "r.resourceCurrent[%s]"%(self.resource,))
-        self.add_prop('max', "r.resourceCurrentMax[%s]"%(self.resource,))
+        self.add_prop('current', "r.resource[%s]"%(self.resource,))
+        self.add_prop('max', "r.resourceMax[%s]"%(self.resource,))
         self.zero = False
     def draw(self):
         current = self.get('current')
@@ -220,7 +279,7 @@ class FuelGauge(PercentageGauge):
         if current < 0.01 and full > 0:
             if not self.zero:
                 self.zero = True
-                return 'Stage %s exhausted'%(self.resource,)
+                return '%s exhausted'%(self.resource,)
         else:
             self.zero = False
 
