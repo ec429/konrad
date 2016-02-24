@@ -1,6 +1,11 @@
 #!/usr/bin/python
 
 import curses
+import math
+
+def initialise():
+    register_colours()
+    curses.nonl()
 
 def register_colours():
     curses.start_color()
@@ -48,7 +53,12 @@ class OneLineGauge(Gauge):
             self.cw.border()
     def addstr(self, txt):
         off = int(self.bordered)
-        self.cw.addnstr(off, off, txt, self.olg_width)
+        try:
+            self.cw.addnstr(off, off, txt, self.olg_width)
+        except curses.error:
+            # for some reason addnstr doesn't like the bottom-right cell in a
+            # window.  maybe it's trying to move the cursor past it...
+            pass
     def chgat(self, xoff, num, attr):
         off = int(self.bordered)
         num = min(num, self.olg_width - xoff)
@@ -83,6 +93,55 @@ class TimeGauge(OneLineGauge):
             d = h / 24
             h %= 24
             self.addstr('T+%02dd%02d:%02d'%(d, h, m))
+
+class SIGauge(OneLineGauge):
+    unit = ''
+    label = ''
+    maxwidth = 6
+    def draw(self, value):
+        super(SIGauge, self).draw()
+        sgn = '' if value >= 0 else '-'
+        width = self.width - len(self.label) - len(self.unit) - 2
+        digits = min(width, self.maxwidth)
+        sz = math.log10(abs(value)) if value else 1
+        if sgn: sz += 1
+        pfx = ('', 1)
+        if sz >= digits:
+            pfx = ('k', 1000)
+        if sz >= digits + 2:
+            pfx = ('M', 1e6)
+        if sz >= digits + 5:
+            pfx = ('G', 1e9)
+        if sz >= digits + 8:
+            pfx = ('T', 1e12)
+        self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), value / pfx[1], pfx[0], self.unit))
+
+class AltitudeGauge(SIGauge):
+    unit = 'm'
+    label = 'Altitude'
+    def __init__(self, dl, cw):
+        super(AltitudeGauge, self).__init__(dl, cw)
+        self.add_prop('alt', 'v.altitude')
+    def draw(self):
+        super(AltitudeGauge, self).draw(self.get('alt'))
+
+class PeriapsisGauge(SIGauge):
+    unit = 'm'
+    label = 'Periapsis'
+    def __init__(self, dl, cw):
+        super(PeriapsisGauge, self).__init__(dl, cw)
+        self.add_prop('peri', 'o.PeA')
+    def draw(self):
+        super(PeriapsisGauge, self).draw(self.get('peri'))
+
+class ApoapsisGauge(SIGauge):
+    unit = 'm'
+    label = 'Apoapsis'
+    def __init__(self, dl, cw):
+        super(ApoapsisGauge, self).__init__(dl, cw)
+        self.add_prop('apo', 'o.ApA')
+    def draw(self):
+        super(ApoapsisGauge, self).draw(self.get('apo'))
 
 class PercentageGauge(OneLineGauge):
     def draw(self, n, d, s):
@@ -169,7 +228,7 @@ if __name__ == '__main__':
     import downlink
     scr = curses.initscr()
     try:
-        register_colours()
+        initialise()
         dl = downlink.connect_default()
         scr.addstr(0, 31, "KONRAD: Gauges demo")
         fuel = scr.derwin(4, 27, 10, 53)

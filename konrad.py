@@ -15,8 +15,14 @@ def fd_main(opts, scr, dl):
         ], 'Stage Propellant')
     status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     status.push("Nominal")
+    obt = scr.derwin(5, 27, 15, 52)
+    obtgroup = gauge.GaugeGroup(obt, [
+        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1)),
+        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1)),
+        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
+        ], 'Orbital')
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-    return (status, gauge.GaugeGroup(scr, [fuelgroup, status, time], "KONRAD: FD Console"))
+    return (status, gauge.GaugeGroup(scr, [fuelgroup, status, obtgroup, time], "KONRAD: FD Console"))
 
 consoles = {'fd': fd_main,}
 
@@ -40,7 +46,7 @@ if __name__ == '__main__':
     dl.subscribe('v.name')
     scr = curses.initscr()
     try:
-        gauge.register_colours()
+        gauge.initialise()
         status, group = console(opts, scr, dl)
         while True:
             dl.update()
