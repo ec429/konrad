@@ -41,14 +41,14 @@ class OneLineGauge(Gauge):
         self.olg_width = self.width
     def centext(self, txt):
         w = self.olg_width
-        return txt.center(w)[:w]
+        return txt.center(w)[:w-1]
     def draw(self):
         self.cw.clear()
         if self.bordered:
             self.cw.border()
     def addstr(self, txt):
         off = int(self.bordered)
-        self.cw.addstr(off, off, txt[:self.olg_width])
+        self.cw.addnstr(off, off, txt, self.olg_width)
     def chgat(self, xoff, num, attr):
         off = int(self.bordered)
         num = min(num, self.olg_width - xoff)
@@ -59,7 +59,7 @@ class StatusReadout(OneLineGauge):
     def __init__(self, dl, cw, label):
         super(StatusReadout, self).__init__(dl, cw)
         self.label = label
-        self.width -= len(label)
+        self.width -= len(label) + 1
         self.text = ''.ljust(self.width)
     def draw(self):
         super(StatusReadout, self).draw()
@@ -128,9 +128,11 @@ class FuelGauge(PercentageGauge):
         if current < 0.01 and full > 0:
             if not self.zero:
                 self.zero = True
-                return 'Stage %s exhausted'%(self.resource,)
+                return ['Stage %s exhausted'%(self.resource,)]
         else:
             self.zero = False
+
+global fallover
 
 class GaugeGroup(object):
     def __init__(self, cw, gl, title):
@@ -139,17 +141,25 @@ class GaugeGroup(object):
         self.title = title
     def draw(self):
         self.cw.clear()
-        self.cw.border()
         if self.title:
+            self.cw.border()
             _, width = self.cw.getmaxyx()
             title = self.title[:width]
             mid = (width - len(title)) / 2
             self.cw.addstr(0, mid, title)
         messages = []
         for g in self.gl:
-            m = g.draw()
-            if m is not None:
-                messages.append(m)
+            try:
+                m = g.draw()
+                if m is not None:
+                    messages.extend(m)
+            except curses.error as e:
+                messages.append("dpyerr " + repr(e))
+                if fallover: raise
+            except Exception as e:
+                messages.append("telerr " + repr(e))
+                if fallover: raise
+        return messages
     def post_draw(self):
         for g in self.gl:
             g.post_draw()
@@ -170,17 +180,14 @@ if __name__ == '__main__':
         status = StatusReadout(dl, scr.derwin(1, 78, 23, 1), 'status:')
         status.push("Nominal")
         time = TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-        groups = [fuelgroup, status, time]
+        top = GaugeGroup(scr, [fuelgroup, status, time], None)
         while True:
             dl.update()
-            for g in groups:
-                try:
-                    m = g.draw()
-                    g.post_draw()
-                    if m is not None:
-                        status.push(m)
-                except curses.error as e:
-                    status.push("dpyerr " + repr(e))
+            ml = top.draw()
+            top.post_draw()
+            if ml is not None:
+                for m in ml:
+                    status.push(m)
             scr.refresh()
     finally:
         curses.endwin()
