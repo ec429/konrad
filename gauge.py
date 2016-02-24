@@ -94,6 +94,15 @@ class TimeGauge(OneLineGauge):
             h %= 24
             self.addstr('T+%02dd%02d:%02d'%(d, h, m))
 
+class BodyGauge(OneLineGauge):
+    def __init__(self, dl, cw, body):
+        super(BodyGauge, self).__init__(dl, cw)
+        self.add_prop('name', 'b.name[%d]'%(body,))
+    def draw(self):
+        super(BodyGauge, self).draw()
+        name = self.get('name')
+        self.addstr(self.centext(name))
+
 class SIGauge(OneLineGauge):
     unit = ''
     label = ''
@@ -119,20 +128,44 @@ class SIGauge(OneLineGauge):
 class AltitudeGauge(SIGauge):
     unit = 'm'
     label = 'Altitude'
-    def __init__(self, dl, cw):
+    def __init__(self, dl, cw, body):
         super(AltitudeGauge, self).__init__(dl, cw)
         self.add_prop('alt', 'v.altitude')
+        self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
+        self.vac = False
     def draw(self):
-        super(AltitudeGauge, self).draw(self.get('alt'))
+        alt = self.get('alt')
+        super(AltitudeGauge, self).draw(alt)
+        atm_top = self.get('atm_top')
+        if alt > atm_top:
+            if not self.vac:
+                self.vac = True
+                return 'Clear of atmosphere'
+        else:
+            if self.vac:
+                self.vac = False
+                return 'Entered atmosphere'
 
 class PeriapsisGauge(SIGauge):
     unit = 'm'
     label = 'Periapsis'
-    def __init__(self, dl, cw):
+    def __init__(self, dl, cw, body):
         super(PeriapsisGauge, self).__init__(dl, cw)
         self.add_prop('peri', 'o.PeA')
+        self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
+        self.orb = False
     def draw(self):
-        super(PeriapsisGauge, self).draw(self.get('peri'))
+        peri = self.get('peri')
+        super(PeriapsisGauge, self).draw(peri)
+        atm_top = self.get('atm_top')
+        if peri > atm_top:
+            if not self.orb:
+                self.orb = True
+                return 'Stable orbit achieved'
+        else:
+            if self.orb:
+                self.orb = False
+                return 'Orbit is no longer stable'
 
 class ApoapsisGauge(SIGauge):
     unit = 'm'
@@ -187,7 +220,7 @@ class FuelGauge(PercentageGauge):
         if current < 0.01 and full > 0:
             if not self.zero:
                 self.zero = True
-                return ['Stage %s exhausted'%(self.resource,)]
+                return 'Stage %s exhausted'%(self.resource,)
         else:
             self.zero = False
 
@@ -211,7 +244,12 @@ class GaugeGroup(object):
             try:
                 m = g.draw()
                 if m is not None:
-                    messages.extend(m)
+                    if isinstance(m, str):
+                        messages.append(m)
+                    elif isinstance(m, list):
+                        messages.extend(m)
+                    else:
+                        messages.append(str(m))
             except curses.error as e:
                 messages.append("dpyerr " + repr(e))
                 if fallover: raise

@@ -17,18 +17,22 @@ def fd_main(opts, scr, dl):
     status.push("Nominal")
     obt = scr.derwin(5, 27, 15, 52)
     obtgroup = gauge.GaugeGroup(obt, [
-        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1)),
-        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1)),
+        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body),
+        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body),
         gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
         ], 'Orbital')
+    body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-    return (status, gauge.GaugeGroup(scr, [fuelgroup, status, obtgroup, time], "KONRAD: FD Console"))
+    return (status, gauge.GaugeGroup(scr,
+                [fuelgroup, status, obtgroup, body, time],
+                "KONRAD: FD Console"))
 
 consoles = {'fd': fd_main,}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
+    x.add_option('-b', '--body', type='int', help="ID of body to assume we're at", default=1)
     opts, args = x.parse_args()
     if len(args) != 1:
         x.error("Missing consname (choose from %s)"%('|'.join(consoles.keys()),))
