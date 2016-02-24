@@ -46,7 +46,32 @@ def fd_main(opts, scr, dl):
                 [fuelgroup, status, obtgroup, strsgroup, capsysgroup, origroup, body, time],
                 "KONRAD: FD Console"))
 
-consoles = {'fd': fd_main,}
+def traj_main(opts, scr, dl):
+    """Trajectory console"""
+    status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
+    status.push("Telemetry active")
+    obt = scr.derwin(6, 27, 16, 52)
+    obtgroup = gauge.GaugeGroup(obt, [
+        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body),
+        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body),
+        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
+        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1)),
+        ], 'Orbital')
+    orient = scr.derwin(3, 34, 19, 1)
+    origroup = gauge.GaugeGroup(orient, [
+        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 1), 'PIT', 'n.pitch2', half=True),
+        gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
+        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 12), 'HDG', 'n.heading2'),
+        gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
+        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 23), 'RLL', 'n.roll2'),
+        ], 'Orientation')
+    body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+    time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+    return (status, gauge.GaugeGroup(scr,
+                [status, obtgroup, origroup, body, time],
+                "KONRAD: Trajectory"))
+
+consoles = {'fd': fd_main, 'traj': traj_main}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')

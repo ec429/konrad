@@ -65,6 +65,13 @@ class OneLineGauge(Gauge):
             # for some reason addnstr doesn't like the bottom-right cell in a
             # window.  maybe it's trying to move the cursor past it...
             pass
+    def addch(self, xoff, char, attr=None):
+        off = int(self.bordered)
+        try:
+            old = self.cw.inch(off, off + xoff)
+            self.cw.addch(off, off + xoff, char, attr | (old &~0xff))
+        except curses.error:
+            pass
     def chgat(self, xoff, num, attr):
         off = int(self.bordered)
         num = min(num, self.olg_width - xoff)
@@ -248,9 +255,23 @@ class GeeGauge(OneLineGauge):
         else:
             self.warn = False
 
-class PercentageGauge(OneLineGauge):
+class FractionGauge(OneLineGauge):
+    def colour(self, n, d):
+        if d is None or d < 0:
+            self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
+            return
+        frac = n / float(d) if d > 0 else 0
+        blocks = self.width * 3
+        filled = int(blocks * frac + 0.5)
+        green = int(filled / 3)
+        self.chgat(0, green, curses.color_pair(3))
+        if green < self.width:
+            self.chgat(green, 1, curses.color_pair(filled % 3))
+        if green < self.width - 1:
+            self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
+
+class PercentageGauge(FractionGauge):
     def draw(self, n, d, s):
-        super(PercentageGauge, self).draw()
         if d is None or d < 0:
             if self.width < 7:
                 text = "N/A"
@@ -268,15 +289,8 @@ class PercentageGauge(OneLineGauge):
             prec = min(3, self.width - 5)
             num = "%0*.*f%%"%(prec + 4, prec, percent)
             text = "%s %s"%(num, s)
-        self.addstr(text[:self.width])
-        blocks = self.width * 3
-        filled = int(blocks * percent / 100.0 + 0.5)
-        green = int(filled / 3)
-        self.chgat(0, green, curses.color_pair(3))
-        if green < self.width:
-            self.chgat(green, 1, curses.color_pair(filled % 3))
-        if green < self.width - 1:
-            self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
+        self.addstr(text)
+        self.colour(percent, 100.0)
 
 class FuelGauge(PercentageGauge):
     def __init__(self, dl, cw, resource):
@@ -295,6 +309,20 @@ class FuelGauge(PercentageGauge):
                 return '%s exhausted'%(self.resource,)
         else:
             self.zero = False
+
+class AngleGauge(FractionGauge):
+    def __init__(self, dl, cw, label, api, half=False):
+        super(AngleGauge, self).__init__(dl, cw)
+        self.label = label
+        self.half = half
+        self.add_prop('angle', api)
+    def draw(self):
+        angle = self.get('angle')
+        width = self.width - len(self.label) - 3
+        prec = min(3, width - 3)
+        self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+        self.colour(abs(angle), 90 if self.half else 180)
+        self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
 
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):
