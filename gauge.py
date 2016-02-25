@@ -124,10 +124,47 @@ class BodyGauge(OneLineGauge):
         name = self.get('name')
         self.addstr(self.centext(name))
 
-class SIGauge(OneLineGauge):
+class FractionGauge(OneLineGauge):
+    fracmode = 3
+    def colour(self, n, d):
+        if d is None or d < 0:
+            self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
+            return
+        frac = n / float(d) if d > 0 else 0
+        frac = max(frac, 0)
+        blocks = self.width * self.fracmode
+        filled = int(blocks * frac + 0.5)
+        green = int(filled / self.fracmode)
+        if self.fracmode == 3:
+            green = min(green, self.width)
+            self.chgat(0, green, curses.color_pair(3))
+            if green < self.width:
+                self.chgat(green, 1, curses.color_pair(filled % 3))
+            if green < self.width - 1:
+                self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
+        elif self.fracmode == 2:
+            if green <= self.width:
+                self.chgat(0, green, curses.color_pair(3))
+                if green < self.width:
+                    self.chgat(green, 0, curses.color_pair(2 if filled % 2 else 0))
+                if green < self.width - 1:
+                    self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
+            else:
+                over = min(green - self.width, self.width)
+                green = self.width - over
+                self.chgat(0, green, curses.color_pair(3))
+                self.chgat(green, over, curses.color_pair(1))
+        else:
+            raise Exception("Bad fracmode", self.fracmode)
+
+class SIGauge(FractionGauge):
     unit = ''
     label = ''
     maxwidth = 6
+    fracmode = 2
+    def __init__(self, dl, cw, target=None):
+        super(SIGauge, self).__init__(dl, cw)
+        self.target=target
     def draw(self, value):
         super(SIGauge, self).draw()
         sgn = '' if value >= 0 else '-'
@@ -145,12 +182,14 @@ class SIGauge(OneLineGauge):
         if sz >= digits + 8:
             pfx = ('T', 1e12)
         self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), value / pfx[1], pfx[0], self.unit))
+        if self.target is not None:
+            self.colour(value, self.target)
 
 class AltitudeGauge(SIGauge):
     unit = 'm'
     label = 'Altitude'
-    def __init__(self, dl, cw, body):
-        super(AltitudeGauge, self).__init__(dl, cw)
+    def __init__(self, dl, cw, body, target=None):
+        super(AltitudeGauge, self).__init__(dl, cw, target)
         self.add_prop('alt', 'v.altitude')
         self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
         self.vac = False
@@ -170,8 +209,8 @@ class AltitudeGauge(SIGauge):
 class PeriapsisGauge(SIGauge):
     unit = 'm'
     label = 'Periapsis'
-    def __init__(self, dl, cw, body):
-        super(PeriapsisGauge, self).__init__(dl, cw)
+    def __init__(self, dl, cw, body, target=None):
+        super(PeriapsisGauge, self).__init__(dl, cw, target)
         self.add_prop('peri', 'o.PeA')
         self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
         self.orb = False
@@ -191,8 +230,8 @@ class PeriapsisGauge(SIGauge):
 class ApoapsisGauge(SIGauge):
     unit = 'm'
     label = 'Apoapsis'
-    def __init__(self, dl, cw):
-        super(ApoapsisGauge, self).__init__(dl, cw)
+    def __init__(self, dl, cw, target=None):
+        super(ApoapsisGauge, self).__init__(dl, cw, target)
         self.add_prop('apo', 'o.ApA')
     def draw(self):
         super(ApoapsisGauge, self).draw(self.get('apo'))
@@ -200,10 +239,24 @@ class ApoapsisGauge(SIGauge):
 class ObtVelocityGauge(SIGauge):
     unit = 'm/s'
     label = 'Velocity'
-    def __init__(self, dl, cw):
-        super(ObtVelocityGauge, self).__init__(dl, cw)
+    fly_v = False
+    def __init__(self, dl, cw, target=None, tmu=None, tsma=None, trad=None):
+        super(ObtVelocityGauge, self).__init__(dl, cw, target)
+        self.tmu = tmu
+        self.tsma = tsma
+        self.trad = trad
+        if self.target is None and None not in [self.tmu, self.tsma, self.trad]:
+            self.fly_v = True
+            self.add_prop('alt', 'v.altitude')
         self.add_prop('orbV', 'v.orbitalVelocity')
     def draw(self):
+        if self.fly_v:
+            # sqrt(mu * (2/r - 1/a))
+            alt = self.get('alt')
+            if alt is not None:
+                self.target = math.sqrt(self.tmu * (2.0 / (alt + self.trad) - 1.0 / self.tsma))
+            else:
+                self.target = None
         super(ObtVelocityGauge, self).draw(self.get('orbV'))
 
 class DynPresGauge(SIGauge):
@@ -255,21 +308,6 @@ class GeeGauge(OneLineGauge):
         else:
             self.warn = False
 
-class FractionGauge(OneLineGauge):
-    def colour(self, n, d):
-        if d is None or d < 0:
-            self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
-            return
-        frac = n / float(d) if d > 0 else 0
-        blocks = self.width * 3
-        filled = int(blocks * frac + 0.5)
-        green = int(filled / 3)
-        self.chgat(0, green, curses.color_pair(3))
-        if green < self.width:
-            self.chgat(green, 1, curses.color_pair(filled % 3))
-        if green < self.width - 1:
-            self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
-
 class PercentageGauge(FractionGauge):
     def draw(self, n, d, s):
         if d is None or d < 0:
@@ -311,18 +349,35 @@ class FuelGauge(PercentageGauge):
             self.zero = False
 
 class AngleGauge(FractionGauge):
-    def __init__(self, dl, cw, label, api, half=False):
+    label = ''
+    fsd = 180
+    api = ''
+    def __init__(self, dl, cw):
         super(AngleGauge, self).__init__(dl, cw)
-        self.label = label
-        self.half = half
-        self.add_prop('angle', api)
+        self.add_prop('angle', self.api)
     def draw(self):
         angle = self.get('angle')
         width = self.width - len(self.label) - 3
         prec = min(3, width - 3)
         self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
-        self.colour(abs(angle), 90 if self.half else 180)
+        self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
+
+class PitchGauge(AngleGauge):
+    label = 'PIT'
+    fsd = 90
+    api = 'n.pitch2'
+
+class HeadingGauge(AngleGauge):
+    label = 'HDG'
+    fsd = 360
+    api = 'n.heading2'
+    def colour(self, n, d):
+        super(HeadingGauge, self).colour((n + 90) % self.fsd, self.fsd)
+
+class RollGauge(AngleGauge):
+    label = 'RLL'
+    api = 'n.roll2'
 
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):
@@ -363,10 +418,10 @@ class GaugeGroup(object):
                     else:
                         messages.append(str(m))
             except curses.error as e:
-                messages.append("dpyerr " + repr(e))
+                messages.append("dpyerr in " + g.__class__.__name__)
                 if fallover: raise
             except Exception as e:
-                messages.append("telerr " + repr(e))
+                messages.append("telerr in " + g.__class__.__name__)
                 if fallover: raise
         return messages
     def post_draw(self):

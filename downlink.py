@@ -27,17 +27,18 @@ class Downlink(object):
         self.ws.send(s)
     def set_rate(self):
         self.send_msg({'rate': self.rate})
-        self.ws.settimeout(2000.0 / self.rate)
+        self.ws.settimeout(self.rate / 500.0)
     def resubscribe(self):
         for key in self.subscriptions:
             self._subscribe(key)
     def listen(self):
-        while True:
+        msg = '{}'
+        for i in xrange(3):
             try:
                 msg = self.ws.recv()
                 break
             except websocket.WebSocketTimeoutException:
-                return {}
+                self.reconnect()
             except websocket.WebSocketConnectionClosedException:
                 self.reconnect()
             except KeyboardInterrupt:

@@ -4,6 +4,7 @@ import downlink
 import gauge
 import curses
 import optparse
+import math
 
 def fd_main(opts, scr, dl):
     """Flight Director's console"""
@@ -28,15 +29,18 @@ def fd_main(opts, scr, dl):
         gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
         gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
         ], 'Stresses')
-    capsys = scr.derwin(6, 27, 14, 1)
+    capsys = scr.derwin(8, 27, 14, 1)
     capsysgroup = gauge.GaugeGroup(capsys, [
         gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
         gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
-        gauge.Light(dl, capsys.derwin(1, 12, 3, 1), 'SAS', 'v.sasValue'),
-        gauge.VLine(dl, capsys.derwin(2, 1, 3, 13)),
-        gauge.Light(dl, capsys.derwin(1, 12, 3, 14), 'RCS', 'v.rcsValue'),
-        gauge.Light(dl, capsys.derwin(1, 12, 4, 1), 'GEAR', 'v.gearValue'),
-        gauge.Light(dl, capsys.derwin(1, 12, 4, 14), 'BRK', 'v.brakeValue'),
+        gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
+        gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
+        gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen'),
+        gauge.Light(dl, capsys.derwin(1, 6, 6, 1), 'SAS', 'v.sasValue'),
+        gauge.Light(dl, capsys.derwin(1, 6, 6, 7), 'RCS', 'v.rcsValue'),
+        gauge.VLine(dl, capsys.derwin(1, 1, 6, 13)),
+        gauge.Light(dl, capsys.derwin(1, 6, 6, 14), 'GEAR', 'v.gearValue'),
+        gauge.Light(dl, capsys.derwin(1, 6, 6, 20), 'BRK', 'v.brakeValue'),
         ], 'CapSys')
     orient = scr.derwin(12, 24, 10, 28)
     origroup = gauge.GaugeGroup(orient, [], 'Orientation')
@@ -52,18 +56,18 @@ def traj_main(opts, scr, dl):
     status.push("Telemetry active")
     obt = scr.derwin(6, 27, 16, 52)
     obtgroup = gauge.GaugeGroup(obt, [
-        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body),
-        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body),
-        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
-        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1)),
+        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
+        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
+        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
+        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
         ], 'Orbital')
     orient = scr.derwin(3, 34, 19, 1)
     origroup = gauge.GaugeGroup(orient, [
-        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 1), 'PIT', 'n.pitch2', half=True),
+        gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
         gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
-        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 12), 'HDG', 'n.heading2'),
+        gauge.HeadingGauge(dl, orient.derwin(1, 10, 1, 12)),
         gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
-        gauge.AngleGauge(dl, orient.derwin(1, 10, 1, 23), 'RLL', 'n.roll2'),
+        gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
         ], 'Orientation')
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
@@ -77,7 +81,15 @@ def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
     x.add_option('-b', '--body', type='int', help="ID of body to assume we're at", default=1)
+    x.add_option('--target-alt', type='int', help="Target altitude above MSL (m)")
+    x.add_option('--target-peri', type='int', help="Target periapsis altitude (m)")
+    x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
+    x.add_option('--target-obt-vel', type='int', help="Target orbital velocity (m/s)")
     opts, args = x.parse_args()
+    # Magic for the magic target_obt_vel
+    opts.target_obt_mu = None
+    opts.target_obt_sma = None
+    opts.target_obt_rad = None
     if len(args) != 1:
         x.error("Missing consname (choose from %s)"%('|'.join(consoles.keys()),))
     consname = args[0]
@@ -92,6 +104,28 @@ if __name__ == '__main__':
     dl = downlink.connect_default()
     vessel = None
     dl.subscribe('v.name')
+    if opts.target_alt and not (opts.target_peri or opts.target_apo):
+        # Assume they want circular at target alt
+        opts.target_peri = opts.target_alt
+        opts.target_apo = opts.target_alt
+    if opts.target_peri and opts.target_apo and not opts.target_obt_vel:
+        # Supply GM and sma, so we can compute v on-the-fly
+        brad = "b.radius[%d]"%(opts.body,)
+        bgm = "b.o.gravParameter[%d]"%(opts.body,)
+        dl.subscribe(brad)
+        dl.subscribe(bgm)
+        dl.update()
+        r = dl.get(brad, None)
+        gm = dl.get(bgm, None)
+        if None not in (r, gm):
+            sma = r + (opts.target_peri + opts.target_apo) / 2.0
+            if opts.target_peri == opts.target_apo:
+                # Circular, just find v_0 ~= sqrt(mu/a)
+                opts.target_obt_vel = math.sqrt(gm / sma)
+            else:
+                opts.target_obt_mu = gm
+                opts.target_obt_sma = sma
+                opts.target_obt_rad = r
     scr = curses.initscr()
     try:
         gauge.initialise()
