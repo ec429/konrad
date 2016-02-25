@@ -52,7 +52,7 @@ class OneLineGauge(Gauge):
         self.olg_width = self.width
     def centext(self, txt):
         w = self.olg_width
-        return txt.center(w)[:w-1]
+        return txt.center(w)[:w]
     def draw(self):
         self.cw.clear()
         if self.bordered:
@@ -119,10 +119,19 @@ class BodyGauge(OneLineGauge):
     def __init__(self, dl, cw, body):
         super(BodyGauge, self).__init__(dl, cw)
         self.add_prop('name', 'b.name[%d]'%(body,))
+        self.add_prop('body', 'v.body')
+        self.warn = False
     def draw(self):
         super(BodyGauge, self).draw()
         name = self.get('name')
-        self.addstr(self.centext(name))
+        body = self.get('body')
+        wrong = body != name
+        text = '%s!%s'%(body, name) if wrong else name
+        self.addstr(self.centext(text))
+        if wrong:
+            if not self.warn:
+                self.warn = True
+                return 'Change Body: %s'%(body,)
 
 class FractionGauge(OneLineGauge):
     fracmode = 3
