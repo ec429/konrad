@@ -476,37 +476,6 @@ class LatitudeGauge(AngleGauge):
     def colour(self, *args):
         pass
 
-class BearingGauge(HeadingGauge):
-    label = 'Bear'
-    fsd = 360
-    api = None
-    def __init__(self, dl, cw):
-        super(BearingGauge, self).__init__(dl, cw)
-        self.add_prop('vx', 'v.surfaceVelocityx')
-        self.add_prop('vy', 'v.surfaceVelocityy')
-        self.add_prop('vz', 'v.surfaceVelocityz')
-        self.add_prop('lat', 'v.lat')
-        self.add_prop('lon', 'v.long')
-    @property
-    def angle(self):
-        return None # code below is broken, we need to do linear algebra and look at out lat/long
-        th = math.degrees(math.atan2(self.get('vx'), self.get('vy')))
-        if th < 0:
-            th += 360
-        return th
-
-class SideSlipGauge(BearingGauge):
-    label = 'Slip'
-    fsd = 15
-    api = 'n.heading2'
-    @property
-    def angle(self):
-        th = super(SideSlipGauge, self).angle
-        hdg = self.get('angle')
-        if None in (hdg, th):
-            return None
-        return hdg - th
-
 class ClimbAngleGauge(AngleGauge):
     label = 'Elev'
     fsd = 90
