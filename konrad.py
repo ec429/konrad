@@ -67,6 +67,16 @@ def traj_main(opts, scr, dl):
         gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
         gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
         ], 'Orbital')
+    motion = scr.derwin(5, 34, 15, 1)
+    mogroup = gauge.GaugeGroup(motion, [
+        gauge.BearingGauge(dl, motion.derwin(1, 16, 1, 1)),
+        gauge.SideSlipGauge(dl, motion.derwin(1, 16, 2, 1)),
+        gauge.HSpeedGauge(dl, motion.derwin(1, 16, 3, 1)),
+        gauge.VLine(dl, motion.derwin(3, 1, 1, 17)),
+        gauge.ClimbAngleGauge(dl, motion.derwin(1, 15, 1, 18)),
+        gauge.AoAGauge(dl, motion.derwin(1, 15, 2, 18)),
+        gauge.VSpeedGauge(dl, motion.derwin(1, 15, 3, 18)),
+        ], 'Motion-(Surface)')
     orient = scr.derwin(3, 34, 19, 1)
     origroup = gauge.GaugeGroup(orient, [
         gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
@@ -78,7 +88,7 @@ def traj_main(opts, scr, dl):
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
     return (status, gauge.GaugeGroup(scr,
-                [status, loxngroup, obtgroup, origroup, body, time],
+                [status, loxngroup, obtgroup, mogroup, origroup, body, time],
                 "KONRAD: Trajectory"))
 
 consoles = {'fd': fd_main, 'traj': traj_main}

@@ -301,6 +301,24 @@ class ObtVelocityGauge(SIGauge):
                 self.target = None
         super(ObtVelocityGauge, self).draw(self.get('orbV'))
 
+class HSpeedGauge(SIGauge):
+    unit = 'm/s'
+    label = 'HSpeed'
+    def __init__(self, dl, cw):
+        super(HSpeedGauge, self).__init__(dl, cw)
+        self.add_prop('hs', 'v.surfaceSpeed')
+    def draw(self):
+        super(HSpeedGauge, self).draw(self.get('hs'))
+
+class VSpeedGauge(SIGauge):
+    unit = 'm/s'
+    label = 'VSpeed'
+    def __init__(self, dl, cw):
+        super(VSpeedGauge, self).__init__(dl, cw)
+        self.add_prop('vs', 'v.verticalSpeed')
+    def draw(self):
+        super(VSpeedGauge, self).draw(self.get('vs'))
+
 class DynPresGauge(SIGauge):
     unit = 'Pa'
     label = 'Dyn.Pres.'
@@ -393,12 +411,16 @@ class FuelGauge(PercentageGauge):
 class AngleGauge(FractionGauge):
     label = ''
     fsd = 180
-    api = ''
+    api = None
     def __init__(self, dl, cw):
         super(AngleGauge, self).__init__(dl, cw)
-        self.add_prop('angle', self.api)
+        if self.api:
+            self.add_prop('angle', self.api)
+    @property
+    def angle(self):
+        return self.get('angle')
     def draw(self):
-        angle = self.get('angle')
+        angle = self.angle
         width = self.width - len(self.label) - 2
         prec = min(3, width - 4)
         self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
@@ -424,11 +446,68 @@ class RollGauge(AngleGauge):
 class LongitudeGauge(AngleGauge):
     label = 'Lng'
     api = 'v.long'
+    def colour(self, *args):
+        pass
 
 class LatitudeGauge(AngleGauge):
     label = 'Lat'
     fsd = 90
     api = 'v.lat'
+    def colour(self, *args):
+        pass
+
+class BearingGauge(HeadingGauge):
+    label = 'Bear'
+    fsd = 360
+    api = None
+    def __init__(self, dl, cw):
+        super(BearingGauge, self).__init__(dl, cw)
+        self.add_prop('vx', 'v.surfaceVelocityx')
+        self.add_prop('vy', 'v.surfaceVelocityy')
+    @property
+    def angle(self):
+        return 8.888 # code below is broken, we need to do linear algebra and look at out lat/long
+        th = math.degrees(math.atan2(self.get('vx'), self.get('vy')))
+        if th < 0:
+            th += 360
+        return th
+
+class SideSlipGauge(BearingGauge):
+    label = 'Slip'
+    fsd = 15
+    api = 'n.heading2'
+    @property
+    def angle(self):
+        th = super(SideSlipGauge, self).angle
+        hdg = self.get('angle')
+        return hdg - th
+
+class ClimbAngleGauge(AngleGauge):
+    label = 'Elev'
+    fsd = 90
+    api = None
+    def __init__(self, dl, cw):
+        super(ClimbAngleGauge, self).__init__(dl, cw)
+        self.add_prop('hs', 'v.surfaceSpeed')
+        self.add_prop('vs', 'v.verticalSpeed')
+    @property
+    def angle(self):
+        return math.degrees(math.atan2(self.get('vs'), self.get('hs')))
+
+class AoAGauge(ClimbAngleGauge):
+    label = 'AoA'
+    fsd = 20
+    api = None
+    def __init__(self, dl, cw):
+        super(AoAGauge, self).__init__(dl, cw)
+        self.add_prop('hs', 'v.surfaceSpeed')
+        self.add_prop('vs', 'v.verticalSpeed')
+        self.add_prop('pit', 'n.pitch2')
+    @property
+    def angle(self):
+        th = super(AoAGauge, self).angle
+        pit = self.get('pit')
+        return pit - th
 
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):
