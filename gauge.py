@@ -486,10 +486,10 @@ class BearingGauge(HeadingGauge):
         self.add_prop('vy', 'v.surfaceVelocityy')
         self.add_prop('vz', 'v.surfaceVelocityz')
         self.add_prop('lat', 'v.lat')
-        self.add_prop('lon', 'v.lon')
+        self.add_prop('lon', 'v.long')
     @property
     def angle(self):
-        return 8.888 # code below is broken, we need to do linear algebra and look at out lat/long
+        return None # code below is broken, we need to do linear algebra and look at out lat/long
         th = math.degrees(math.atan2(self.get('vx'), self.get('vy')))
         if th < 0:
             th += 360

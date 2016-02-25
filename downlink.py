@@ -38,7 +38,7 @@ class Downlink(object):
                 msg = self.ws.recv()
                 break
             except websocket.WebSocketTimeoutException:
-                self.reconnect()
+                break
             except websocket.WebSocketConnectionClosedException:
                 self.reconnect()
             except KeyboardInterrupt:
