@@ -54,18 +54,20 @@ def traj_main(opts, scr, dl):
     """Trajectory console"""
     status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     status.push("Telemetry active")
-    loxn = scr.derwin(4, 27, 12, 52)
+    loxn = scr.derwin(4, 27, 10, 52)
     loxngroup = gauge.GaugeGroup(loxn, [
         gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
         gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
         gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body),
         ], 'Location')
-    obt = scr.derwin(6, 27, 16, 52)
+    obt = scr.derwin(8, 27, 14, 52)
     obtgroup = gauge.GaugeGroup(obt, [
         gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
         gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
         gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
         gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
+        gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
+        gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
         ], 'Orbital')
     motion = scr.derwin(4, 34, 15, 1)
     mogroup = gauge.GaugeGroup(motion, [

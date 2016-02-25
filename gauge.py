@@ -119,6 +119,30 @@ class TimeGauge(OneLineGauge):
             h %= 24
             self.addstr('T+%02dd%02d:%02d'%(d, h, m))
 
+class ObtPeriodGauge(OneLineGauge):
+    def __init__(self, dl, cw):
+        super(ObtPeriodGauge, self).__init__(dl, cw)
+        self.add_prop('T', 'o.period')
+    def draw(self):
+        super(ObtPeriodGauge, self).draw()
+        t = self.get('T')
+        if t is None:
+            self.addstr('LINK DOWN')
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        if t < 60:
+            text = '%ds'%(t,)
+        elif t < 3600:
+            text = '%dm%02ds'%(t / 60, t % 60)
+        else:
+            s = t % 60
+            m = (t / 60) % 60
+            h = (t / 3600)
+            text = '%dh%02dm%02d'%(h, m, s)
+        label = 'Period'
+        width = self.width - len(label) - 2
+        self.addstr('%s: %s'%(label, text.rjust(width)[:width]))
+
 class BodyGauge(OneLineGauge):
     def __init__(self, dl, cw, body):
         super(BodyGauge, self).__init__(dl, cw)
@@ -446,6 +470,13 @@ class AngleGauge(FractionGauge):
             self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
             self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
+
+class InclinationGauge(AngleGauge):
+    label = 'Inclination'
+    fsd = None
+    api = 'o.inclination'
+    def colour(self, *args):
+        pass
 
 class PitchGauge(AngleGauge):
     label = 'PIT'
