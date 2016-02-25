@@ -97,10 +97,14 @@ def traj_main(opts, scr, dl):
         gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
         gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
         ], 'Orientation')
+    navball = scr.derwin(9, 17, 13, 35)
+    navgroup = gauge.GaugeGroup(navball, [
+        gauge.NavBall(dl, navball.derwin(7, 15, 1, 1)),
+        ], "NavBall")
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
     return (status, gauge.GaugeGroup(scr,
-                [status, loxngroup, obtgroup, mogroup, origroup, body, time],
+                [status, loxngroup, obtgroup, mogroup, origroup, navgroup, body, time],
                 "KONRAD: Trajectory"))
 
 consoles = {'fd': fd_main, 'traj': traj_main}
