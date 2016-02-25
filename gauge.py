@@ -105,6 +105,10 @@ class TimeGauge(OneLineGauge):
     def draw(self):
         super(TimeGauge, self).draw()
         t = self.get('T')
+        if t is None:
+            self.addstr('LINK DOWN')
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
         s = t % 60
         m = (t / 60) % 60
         h = (t / 3600)
@@ -124,6 +128,10 @@ class BodyGauge(OneLineGauge):
     def draw(self):
         super(BodyGauge, self).draw()
         name = self.get('name')
+        if name is None:
+            self.addstr(self.centext("LINK DOWN"))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
         body = self.get('body')
         wrong = body != name
         text = '%s!%s'%(body, name) if wrong else name
@@ -190,9 +198,17 @@ class SIGauge(FractionGauge):
             pfx = ('G', 1e9)
         if sz >= digits + 8:
             pfx = ('T', 1e12)
-        self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), value / pfx[1], pfx[0], self.unit))
-        if self.target is not None:
-            self.colour(value, self.target)
+        if value is None:
+            bad = 'NO DATA'
+            if width < 8:
+                bad = '-'*(width - 1)
+            bad = bad.rjust(width - 1)[:width - 1]
+            self.addstr('%s: %s %s'%(self.label, bad, self.unit))
+            self.chgat(0, self.width, curses.color_pair(2))
+        else:
+            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), value / pfx[1], pfx[0], self.unit))
+            if self.target is not None:
+                self.colour(value, self.target)
 
 class DownrangeGauge(SIGauge):
     unit = 'm'
@@ -423,8 +439,12 @@ class AngleGauge(FractionGauge):
         angle = self.angle
         width = self.width - len(self.label) - 2
         prec = min(3, width - 4)
-        self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
-        self.colour(abs(angle), self.fsd)
+        if angle is None:
+            self.addstr(self.centext('NO DATA'))
+            self.chgat(0, self.width, curses.color_pair(2))
+        else:
+            self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+            self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
 
 class PitchGauge(AngleGauge):
@@ -464,6 +484,9 @@ class BearingGauge(HeadingGauge):
         super(BearingGauge, self).__init__(dl, cw)
         self.add_prop('vx', 'v.surfaceVelocityx')
         self.add_prop('vy', 'v.surfaceVelocityy')
+        self.add_prop('vz', 'v.surfaceVelocityz')
+        self.add_prop('lat', 'v.lat')
+        self.add_prop('lon', 'v.lon')
     @property
     def angle(self):
         return 8.888 # code below is broken, we need to do linear algebra and look at out lat/long
@@ -480,6 +503,8 @@ class SideSlipGauge(BearingGauge):
     def angle(self):
         th = super(SideSlipGauge, self).angle
         hdg = self.get('angle')
+        if None in (hdg, th):
+            return None
         return hdg - th
 
 class ClimbAngleGauge(AngleGauge):
@@ -492,7 +517,11 @@ class ClimbAngleGauge(AngleGauge):
         self.add_prop('vs', 'v.verticalSpeed')
     @property
     def angle(self):
-        return math.degrees(math.atan2(self.get('vs'), self.get('hs')))
+        vs = self.get('vs')
+        hs = self.get('hs')
+        if None in (vs, hs):
+            return None
+        return math.degrees(math.atan2(vs, hs))
 
 class AoAGauge(ClimbAngleGauge):
     label = 'AoA'
@@ -507,6 +536,8 @@ class AoAGauge(ClimbAngleGauge):
     def angle(self):
         th = super(AoAGauge, self).angle
         pit = self.get('pit')
+        if None in (pit, th):
+            return None
         return pit - th
 
 class Light(OneLineGauge):
