@@ -8,42 +8,54 @@ import math
 
 def fd_main(opts, scr, dl):
     """Flight Director's console"""
-    fuel = scr.derwin(6, 27, 10, 52)
+    props = len(opts.propellant)
+    fuel = scr.derwin(2 + props, 26, 14 - props, 53)
     fuelgroup = gauge.GaugeGroup(fuel, [
-        gauge.FuelGauge(dl, fuel.derwin(1, 25, 1, 1), 'LiquidFuel'),
-        gauge.FuelGauge(dl, fuel.derwin(1, 25, 2, 1), 'Oxidizer'),
-        gauge.FuelGauge(dl, fuel.derwin(1, 25, 3, 1), 'SolidFuel'),
-        gauge.FuelGauge(dl, fuel.derwin(1, 25, 4, 1), 'MonoPropellant'),
+        gauge.FuelGauge(dl, fuel.derwin(1, 24, i + 1, 1), p)
+        for i,p in enumerate(opts.propellant)
         ], 'Propellants')
     status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     status.push("Telemetry active")
-    obt = scr.derwin(6, 27, 16, 52)
+    obt = scr.derwin(6, 26, 16, 53)
     obtgroup = gauge.GaugeGroup(obt, [
-        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body),
-        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body),
-        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1)),
-        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1)),
+        gauge.AltitudeGauge(dl, obt.derwin(1, 24, 1, 1), opts.body),
+        gauge.PeriapsisGauge(dl, obt.derwin(1, 24, 2, 1), opts.body),
+        gauge.ApoapsisGauge(dl, obt.derwin(1, 24, 3, 1)),
+        gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1)),
         ], 'Orbital')
-    strs = scr.derwin(4, 27, 10, 1)
+    strs = scr.derwin(4, 27, 14 if opts.unmanned else 10, 1)
     strsgroup = gauge.GaugeGroup(strs, [
         gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
         gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
         ], 'Stresses')
-    capsys = scr.derwin(8, 27, 14, 1)
-    capsysgroup = gauge.GaugeGroup(capsys, [
-        gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
-        gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
-        gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
-        gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
-        gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen'),
-        gauge.Light(dl, capsys.derwin(1, 6, 6, 1), 'SAS', 'v.sasValue'),
-        gauge.Light(dl, capsys.derwin(1, 6, 6, 7), 'RCS', 'v.rcsValue'),
-        gauge.VLine(dl, capsys.derwin(1, 1, 6, 13)),
-        gauge.Light(dl, capsys.derwin(1, 6, 6, 14), 'GEAR', 'v.gearValue'),
-        gauge.Light(dl, capsys.derwin(1, 6, 6, 20), 'BRK', 'v.brakeValue'),
-        ], 'CapSys')
-    orient = scr.derwin(12, 24, 10, 28)
-    origroup = gauge.GaugeGroup(orient, [], 'Orientation')
+    if opts.unmanned:
+        capsys = scr.derwin(4, 27, 18, 1)
+        capsysgroup = gauge.GaugeGroup(capsys, [
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
+            gauge.Light(dl, capsys.derwin(1, 6, 2, 1), 'SAS', 'v.sasValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 2, 7), 'RCS', 'v.rcsValue'),
+            gauge.VLine(dl, capsys.derwin(1, 1, 2, 13)),
+            gauge.Light(dl, capsys.derwin(1, 6, 2, 14), 'GEAR', 'v.gearValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 2, 20), 'BRK', 'v.brakeValue'),
+            ], 'Avionics')
+    else:
+        capsys = scr.derwin(8, 27, 14, 1)
+        capsysgroup = gauge.GaugeGroup(capsys, [
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
+            gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen'),
+            gauge.Light(dl, capsys.derwin(1, 6, 6, 1), 'SAS', 'v.sasValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 6, 7), 'RCS', 'v.rcsValue'),
+            gauge.VLine(dl, capsys.derwin(1, 1, 6, 13)),
+            gauge.Light(dl, capsys.derwin(1, 6, 6, 14), 'GEAR', 'v.gearValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 6, 20), 'BRK', 'v.brakeValue'),
+            ], 'CapSys')
+    orient = scr.derwin(13, 25, 9, 28)
+    origroup = gauge.GaugeGroup(orient, [
+        gauge.NavBall(dl, orient.derwin(11, 23, 1, 1)),
+        ], 'Orientation')
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
     return (status, gauge.GaugeGroup(scr,
@@ -101,6 +113,8 @@ def parse_opts():
     x.add_option('--target-peri', type='int', help="Target periapsis altitude (m)")
     x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
     x.add_option('--target-obt-vel', type='int', help="Target orbital velocity (m/s)")
+    x.add_option('-p', '--propellant', action='append', help="Propellants to track")
+    x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
@@ -112,6 +126,10 @@ def parse_opts():
     if consname not in consoles:
         x.error("No such consname %s"%(consname,))
     console = consoles[consname]
+    if not opts.propellant:
+        opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
+    if len(opts.propellant) > 13:
+        x.error("Too many propellants!  Max is 13")
     return (opts, console)
 
 if __name__ == '__main__':

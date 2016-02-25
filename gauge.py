@@ -2,6 +2,7 @@
 
 import curses
 import math
+import matrix
 
 def initialise():
     register_colours()
@@ -41,6 +42,43 @@ class VLine(Gauge):
     def draw(self):
         super(VLine, self).draw()
         self.cw.vline(0, 0, curses.ACS_VLINE, self.height)
+
+import time
+
+class NavBall(Gauge):
+    def __init__(self, dl, cw):
+        super(NavBall, self).__init__(dl, cw)
+        self.add_prop('pit', 'n.pitch2')
+        self.add_prop('hdg', 'n.heading2')
+        self.add_prop('rll', 'n.roll2')
+        self.cardinals = {'N': matrix.Vector3((1, 0, 0)),
+                          'S': matrix.Vector3((-1, 0, 0)),
+                          'E': matrix.Vector3((0, 1, 0)),
+                          'W': matrix.Vector3((0, -1, 0)),
+                          'O': matrix.Vector3((0, 0, -1)),
+                          'X': matrix.Vector3((0, 0, 1)),
+                          }
+        self.size = min(self.height * 2, self.width) - 1
+        self.half_size = self.size / 2
+        self.center = (self.width / 2, self.height / 2)
+    def draw(self):
+        self.cw.clear()
+        pit = self.get('pit')
+        hdg = self.get('hdg')
+        rll = self.get('rll')
+        if None in (pit, hdg, rll):
+            return
+        m_rll = matrix.RotationMatrix(0, math.radians(rll))
+        m_pit = matrix.RotationMatrix(1, -math.radians(pit))
+        m_hdg = matrix.RotationMatrix(2, -math.radians(hdg))
+        final = m_rll * m_pit * m_hdg
+        self.cw.addch(self.center[1], self.center[0], '.')
+        for k, v in self.cardinals.items():
+            p = final * v
+            if p.data[0] >= -0.05:
+                x = p.data[1] * self.half_size + self.center[0]
+                y = p.data[2] * self.half_size / 2 + self.center[1]
+                self.cw.addch(int(y), int(x), k)
 
 class OneLineGauge(Gauge):
     def __init__(self, dl, cw):
