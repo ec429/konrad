@@ -185,6 +185,39 @@ class SIGauge(FractionGauge):
         if self.target is not None:
             self.colour(value, self.target)
 
+class DownrangeGauge(SIGauge):
+    unit = 'm'
+    label = 'Downrange'
+    def __init__(self, dl, cw, body):
+        super(DownrangeGauge, self).__init__(dl, cw)
+        self.add_prop('lat', 'v.lat')
+        self.add_prop('lon', 'v.long')
+        self.add_prop('brad', 'b.radius[%d]'%(body,))
+        self.init = None
+    def draw(self):
+        lat = self.get('lat')
+        lon = self.get('lon')
+        brad = self.get('brad')
+        if None in (lat, lon):
+            d = 0
+        elif self.init is None:
+            self.init = (lat, lon)
+            d = 0
+        elif brad is None:
+            d = 0
+        else:
+            # https://en.wikipedia.org/wiki/Great-circle_distance#Formulas
+            phi1 = math.radians(self.init[0])
+            lbd1 = math.radians(self.init[1])
+            phi2 = math.radians(lat)
+            lbd2 = math.radians(lon)
+            dlbd = lbd2 - lbd1
+            # dsigma = acs(sin(phi1)sin(phi2)+cos(lbd1)cos(lbd2)cos(dlbd))
+            ds = math.acos(math.sin(phi1) * math.sin(phi2) + math.cos(phi1) * math.cos(phi2) * math.cos(dlbd))
+            # d = r dsigma
+            d = brad * ds
+        super(DownrangeGauge, self).draw(d)
+
 class AltitudeGauge(SIGauge):
     unit = 'm'
     label = 'Altitude'
@@ -357,8 +390,8 @@ class AngleGauge(FractionGauge):
         self.add_prop('angle', self.api)
     def draw(self):
         angle = self.get('angle')
-        width = self.width - len(self.label) - 3
-        prec = min(3, width - 3)
+        width = self.width - len(self.label) - 2
+        prec = min(3, width - 4)
         self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
         self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
@@ -378,6 +411,15 @@ class HeadingGauge(AngleGauge):
 class RollGauge(AngleGauge):
     label = 'RLL'
     api = 'n.roll2'
+
+class LongitudeGauge(AngleGauge):
+    label = 'Lng'
+    api = 'v.long'
+
+class LatitudeGauge(AngleGauge):
+    label = 'Lat'
+    fsd = 90
+    api = 'v.lat'
 
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):

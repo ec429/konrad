@@ -54,6 +54,12 @@ def traj_main(opts, scr, dl):
     """Trajectory console"""
     status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     status.push("Telemetry active")
+    loxn = scr.derwin(4, 27, 12, 52)
+    loxngroup = gauge.GaugeGroup(loxn, [
+        gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
+        gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
+        gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body),
+        ], 'Location')
     obt = scr.derwin(6, 27, 16, 52)
     obtgroup = gauge.GaugeGroup(obt, [
         gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
@@ -72,7 +78,7 @@ def traj_main(opts, scr, dl):
     body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
     time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
     return (status, gauge.GaugeGroup(scr,
-                [status, obtgroup, origroup, body, time],
+                [status, loxngroup, obtgroup, origroup, body, time],
                 "KONRAD: Trajectory"))
 
 consoles = {'fd': fd_main, 'traj': traj_main}
