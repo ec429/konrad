@@ -1,3 +1,33 @@
 KONRAD - Kerbal Operations, Naughty Rockets, Aerial Debris
 
 A telemachus control panel with a retro feel.  Built on curses technology.
+
+Consoles
+--------
+konrad.py must always be run with a 'consname' argument, indicating which
+console it should display.  So far we have the following:
+* fd
+	Flight Director.  Summarises key vehicle state.
+* traj
+	Trajectory.  The guy who's steering probably wants this one.
+
+Useful Notes
+------------
+There are two kinds of FractionGauge: Mode 3 and Mode 2.  (Naturally.)
+Mode 3 gauges simply fill up from left to right, mostly green, with red and
+yellow denoting a 1/3 and 2/3 filled block respectively.  They are used either
+where an overshoot is physically impossible (e.g. >100% fuel reserve) or for
+angle gauges, where the values wrap around (and may become negative; these
+gauges will use the absolute value in this situation).
+Mode 2 gauges are used when there is an (implicit or explicit) target for the
+value being displayed (e.g. altitude, apsides or velocity).  These gauges also
+fill up with green, with yellow denoting a 1/2 block.  However, once they
+overshoot the target, they 'bounce off' the end in red.  So a bar 3/4 green and
+the rest red indicates a value 125% of the target.
+
+Because Telemachus won't give us the bodyID (only its name), KONRAD has to be
+told it by the user (-b option, defaults to 1).  If the current body name does
+not match the name retrieved for the bodyID, KONRAD will warn the user, showing
+a value of <current>!<expected> in the BodyGauge (and pushing a "Change Body"
+message to the status line).  In this situation, calculated values such as the
+target orbital velocity will be bogus.
