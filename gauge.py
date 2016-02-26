@@ -408,7 +408,7 @@ class DynPresGauge(SIGauge):
         dyn_pres = self.get('q')
         super(DynPresGauge, self).draw(dyn_pres)
         col = 3
-        if dyn_pres > 40000:
+        if dyn_pres > 40000 or dyn_pres is None:
             col = 2
         if dyn_pres > 80000:
             col = 1
@@ -430,6 +430,10 @@ class GeeGauge(OneLineGauge):
     def draw(self):
         super(GeeGauge, self).draw()
         gee = self.get('g')
+        if gee is None:
+            self.addstr(self.centext('NO DATA'))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
         width = self.width - len(self.label) - len(self.unit) - 1
         prec = min(3, width - 3)
         self.addstr('%s:%+*.*f%s'%(self.label, width, prec, gee, self.unit))
@@ -585,10 +589,17 @@ class Light(OneLineGauge):
         self.add_prop('val', api)
     def draw(self):
         super(Light, self).draw()
-        val = bool(int(self.get('val')))
-        flag = ' ' if val else '!'
+        raw = self.get('val')
+        if raw is None:
+            val = True
+            flag = '?'
+            col = 2
+        else:
+            val = bool(int(raw))
+            flag = ' ' if val else '!'
+            col = val * 3
         self.addstr(self.centext(flag + self.text))
-        self.chgat(0, self.width, curses.color_pair(2 if val else 0))
+        self.chgat(0, self.width, curses.color_pair(col))
 
 global fallover
 
