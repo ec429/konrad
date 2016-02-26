@@ -225,7 +225,7 @@ class FractionGauge(OneLineGauge):
             if green <= self.width:
                 self.chgat(0, green, curses.color_pair(3))
                 if green < self.width:
-                    self.chgat(green, 0, curses.color_pair(2 if filled % 2 else 0))
+                    self.chgat(green, 1, curses.color_pair(2 if filled % 2 else 0))
                 if green < self.width - 1:
                     self.chgat(green + 1, self.width - green - 1, curses.color_pair(0))
             else:
