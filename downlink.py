@@ -47,6 +47,8 @@ class Downlink(object):
         return json.loads(msg)
     def update(self):
         d = self.listen()
+        if not d: # Loss of Signal
+            self.data = {}
         self.data.update(d)
         return self.data
     def get(self, key, default=None):
