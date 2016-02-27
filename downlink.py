@@ -5,7 +5,7 @@ import json
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8085
-DEFAULT_RATE = 1000
+DEFAULT_RATE = 250
 
 class Downlink(object):
     def __init__(self, addr, port, rate):
