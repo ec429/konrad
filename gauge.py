@@ -25,6 +25,11 @@ class Gauge(object):
         self.cw = cw
         self.props = {}
         self.height, self.width = cw.getmaxyx()
+    def _changeopt(self, **kwargs):
+        pass
+    def changeopt(self, cls, **kwargs):
+        if isinstance(self, cls):
+            self._changeopt(**kwargs)
     def add_prop(self, name, apistr):
         self.props[name] = apistr
         self.dl.subscribe(apistr)
@@ -569,18 +574,22 @@ class AoAGauge(ClimbAngleGauge):
     label = 'AoA'
     fsd = 20
     api = None
-    def __init__(self, dl, cw):
+    def __init__(self, dl, cw, retro=False):
         super(AoAGauge, self).__init__(dl, cw)
         self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
         self.add_prop('pit', 'n.pitch2')
+        self.retro = retro
+    def _changeopt(self, **kwargs):
+        if 'retro' in kwargs:
+            self.retro = kwargs['retro']
     @property
     def angle(self):
         th = super(AoAGauge, self).angle
         pit = self.get('pit')
         if None in (pit, th):
             return None
-        return pit - th
+        return pit + th if self.retro else pit - th
 
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):
@@ -608,6 +617,9 @@ class GaugeGroup(object):
         self.cw = cw
         self.gl = gl
         self.title = title
+    def changeopt(self, cls, **kwargs):
+        for g in self.gl:
+            g.changeopt(cls, **kwargs)
     def draw(self):
         self.cw.clear()
         if self.title:

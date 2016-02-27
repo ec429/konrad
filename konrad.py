@@ -2,112 +2,132 @@
 
 import downlink
 import gauge
-import curses
+import curses, curses.ascii
 import optparse
 import math
 
-def fd_main(opts, scr, dl):
+class Console(object):
+    group = None
+    def __init__(self, opts, scr, dl):
+        self.status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
+    def input(self, key):
+        if key == ord(curses.ascii.ctrl('X')):
+            return True # exit
+
+class FDConsole(Console):
     """Flight Director's console"""
-    props = len(opts.propellant)
-    fuel = scr.derwin(2 + props, 26, 14 - props, 53)
-    fuelgroup = gauge.GaugeGroup(fuel, [
-        gauge.FuelGauge(dl, fuel.derwin(1, 24, i + 1, 1), p)
-        for i,p in enumerate(opts.propellant)
-        ], 'Propellants')
-    status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
-    status.push("Telemetry active")
-    obt = scr.derwin(6, 26, 16, 53)
-    obtgroup = gauge.GaugeGroup(obt, [
-        gauge.AltitudeGauge(dl, obt.derwin(1, 24, 1, 1), opts.body),
-        gauge.PeriapsisGauge(dl, obt.derwin(1, 24, 2, 1), opts.body),
-        gauge.ApoapsisGauge(dl, obt.derwin(1, 24, 3, 1)),
-        gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1)),
-        ], 'Orbital')
-    strs = scr.derwin(4, 27, 14 if opts.unmanned else 10, 1)
-    strsgroup = gauge.GaugeGroup(strs, [
-        gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
-        gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
-        ], 'Stresses')
-    if opts.unmanned:
-        capsys = scr.derwin(4, 27, 18, 1)
-        capsysgroup = gauge.GaugeGroup(capsys, [
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
-            gauge.Light(dl, capsys.derwin(1, 6, 2, 1), 'SAS', 'v.sasValue'),
-            gauge.Light(dl, capsys.derwin(1, 6, 2, 7), 'RCS', 'v.rcsValue'),
-            gauge.VLine(dl, capsys.derwin(1, 1, 2, 13)),
-            gauge.Light(dl, capsys.derwin(1, 6, 2, 14), 'GEAR', 'v.gearValue'),
-            gauge.Light(dl, capsys.derwin(1, 6, 2, 20), 'BRK', 'v.brakeValue'),
-            ], 'Avionics')
-    else:
-        capsys = scr.derwin(8, 27, 14, 1)
-        capsysgroup = gauge.GaugeGroup(capsys, [
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
-            gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen'),
-            gauge.Light(dl, capsys.derwin(1, 6, 6, 1), 'SAS', 'v.sasValue'),
-            gauge.Light(dl, capsys.derwin(1, 6, 6, 7), 'RCS', 'v.rcsValue'),
-            gauge.VLine(dl, capsys.derwin(1, 1, 6, 13)),
-            gauge.Light(dl, capsys.derwin(1, 6, 6, 14), 'GEAR', 'v.gearValue'),
-            gauge.Light(dl, capsys.derwin(1, 6, 6, 20), 'BRK', 'v.brakeValue'),
-            ], 'CapSys')
-    orient = scr.derwin(13, 25, 9, 28)
-    origroup = gauge.GaugeGroup(orient, [
-        gauge.NavBall(dl, orient.derwin(11, 23, 1, 1)),
-        ], 'Orientation')
-    body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
-    time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-    return (status, gauge.GaugeGroup(scr,
-                [fuelgroup, status, obtgroup, strsgroup, capsysgroup, origroup, body, time],
-                "KONRAD: FD Console"))
+    def __init__(self, opts, scr, dl):
+        super(FDConsole, self).__init__(opts, scr, dl)
+        props = len(opts.propellant)
+        fuel = scr.derwin(2 + props, 26, 14 - props, 53)
+        fuelgroup = gauge.GaugeGroup(fuel, [
+            gauge.FuelGauge(dl, fuel.derwin(1, 24, i + 1, 1), p)
+            for i,p in enumerate(opts.propellant)
+            ], 'Propellants')
+        obt = scr.derwin(6, 26, 16, 53)
+        obtgroup = gauge.GaugeGroup(obt, [
+            gauge.AltitudeGauge(dl, obt.derwin(1, 24, 1, 1), opts.body),
+            gauge.PeriapsisGauge(dl, obt.derwin(1, 24, 2, 1), opts.body),
+            gauge.ApoapsisGauge(dl, obt.derwin(1, 24, 3, 1)),
+            gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1)),
+            ], 'Orbital')
+        xcons = len(opts.consumable)
+        strs = scr.derwin(4, 27, 14 if opts.unmanned else 10 - xcons, 1)
+        strsgroup = gauge.GaugeGroup(strs, [
+            gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
+            gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
+            ], 'Stresses')
+        if opts.unmanned:
+            capsys = scr.derwin(4, 27, 18, 1)
+            capsysgroup = gauge.GaugeGroup(capsys, [
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
+                gauge.Light(dl, capsys.derwin(1, 6, 2, 1), 'SAS', 'v.sasValue'),
+                gauge.Light(dl, capsys.derwin(1, 6, 2, 7), 'RCS', 'v.rcsValue'),
+                gauge.VLine(dl, capsys.derwin(1, 1, 2, 13)),
+                gauge.Light(dl, capsys.derwin(1, 6, 2, 14), 'GEAR', 'v.gearValue'),
+                gauge.Light(dl, capsys.derwin(1, 6, 2, 20), 'BRK', 'v.brakeValue'),
+                ], 'Avionics')
+        else:
+            capsys = scr.derwin(8 + xcons, 27, 14 - xcons, 1)
+            capsysgroup = gauge.GaugeGroup(capsys, [
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
+                gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen')] +
+                [gauge.FuelGauge(dl, capsys.derwin(1, 25, 6 + i, 1), c) for i,c in enumerate(opts.consumable)] + [
+                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 1), 'SAS', 'v.sasValue'),
+                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 7), 'RCS', 'v.rcsValue'),
+                gauge.VLine(dl, capsys.derwin(1, 1, 6 + xcons, 13)),
+                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 14), 'GEAR', 'v.gearValue'),
+                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 20), 'BRK', 'v.brakeValue'),
+                ], 'CapSys')
+        orient = scr.derwin(13, 25, 9, 28)
+        origroup = gauge.GaugeGroup(orient, [
+            gauge.NavBall(dl, orient.derwin(11, 23, 1, 1)),
+            ], 'Orientation')
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [fuelgroup, obtgroup, strsgroup, capsysgroup, origroup,
+                                       self.status, body, time],
+                                      "KONRAD: FD Console")
 
-def traj_main(opts, scr, dl):
+class TrajConsole(Console):
     """Trajectory console"""
-    status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
-    status.push("Telemetry active")
-    loxn = scr.derwin(4, 27, 10, 52)
-    loxngroup = gauge.GaugeGroup(loxn, [
-        gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
-        gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
-        gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body),
-        ], 'Location')
-    obt = scr.derwin(8, 27, 14, 52)
-    obtgroup = gauge.GaugeGroup(obt, [
-        gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
-        gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
-        gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
-        gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
-        gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
-        gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
-        ], 'Orbital')
-    motion = scr.derwin(4, 34, 15, 1)
-    mogroup = gauge.GaugeGroup(motion, [
-        gauge.ClimbAngleGauge(dl, motion.derwin(1, 16, 1, 1)),
-        gauge.HSpeedGauge(dl, motion.derwin(1, 16, 2, 1)),
-        gauge.VLine(dl, motion.derwin(2, 1, 1, 17)),
-        gauge.AoAGauge(dl, motion.derwin(1, 15, 1, 18)),
-        gauge.VSpeedGauge(dl, motion.derwin(1, 15, 2, 18)),
-        ], 'Motion-(Surface)')
-    orient = scr.derwin(3, 34, 19, 1)
-    origroup = gauge.GaugeGroup(orient, [
-        gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
-        gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
-        gauge.HeadingGauge(dl, orient.derwin(1, 10, 1, 12)),
-        gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
-        gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
-        ], 'Orientation')
-    navball = scr.derwin(9, 17, 13, 35)
-    navgroup = gauge.GaugeGroup(navball, [
-        gauge.NavBall(dl, navball.derwin(7, 15, 1, 1)),
-        ], "NavBall")
-    body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
-    time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-    return (status, gauge.GaugeGroup(scr,
-                [status, loxngroup, obtgroup, mogroup, origroup, navgroup, body, time],
-                "KONRAD: Trajectory"))
+    def __init__(self, opts, scr, dl):
+        super(TrajConsole, self).__init__(opts, scr, dl)
+        loxn = scr.derwin(4, 27, 10, 52)
+        loxngroup = gauge.GaugeGroup(loxn, [
+            gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
+            gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
+            gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body),
+            ], 'Location')
+        obt = scr.derwin(8, 27, 14, 52)
+        obtgroup = gauge.GaugeGroup(obt, [
+            gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
+            gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
+            gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
+            gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
+            gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
+            gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
+            ], 'Orbital')
+        motion = scr.derwin(4, 34, 15, 1)
+        mogroup = gauge.GaugeGroup(motion, [
+            gauge.ClimbAngleGauge(dl, motion.derwin(1, 16, 1, 1)),
+            gauge.HSpeedGauge(dl, motion.derwin(1, 16, 2, 1)),
+            gauge.VLine(dl, motion.derwin(2, 1, 1, 17)),
+            gauge.AoAGauge(dl, motion.derwin(1, 15, 1, 18), opts.retrograde),
+            gauge.VSpeedGauge(dl, motion.derwin(1, 15, 2, 18)),
+            ], 'Motion-(Surface)')
+        orient = scr.derwin(3, 34, 19, 1)
+        origroup = gauge.GaugeGroup(orient, [
+            gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
+            gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
+            gauge.HeadingGauge(dl, orient.derwin(1, 10, 1, 12)),
+            gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
+            gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
+            ], 'Orientation')
+        navball = scr.derwin(9, 17, 13, 35)
+        navgroup = gauge.GaugeGroup(navball, [
+            gauge.NavBall(dl, navball.derwin(7, 15, 1, 1)),
+            ], "NavBall")
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [loxngroup, obtgroup, mogroup, origroup, navgroup,
+                                       self.status, body, time],
+                                      "KONRAD: Trajectory")
+    def input(self, key):
+        if key == ord('<'):
+            self.group.changeopt(gauge.AoAGauge, retro=True)
+            return
+        if key == ord('>'):
+            self.group.changeopt(gauge.AoAGauge, retro=False)
+            return
+        return super(TrajConsole, self).input(key)
 
-consoles = {'fd': fd_main, 'traj': traj_main}
+consoles = {'fd': FDConsole, 'traj': TrajConsole}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
@@ -118,7 +138,9 @@ def parse_opts():
     x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
     x.add_option('--target-obt-vel', type='int', help="Target orbital velocity (m/s)")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
+    x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
+    x.add_option('-r', '--retrograde', action='store_true', help='Assume vessel travelling blunt end first')
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
@@ -134,6 +156,8 @@ def parse_opts():
         opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
     if len(opts.propellant) > 13:
         x.error("Too many propellants!  Max is 13")
+    if len(opts.consumable) > 9:
+        x.error("Too many consumables!  Max is 9")
     return (opts, console)
 
 if __name__ == '__main__':
@@ -166,19 +190,31 @@ if __name__ == '__main__':
                 opts.target_obt_rad = r
     scr = curses.initscr()
     try:
+        curses.noecho()
+        curses.cbreak()
+        scr.keypad(1)
+        scr.nodelay(1)
         gauge.initialise()
-        status, group = console(opts, scr, dl)
-        while True:
+        console = console(opts, scr, dl)
+        console.status.push("Telemetry active")
+        end = False
+        while not end:
+            while True:
+                key = scr.getch()
+                if key < 0:
+                    break
+                if console.input(key):
+                    end = True
             dl.update()
             vname = dl.get('v.name')
             if vname != vessel:
-                status.push("Tracking %s"%(vname,))
+                console.status.push("Tracking %s"%(vname,))
                 vessel = vname
-            ml = group.draw()
-            group.post_draw()
+            ml = console.group.draw()
+            console.group.post_draw()
             if ml is not None:
                 for m in ml:
-                    status.push(m)
+                    console.status.push(m)
             scr.refresh()
     finally:
         curses.endwin()
