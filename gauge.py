@@ -280,27 +280,27 @@ class SIGauge(FractionGauge):
 class DownrangeGauge(SIGauge):
     unit = 'm'
     label = 'Downrange'
-    def __init__(self, dl, cw, body):
+    def __init__(self, dl, cw, body, init_lat=None, init_long=None):
         super(DownrangeGauge, self).__init__(dl, cw)
         self.add_prop('lat', 'v.lat')
         self.add_prop('lon', 'v.long')
         self.add_prop('brad', 'b.radius[%d]'%(body,))
-        self.init = None
+        self.init_lat = init_lat
+        self.init_long = init_long
     def draw(self):
         lat = self.get('lat')
         lon = self.get('lon')
         brad = self.get('brad')
-        if None in (lat, lon):
-            d = 0
-        elif self.init is None:
-            self.init = (lat, lon)
-            d = 0
-        elif brad is None:
-            d = 0
+        if self.init_lat is None:
+            self.init_lat = lat
+        if self.init_long is None:
+            self.init_long = long
+        if None in (lat, lon, self.init_lat, self.init_long, brad):
+            d = None
         else:
             # https://en.wikipedia.org/wiki/Great-circle_distance#Formulas
-            phi1 = math.radians(self.init[0])
-            lbd1 = math.radians(self.init[1])
+            phi1 = math.radians(self.init_lat)
+            lbd1 = math.radians(self.init_long)
             phi2 = math.radians(lat)
             lbd2 = math.radians(lon)
             dlbd = lbd2 - lbd1

@@ -9,6 +9,7 @@ import math
 class Console(object):
     group = None
     def __init__(self, opts, scr, dl):
+        self.dl = dl
         self.status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     def input(self, key):
         if key == ord(curses.ascii.ctrl('X')):
@@ -72,6 +73,31 @@ class FDConsole(Console):
                                       [fuelgroup, obtgroup, strsgroup, capsysgroup, origroup,
                                        self.status, body, time],
                                       "KONRAD: FD Console")
+    def input(self, key):
+        if key >= ord('0') and key <= ord('9'):
+            i = int(chr(key))
+            if i == 0: i = 10
+            self.dl.send_msg({'run':['f.ag%d'%(i,)]})
+            return
+        if key == ord('t'):
+            self.dl.send_msg({'run':['f.sas']})
+            return
+        if key == ord('r'):
+            self.dl.send_msg({'run':['f.rcs']})
+            return
+        if key == ord('g'):
+            self.dl.send_msg({'run':['f.gear']})
+            return
+        if key == ord('b'):
+            self.dl.send_msg({'run':['f.brake']})
+            return
+        if key == ord('!'):
+            self.dl.send_msg({'run':['f.abort']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        return super(FDConsole, self).input(key)
 
 class TrajConsole(Console):
     """Trajectory console"""
@@ -81,7 +107,7 @@ class TrajConsole(Console):
         loxngroup = gauge.GaugeGroup(loxn, [
             gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
             gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
-            gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body),
+            gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body, opts.init_lat, opts.init_long),
             ], 'Location')
         obt = scr.derwin(8, 27, 14, 52)
         obtgroup = gauge.GaugeGroup(obt, [
@@ -141,6 +167,9 @@ def parse_opts():
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
     x.add_option('-r', '--retrograde', action='store_true', help='Assume vessel travelling blunt end first')
+    x.add_option('--init-lat', type='float', help="Latitude of launch (or target) site")
+    x.add_option('--init-long', type='float', help="Longitude of launch (or target) site")
+    x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
@@ -158,6 +187,9 @@ def parse_opts():
         x.error("Too many propellants!  Max is 13")
     if len(opts.consumable) > 9:
         x.error("Too many consumables!  Max is 9")
+    if opts.ccafs:
+        opts.init_lat = 28.608389
+        opts.init_long = -80.604333
     return (opts, console)
 
 if __name__ == '__main__':
