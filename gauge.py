@@ -173,15 +173,18 @@ class ObtPeriodGauge(OneLineGauge):
             self.addstr('LINK DOWN')
             self.chgat(0, self.width, curses.color_pair(2))
             return
+        s = t % 60
+        m = (t / 60) % 60
+        h = (t / 3600) % 24
+        d = (t / 86400)
         if t < 60:
             text = '%ds'%(t,)
         elif t < 3600:
             text = '%dm%02ds'%(t / 60, t % 60)
+        elif t < 86400:
+            text = '%dh%02dm%02ds'%(h, m, s)
         else:
-            s = t % 60
-            m = (t / 60) % 60
-            h = (t / 3600)
-            text = '%dh%02dm%02d'%(h, m, s)
+            text = '%dd%02dh%02dm'%(d, h, m)
         label = 'Period'
         width = self.width - len(label) - 2
         self.addstr('%s: %s'%(label, text.rjust(width)[:width]))
@@ -382,7 +385,8 @@ class ObtVelocityGauge(SIGauge):
             # sqrt(mu * (2/r - 1/a))
             alt = self.get('alt')
             if alt is not None:
-                self.target = math.sqrt(self.tmu * (2.0 / (alt + self.trad) - 1.0 / self.tsma))
+                squared = self.tmu * (2.0 / (alt + self.trad) - 1.0 / self.tsma)
+                self.target = None if squared < 0 else math.sqrt(squared)
             else:
                 self.target = None
         super(ObtVelocityGauge, self).draw(self.get('orbV'))
