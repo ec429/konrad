@@ -239,7 +239,7 @@ if __name__ == '__main__':
                     end = True
             dl.update()
             vname = dl.get('v.name')
-            if vname != vessel:
+            if vname != vessel and vname is not None:
                 console.status.push("Tracking %s"%(vname,))
                 vessel = vname
             ml = console.group.draw()

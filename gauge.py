@@ -322,6 +322,8 @@ class AltitudeGauge(SIGauge):
         alt = self.get('alt')
         super(AltitudeGauge, self).draw(alt)
         atm_top = self.get('atm_top')
+        if None in (alt, atm_top):
+            return
         if alt > atm_top:
             if not self.vac:
                 self.vac = True
@@ -343,6 +345,7 @@ class PeriapsisGauge(SIGauge):
         peri = self.get('peri')
         super(PeriapsisGauge, self).draw(peri)
         atm_top = self.get('atm_top')
+        if None in (peri, atm_top): return
         if peri > atm_top:
             if not self.orb:
                 self.orb = True
