@@ -297,7 +297,7 @@ class DownrangeGauge(SIGauge):
         if self.init_lat is None:
             self.init_lat = lat
         if self.init_long is None:
-            self.init_long = long
+            self.init_long = lon
         if None in (lat, lon, self.init_lat, self.init_long, brad):
             d = None
         else:
