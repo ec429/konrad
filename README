@@ -8,8 +8,14 @@ konrad.py must always be run with a 'consname' argument, indicating which
 console it should display.  So far we have the following:
 * fd
 	Flight Director.  Summarises key vehicle state.
+	Inputs:
+	- t/r/b/g for SAS/RCS/BRK/GEAR
+	- space for staging
+	- 1-9 and 0 for action groups
+	- ! (shift-1) for Abort!  (NOTE!  Not the same key as in KSP!)
 * traj
 	Trajectory.  The guy who's steering probably wants this one.
+	Inputs: < (retrograde) and > (prograde) control AoA gauge behaviour.
 
 Useful Notes
 ------------
