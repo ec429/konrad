@@ -2,6 +2,7 @@
 
 import websocket
 import json
+import time
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8085
@@ -72,6 +73,23 @@ class Downlink(object):
 
 def connect_default():
     return Downlink(DEFAULT_HOST, DEFAULT_PORT, DEFAULT_RATE)
+
+class FakeDownlink(object):
+    """A hollow shell that implements the Downlink interface.  Useful for
+    testing things without having a Telemachus server to connect to."""
+    def __init__(self, *args, **kwargs):
+        self.data = {}
+    def send_msg(self, d):
+        pass
+    def subscribe(self, key):
+        pass
+    def unsubscribe(self, key):
+        pass
+    def update(self):
+        time.sleep(DEFAULT_RATE / 1000.0)
+        return {}
+    def get(self, key, default=None):
+        return None
 
 if __name__ == '__main__':
     # Simple test code
