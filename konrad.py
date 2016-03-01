@@ -171,6 +171,7 @@ def parse_opts():
     x.add_option('--init-long', type='float', help="Longitude of launch (or target) site")
     x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
     x.add_option('--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
+    x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
@@ -196,10 +197,14 @@ def parse_opts():
 if __name__ == '__main__':
     opts, console = parse_opts()
     gauge.fallover = opts.fallover
+    if opts.log_to:
+        logf = open(opts.log_to, "wb")
+    else:
+        logf = None
     if opts.dry_run:
         dl = downlink.FakeDownlink()
     else:
-        dl = downlink.connect_default()
+        dl = downlink.connect_default(logf=logf)
     vessel = None
     dl.subscribe('v.name')
     if opts.target_alt and not (opts.target_peri or opts.target_apo):
