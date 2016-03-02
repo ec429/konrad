@@ -48,8 +48,6 @@ class VLine(Gauge):
         super(VLine, self).draw()
         self.cw.vline(0, 0, curses.ACS_VLINE, self.height)
 
-import time
-
 class NavBall(Gauge):
     def __init__(self, dl, cw):
         super(NavBall, self).__init__(dl, cw)
