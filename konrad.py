@@ -5,6 +5,7 @@ import gauge
 import curses, curses.ascii
 import optparse
 import math
+import booster
 
 class Console(object):
     group = None
@@ -153,7 +154,30 @@ class TrajConsole(Console):
             return
         return super(TrajConsole, self).input(key)
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole}
+class BoosterConsole(Console):
+    """Booster Dynamics console"""
+    def __init__(self, opts, scr, dl):
+        super(BoosterConsole, self).__init__(opts, scr, dl)
+        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        props = len(opts.propellant)
+        fuel = scr.derwin(2 + props, 26, 20 - props, 53)
+        fuelgroup = gauge.GaugeGroup(fuel, [
+            gauge.FuelGauge(dl, fuel.derwin(1, 24, i + 1, 1), p)
+            for i,p in enumerate(opts.propellant)
+            ], 'Propellants')
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        stages = scr.derwin(18, 40, 4, 1)
+        stagesgroup = gauge.GaugeGroup(stages, [
+            gauge.StagesGauge(dl, stages.derwin(16, 38, 1, 1), opts.booster),
+            ], 'Stages')
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [update, fuelgroup, deltav, stagesgroup,
+                                       self.status, body, time],
+                                      "KONRAD: Booster")
+
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
@@ -172,6 +196,7 @@ def parse_opts():
     x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
     x.add_option('--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
     x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
+    x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
@@ -183,6 +208,11 @@ def parse_opts():
     if consname not in consoles:
         x.error("No such consname %s"%(consname,))
     console = consoles[consname]
+    if opts.booster:
+        opts.booster = open(opts.booster, 'r')
+        opts.booster = booster.Booster.from_json(opts.booster.read())
+        if not opts.propellant:
+            opts.propellant = opts.booster.all_props
     if not opts.propellant:
         opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
     if len(opts.propellant) > 13:

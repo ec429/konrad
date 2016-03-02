@@ -615,6 +615,57 @@ class Light(OneLineGauge):
         self.addstr(self.centext(flag + self.text))
         self.chgat(0, self.width, curses.color_pair(col))
 
+class UpdateBooster(Gauge):
+    def __init__(self, dl, cw, booster):
+        super(UpdateBooster, self).__init__(dl, cw)
+        self.booster = booster
+        for p in self.booster.all_props:
+            self.add_prop(p, 'r.resource[%s]'%(p,))
+            self.add_prop('%s_max'%(p,), 'r.resourceMax[%s]'%(p,))
+    def draw(self):
+        # we don't actually draw anything...
+        # we just do some calculations!
+        has_staged = False
+        for p in self.booster.all_props:
+            mx = self.get('%s_max'%(p,))
+            if mx is None: continue
+            if mx < self.booster.stages[0].prop_all(p) * 0.99:
+                has_staged = True
+        if has_staged:
+            self.booster.stage()
+        for p in self.booster.all_props:
+            amt = self.get(p)
+            if amt is None: continue
+            for s in reversed(self.booster.stages):
+                prop = s.this_prop(p)
+                if prop is not None:
+                    prop.filled = min(amt, prop.volume)
+                    amt -= prop.filled
+        if has_staged:
+            return "Booster staged"
+
+class DeltaVGauge(SIGauge):
+    unit = 'm/s'
+    label = 'Vac.DeltaV'
+    def __init__(self, dl, cw, booster):
+        super(DeltaVGauge, self).__init__(dl, cw)
+        self.booster = booster
+    def draw(self):
+        super(DeltaVGauge, self).draw(self.booster.deltaV)
+
+class StagesGauge(Gauge):
+    def __init__(self, dl, cw, booster):
+        super(StagesGauge, self).__init__(dl, cw)
+        self.booster = booster
+    def draw(self):
+        self.cw.clear()
+        for i,s in enumerate(self.booster.stages):
+            if i * 2 < self.height:
+                header = 'Stage %d [%s]'%(i + 1, ', '.join(s.propnames))
+                self.cw.addnstr(i * 2, 0, header, self.width)
+                deltav = 'Vac.dV: %dm/s'%(s.deltaV,)
+                self.cw.addnstr(i * 2 + 1, 0, deltav, self.width)
+
 global fallover
 
 class GaugeGroup(object):
