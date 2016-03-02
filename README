@@ -16,6 +16,10 @@ console it should display.  So far we have the following:
 * traj
 	Trajectory.  The guy who's steering probably wants this one.
 	Inputs: < (retrograde) and > (prograde) control AoA gauge behaviour.
+* boost
+	Booster.  Track remaining fuel and delta-V.
+	Requires an accurate JSON Booster file, supplied with --booster.  See the
+	section "JSON Booster" below for more information.
 
 Useful Notes
 ------------
@@ -37,3 +41,35 @@ not match the name retrieved for the bodyID, KONRAD will warn the user, showing
 a value of <current>!<expected> in the BodyGauge (and pushing a "Change Body"
 message to the status line).  In this situation, calculated values such as the
 target orbital velocity will be bogus.
+
+JSON Booster
+------------
+A way of telling KONRAD some things about your rocket that it can't get from
+the telemetry.  The information is specified in JSON format, according to the
+following layout:
+The top-level item is a Booster, which consists of a list of Stages.
+A Stage is a dictionary, with the following items:
+  "props": list of Propellants
+  "isp": main engine Isp in seconds
+  "dry": stage dry mass in tons
+A Propellant is a dictionary, with the following items:
+  "name": the KSP resource name of the propellant
+  "volume": the volume of the tank (this is in litres if using RealismOverhaul)
+  "density": the propellant density.  Look in resource files for this
+  "mainEngine": optional boolean (defaults to true) indicating whether this
+                 propellant is consumed by the main engine (and is thus part of
+                 the interpretation of the Isp figure)
+Some examples are in the test/ directory:
+* WAC.  Three TinyTim boosters and an Aerobee sustainer.
+* AtlasAgena.  An Agena-D (with hydrazine RCS) on an Atlas SLV-3.  This example
+   exhibits one of the main limitations of the format: it can't comprehend
+   Atlas-style parallel staging.  But that's OK, because there's no way for us
+   to figure out from the telemetry whether the booster engines have been
+   dropped _anyway_, as Telemachus won't give us staging information directly -
+   we have to deduce it by noticing that tanks have been dropped, which of
+   course doesn't work for Atlas.
+
+As it's somewhat annoying to have to go and look up the densities for all your
+propellants, it would be nice to have a way to export these densities - or
+better yet, an entire JSON Booster specification - from the game.  That's
+something I plan to look into in the not-too-distant future.
