@@ -1,0 +1,11 @@
+[{
+    "props": [{"name": "SolidFuel", "volume": 113.598, "density": 0.00178}],
+    "isp": 220,
+    "dry": 0.81722},
+{
+    "props": [{"name": "Aniline", "volume": 79.47, "density": 0.00102},
+              {"name": "Furfuryl", "volume": 19.87, "density": 0.00113},
+              {"name": "IRFNA-III", "volume": 143.8, "density": 0.001658}],
+    "isp": 218.36,
+    "dry": 0.122}
+]
