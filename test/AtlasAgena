@@ -1,0 +1,15 @@
+[
+{   "props": [{"name": "Kerosene", "volume": 0, "density": 0.00082},
+              {"name": "LqdOxygen", "volume": 0, "density": 0.001141}],
+    "isp": 282,
+    "dry": 2.892},
+{   "props": [{"name": "Kerosene", "volume": 43024.4, "density": 0.00082},
+              {"name": "LqdOxygen", "volume": 69604.9, "density": 0.001141}],
+    "isp": 309,
+    "dry": 2.441},
+{   "props": [{"name": "UDMH", "volume": 2507, "density": 0.000791},
+              {"name": "IRFNA-III", "volume": 3077, "density": 0.001658},
+              {"name": "Hydrazine", "volume": 72.95, "density": 0.001004, "mainEngine": false}],
+    "isp": 291,
+    "dry": 0.992}
+]
