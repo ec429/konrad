@@ -127,6 +127,19 @@ class FixedLabel(OneLineGauge):
         super(FixedLabel, self).draw()
         self.addstr(self.text)
 
+class VariableLabel(OneLineGauge):
+    def __init__(self, dl, cw, d, key, centered=False):
+        super(VariableLabel, self).__init__(dl, cw)
+        self.d = d
+        self.key = key
+        self.centered = centered
+    def draw(self):
+        super(VariableLabel, self).draw()
+        text = self.d.get(self.key, '')
+        if self.centered:
+            text = self.centext(text)
+        self.addstr(text)
+
 class StatusReadout(OneLineGauge):
     def __init__(self, dl, cw, label):
         super(StatusReadout, self).__init__(dl, cw)
@@ -504,13 +517,16 @@ class AngleGauge(FractionGauge):
     label = ''
     fsd = 180
     api = None
-    def __init__(self, dl, cw):
+    def __init__(self, dl, cw, want=None):
         super(AngleGauge, self).__init__(dl, cw)
-        if self.api:
+        self.want = want
+        if self.api and (self.want is None):
             self.add_prop('angle', self.api)
     @property
     def angle(self):
-        return self.get('angle')
+        if self.want is None:
+            return self.get('angle')
+        return self.want.get(self.label)
     def draw(self):
         angle = self.angle
         width = self.width - len(self.label) - 2

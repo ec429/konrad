@@ -104,6 +104,7 @@ class TrajConsole(Console):
     """Trajectory console"""
     def __init__(self, opts, scr, dl):
         super(TrajConsole, self).__init__(opts, scr, dl)
+        self.want = {'PIT': 90, 'HDG': 90, 'RLL': 0, 'mode': 'Off'}
         loxn = scr.derwin(4, 27, 10, 52)
         loxngroup = gauge.GaugeGroup(loxn, [
             gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
@@ -119,7 +120,8 @@ class TrajConsole(Console):
             gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
             ], 'Orbital')
-        motion = scr.derwin(4, 34, 15, 1)
+        shift = 3 if opts.mj else 0
+        motion = scr.derwin(4, 34, 15 - shift, 1)
         mogroup = gauge.GaugeGroup(motion, [
             gauge.ClimbAngleGauge(dl, motion.derwin(1, 16, 1, 1)),
             gauge.HSpeedGauge(dl, motion.derwin(1, 16, 2, 1)),
@@ -127,7 +129,7 @@ class TrajConsole(Console):
             gauge.AoAGauge(dl, motion.derwin(1, 15, 1, 18), opts.retrograde),
             gauge.VSpeedGauge(dl, motion.derwin(1, 15, 2, 18)),
             ], 'Motion-(Surface)')
-        orient = scr.derwin(3, 34, 19, 1)
+        orient = scr.derwin(3, 34, 19 - shift, 1)
         origroup = gauge.GaugeGroup(orient, [
             gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
             gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
@@ -135,16 +137,37 @@ class TrajConsole(Console):
             gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
             gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
             ], 'Orientation')
-        navball = scr.derwin(9, 17, 13, 35)
+        navball = scr.derwin(9, 17, 13 - shift, 35)
         navgroup = gauge.GaugeGroup(navball, [
             gauge.NavBall(dl, navball.derwin(7, 15, 1, 1)),
             ], "NavBall")
+        if opts.mj:
+            oriwant = scr.derwin(3, 34, 19, 1)
+            owgroup = gauge.GaugeGroup(oriwant, [
+                gauge.PitchGauge(dl, oriwant.derwin(1, 10, 1, 1), want=self.want),
+                gauge.VLine(dl, oriwant.derwin(1, 1, 1, 11)),
+                gauge.HeadingGauge(dl, oriwant.derwin(1, 10, 1, 12), want=self.want),
+                gauge.VLine(dl, oriwant.derwin(1, 1, 1, 22)),
+                gauge.RollGauge(dl, oriwant.derwin(1, 10, 1, 23), want=self.want),
+                ], 'Input Orientation')
+            wm = scr.derwin(3, 17, 19, 35)
+            wmgroup = gauge.GaugeGroup(wm, [
+                gauge.VariableLabel(dl, wm.derwin(1, 15, 1, 1), self.want, 'mode', centered=True),
+                ], 'AP Mode')
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
-        self.group = gauge.GaugeGroup(scr,
-                                      [loxngroup, obtgroup, mogroup, origroup, navgroup,
-                                       self.status, body, time],
-                                      "KONRAD: Trajectory")
+        gauges = [loxngroup, obtgroup, mogroup, origroup, navgroup]
+        if opts.mj:
+            gauges += [owgroup, wmgroup]
+        self.group = gauge.GaugeGroup(scr, gauges + [self.status, body, time], "KONRAD: Trajectory")
+    def maybe_push_mj(self):
+        if opts.mj and self.want['mode'] == 'Fixed':
+            cmd = 'mj.surface2[%f, %f, %f]'%(self.want['HDG'], self.want['PIT'], self.want['RLL'])
+            self.dl.send_msg({'run':[cmd]})
+    def mj_mode(self, mode, api):
+        self.want['mode'] = mode
+        if opts.mj:
+            self.dl.send_msg({'run':[api]})
     def input(self, key):
         if key == ord('<'):
             self.group.changeopt(gauge.AoAGauge, retro=True)
@@ -152,6 +175,67 @@ class TrajConsole(Console):
         if key == ord('>'):
             self.group.changeopt(gauge.AoAGauge, retro=False)
             return
+        # Input Orientation, for AP Fixed
+        if key == ord('d'):
+            self.want['HDG'] = (self.want['HDG'] + 10) % 360
+            return self.maybe_push_mj()
+        if key == ord('a'):
+            self.want['HDG'] = (self.want['HDG'] + 350) % 360
+            return self.maybe_push_mj()
+        if key == ord('s'):
+            self.want['PIT'] = min(self.want['PIT'] + 10, 90)
+            return self.maybe_push_mj()
+        if key == ord('w'):
+            self.want['PIT'] = max(self.want['PIT'] - 10, -90)
+            return self.maybe_push_mj()
+        if key == ord('e'):
+            self.want['RLL'] = (self.want['RLL'] + 10) % 360
+            return self.maybe_push_mj()
+        if key == ord('q'):
+            self.want['RLL'] = (self.want['RLL'] + 350) % 360
+            return self.maybe_push_mj()
+        if key == ord('D'):
+            self.want['HDG'] = (self.want['HDG'] + 1) % 360
+            return self.maybe_push_mj()
+        if key == ord('A'):
+            self.want['HDG'] = (self.want['HDG'] + 359) % 360
+            return self.maybe_push_mj()
+        if key == ord('S'):
+            self.want['PIT'] = min(self.want['PIT'] + 1, 90)
+            return self.maybe_push_mj()
+        if key == ord('W'):
+            self.want['PIT'] = max(self.want['PIT'] - 1, -90)
+            return self.maybe_push_mj()
+        if key == ord('E'):
+            self.want['RLL'] = (self.want['RLL'] + 1) % 360
+            return self.maybe_push_mj()
+        if key == ord('Q'):
+            self.want['RLL'] = (self.want['RLL'] + 359) % 360
+            return self.maybe_push_mj()
+        # Copy from measured orientation
+        if key == ord('?'):
+            self.want['PIT'] = self.dl.get('n.pitch2', 90)
+            self.want['HDG'] = self.dl.get('n.heading2', 90)
+            self.want['RLL'] = self.dl.get('n.roll2', 0)
+        # AP Modes
+        if key == ord(' '):
+            return self.mj_mode('None', 'mj.smartassoff')
+        if key in [ord('\r'), ord('\n')]:
+            self.want['mode'] = 'Fixed'
+            return self.maybe_push_mj()
+        if key == ord('P'):
+            return self.mj_mode('Prograde', 'mj.prograde')
+        if key == ord('R'):
+            return self.mj_mode('Retrograde', 'mj.retrograde')
+        if key == ord('O'): # 'O'utwards
+            return self.mj_mode('Radial', 'mj.radialplus')
+        if key == ord('I'): # 'I'nwards
+            return self.mj_mode('Anti-Radial', 'mj.radialminus')
+        if key == ord('+'):
+            return self.mj_mode('Normal', 'mj.normalplus')
+        if key == ord('-'):
+            return self.mj_mode('Anti-Normal', 'mj.normalminus')
+
         return super(TrajConsole, self).input(key)
 
 class BoosterConsole(Console):
@@ -197,6 +281,7 @@ def parse_opts():
     x.add_option('--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
     x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
+    x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
