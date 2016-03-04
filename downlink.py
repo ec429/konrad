@@ -105,7 +105,7 @@ class FakeDownlink(object):
         time.sleep(DEFAULT_RATE / 1000.0)
         return {}
     def get(self, key, default=None):
-        return None
+        return default
 
 if __name__ == '__main__':
     # Simple test code
