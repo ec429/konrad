@@ -506,6 +506,8 @@ class FuelGauge(PercentageGauge):
         current = self.get('current')
         full = self.get('max')
         super(FuelGauge, self).draw(current, full, self.resource)
+        if None in (current, full):
+            return
         if current < 0.01 and full > 0:
             if not self.zero:
                 self.zero = True
