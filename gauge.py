@@ -41,7 +41,7 @@ class Gauge(object):
         self.cw.clear()
         self.cw.border()
     def post_draw(self):
-        self.cw.refresh()
+        self.cw.noutrefresh()
 
 class VLine(Gauge):
     def draw(self):
@@ -721,7 +721,7 @@ class GaugeGroup(object):
     def post_draw(self):
         for g in self.gl:
             g.post_draw()
-        self.cw.refresh()
+        self.cw.noutrefresh()
 
 if __name__ == '__main__':
     import downlink
