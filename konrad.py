@@ -162,7 +162,7 @@ class TrajConsole(Console):
         self.group = gauge.GaugeGroup(scr, gauges + [self.status, body, time], "KONRAD: Trajectory")
     def maybe_push_mj(self):
         if opts.mj and self.want['mode'] == 'Fixed':
-            cmd = 'mj.surface2[%f, %f, %f]'%(self.want['HDG'], self.want['PIT'], self.want['RLL'])
+            cmd = 'mj.surface2[%f,%f,%f]'%(self.want['HDG'], self.want['PIT'], self.want['RLL'])
             self.dl.send_msg({'run':[cmd]})
     def mj_mode(self, mode, api):
         self.want['mode'] = mode
