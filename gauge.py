@@ -499,6 +499,7 @@ class GeeGauge(OneLineGauge):
 
 class PercentageGauge(FractionGauge):
     def draw(self, n, d, s):
+        super(PercentageGauge, self).draw()
         if d is None or d < 0 or n is None:
             if self.width < 7:
                 text = "N/A"
