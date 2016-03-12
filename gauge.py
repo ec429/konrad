@@ -140,6 +140,30 @@ class VariableLabel(OneLineGauge):
             text = self.centext(text)
         self.addstr(text)
 
+class MJMode(OneLineGauge):
+    # Return codes for mj.*:
+    # 0 Success
+    # 1 Game paused
+    # 2 Antenna unpowered
+    # 3 Antenna inactive
+    # 4 Antenna unreach
+    # 5 No MJ part
+    # (source: https://github.com/SavinaRoja/Kerminal/blob/master/kerminal/commands/mechjeb.py)
+    def __init__(self, dl, cw, want):
+        super(MJMode, self).__init__(dl, cw)
+        self.want = want
+    def draw(self):
+        if 'reqm' in self.want:
+            reqm = self.want['reqm']
+            if reqm in self.dl.data:
+                rc = self.dl.data[reqm]
+                if rc:
+                    self.want['mode'] = 'Error %d'%(rc,)
+                del self.dl.data[reqm]
+                del self.want['reqm']
+        text = self.want.get('mode', '')
+        self.addstr(self.centext(text))
+
 class StatusReadout(OneLineGauge):
     def __init__(self, dl, cw, label):
         super(StatusReadout, self).__init__(dl, cw)
@@ -475,7 +499,7 @@ class GeeGauge(OneLineGauge):
 
 class PercentageGauge(FractionGauge):
     def draw(self, n, d, s):
-        if d is None or d < 0:
+        if d is None or d < 0 or n is None:
             if self.width < 7:
                 text = "N/A"
             else:
@@ -514,6 +538,14 @@ class FuelGauge(PercentageGauge):
                 return '%s exhausted'%(self.resource,)
         else:
             self.zero = False
+
+class ThrottleGauge(PercentageGauge):
+    def __init__(self, dl, cw):
+        super(ThrottleGauge, self).__init__(dl, cw)
+        self.add_prop('throttle', "f.throttle")
+    def draw(self):
+        throttle = self.get('throttle')
+        super(ThrottleGauge, self).draw(throttle, 1.0, "Throttle")
 
 class AngleGauge(FractionGauge):
     label = ''

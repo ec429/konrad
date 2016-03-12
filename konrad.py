@@ -152,7 +152,7 @@ class TrajConsole(Console):
                 ], 'Input Orientation')
             wm = scr.derwin(3, 17, 19, 35)
             wmgroup = gauge.GaugeGroup(wm, [
-                gauge.VariableLabel(dl, wm.derwin(1, 15, 1, 1), self.want, 'mode', centered=True),
+                gauge.MJMode(dl, wm.derwin(1, 15, 1, 1), self.want),
                 ], 'AP Mode')
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
@@ -163,10 +163,12 @@ class TrajConsole(Console):
     def maybe_push_mj(self):
         if opts.mj and self.want['mode'] == 'Fixed':
             cmd = 'mj.surface2[%f,%f,%f]'%(self.want['HDG'], self.want['PIT'], self.want['RLL'])
+            self.want['reqm'] = cmd
             self.dl.send_msg({'run':[cmd]})
     def mj_mode(self, mode, api):
         self.want['mode'] = mode
         if opts.mj:
+            self.want['reqm'] = api
             self.dl.send_msg({'run':[api]})
     def input(self, key):
         if key == ord('<'):
@@ -250,6 +252,7 @@ class BoosterConsole(Console):
             for i,p in enumerate(opts.propellant)
             ], 'Propellants')
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         stages = scr.derwin(18, 40, 4, 1)
         stagesgroup = gauge.GaugeGroup(stages, [
             gauge.StagesGauge(dl, stages.derwin(16, 38, 1, 1), opts.booster),
@@ -257,9 +260,24 @@ class BoosterConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, fuelgroup, deltav, stagesgroup,
+                                      [update, fuelgroup, deltav, throttle, stagesgroup,
                                        self.status, body, time],
                                       "KONRAD: Booster")
+    def input(self, key):
+        if key >= ord('1') and key <= ord('9'):
+            i = int(chr(key))
+            self.dl.send_msg({'run':['f.setThrottle[%f]'%(i/10.0,)]})
+            return
+        if key == ord('z'):
+            self.dl.send_msg({'run':['f.setThrottle[1.0]']})
+            return
+        if key == ord('x'):
+            self.dl.send_msg({'run':['f.setThrottle[0.0]']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        return super(BoosterConsole, self).input(key)
 
 consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole}
 
