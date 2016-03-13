@@ -14,6 +14,8 @@ class Propellant(object):
     @property
     def mass(self):
         return self.filled * self.density
+    def __str__(self):
+        return self.name if self.mainEngine else '(%s)'%(self.name,)
     @classmethod
     def from_dict(cls, d):
         return cls(d['name'], d['volume'], d['density'], d.get('mainEngine', True))
@@ -66,7 +68,7 @@ class Stage(object):
         return self.prop_here(propname) + self.prop_above(propname)
     @property
     def propnames(self):
-        return [p.name for p in self.props]
+        return [str(p) for p in self.props]
     @classmethod
     def from_dict(cls, d):
         return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'])
