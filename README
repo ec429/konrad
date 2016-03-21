@@ -91,9 +91,14 @@ Some examples are in the test/ directory:
    to figure out from the telemetry whether the booster engines have been
    dropped _anyway_, as Telemachus won't give us staging information directly -
    we have to deduce it by noticing that tanks have been dropped, which of
-   course doesn't work for Atlas.
+   course doesn't work for Atlas.  (However, it turns out that the booster
+   engines have TEATEB tanks, meaning that we _can_ detect the staging event.)
 
-As it's somewhat annoying to have to go and look up the densities for all your
-propellants, it would be nice to have a way to export these densities - or
-better yet, an entire JSON Booster specification - from the game.  That's
-something I plan to look into in the not-too-distant future.
+As it's somewhat annoying to have to work out all these values (particularly
+ the dry masses), it would be nice to have a way to export a JSON Booster
+ specification from the game.  That's something I plan to look into in the
+ not-too-distant future.
+You can, however, avoid having to look up all the densities: just set the
+ environment variable KSPPATH to point at your KSP top-level directory, and
+ KONRAD will read GameData/ModuleManager.ConfigCache to find them out.  That
+ way, you can leave the "density" key out of Propellant specifications.
