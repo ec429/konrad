@@ -3,6 +3,8 @@
 
 import math
 import json
+import os
+import cfg
 
 class Propellant(object):
     def __init__(self, name, volume, density, mainEngine):
@@ -18,7 +20,10 @@ class Propellant(object):
         return self.name if self.mainEngine else '(%s)'%(self.name,)
     @classmethod
     def from_dict(cls, d):
-        return cls(d['name'], d['volume'], d['density'], d.get('mainEngine', True))
+        name = d['name']
+        if 'density' not in d:
+            d['density'] = known_props[name]
+        return cls(name, d['volume'], d['density'], d.get('mainEngine', True))
 
 class Stage(object):
     def __init__(self, props, isp, dry):
@@ -102,6 +107,22 @@ class Booster(object):
     def from_json(cls, j):
         d = json.loads(j)
         return cls.from_dict(d)
+
+ksppath = os.environ.get('KSPPATH')
+known_props = {}
+if ksppath is not None:
+    try:
+        with open(os.path.join(ksppath, 'GameData', 'ModuleManager.ConfigCache'), 'r') as f:
+            d = cfg.parse(f)
+            d = d.get('UrlConfig', {})
+            for c in d:
+                if 'RESOURCE_DEFINITION' in c:
+                    r = c['RESOURCE_DEFINITION']
+                    for rd in r:
+                        if 'name' in rd and 'density' in rd:
+                            known_props[rd['name']] = float(rd['density'])
+    except IOError:
+        pass
 
 if __name__ == '__main__':
     import sys
