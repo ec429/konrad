@@ -93,11 +93,22 @@ Some examples are in the test/ directory:
    we have to deduce it by noticing that tanks have been dropped, which of
    course doesn't work for Atlas.  (However, it turns out that the booster
    engines have TEATEB tanks, meaning that we _can_ detect the staging event.)
+* MercuryAtlas.  An example of how to make parallel staging work, based on
+   FASA's Mercury and Atlas parts.  Note how (a) the sustainer propellants are
+   listed under the third stage, even though they're in the same tank as the
+   others; (b) the TEATEB tanks on the LR-89 booster engines are used to detect
+   when those engines are dropped; (c) the escape tower is treated as dead
+   weight because in a nominal launch it will be jettisoned rather than fired.
+   The delta-V for the booster stage will be a slight underestimate, because
+   the concurrent sustainer burn is at a higher Isp; strictly speaking we
+   should use an average Isp weighted by fuel flow rate, but this would be very
+   close to the booster engine Isp, so the errors should be small.
 
 As it's somewhat annoying to have to work out all these values (particularly
  the dry masses), it would be nice to have a way to export a JSON Booster
  specification from the game.  That's something I plan to look into in the
- not-too-distant future.
+ not-too-distant future.  (Unfortunately, the tricks we use for Atlas would
+ still need to be done by hand.)
 You can, however, avoid having to look up all the densities: just set the
  environment variable KSPPATH to point at your KSP top-level directory, and
  KONRAD will read GameData/ModuleManager.ConfigCache to find them out.  That

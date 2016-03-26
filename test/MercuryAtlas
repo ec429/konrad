@@ -1,0 +1,23 @@
+[
+{   "props": [{"name": "Kerosene", "volume": 31605.5},
+              {"name": "LqdOxygen", "volume": 51130},
+              {"name": "TEATEB", "volume": 2, "mainEngine": false}],
+    "isp": 282,
+    "dry": 3.050},
+{   "props": [{"name": "PSPC", "volume": 64.45, "mainEngine": false}],
+    "isp": 0,
+    "dry": 0.4679},
+{   "props": [{"name": "Kerosene", "volume": 9920},
+              {"name": "LqdOxygen", "volume": 16050}],
+    "isp": 311,
+    "dry": 2.626},
+{   "props": [{"name": "PSPC", "volume": 3.309}],
+    "isp": 107,
+    "dry": 0},
+{   "props": [{"name": "PSPC", "volume": 111.9}],
+    "isp": 107,
+    "dry": 0.032},
+{   "props": [{"name": "HTP", "volume": 17.43, "mainEngine": false}],
+    "isp": 0,
+    "dry": 1.084}
+]
