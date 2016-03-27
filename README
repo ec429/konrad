@@ -83,7 +83,7 @@ A Propellant is a dictionary, with the following items:
   "mainEngine": optional boolean (defaults to true) indicating whether this
                  propellant is consumed by the main engine (and is thus part of
                  the interpretation of the Isp figure)
-Some examples are in the test/ directory:
+Some examples are in the jb_examples/ directory:
 * WAC.  Three TinyTim boosters and an Aerobee sustainer.
 * AtlasAgena.  An Agena-D (with hydrazine RCS) on an Atlas SLV-3.  This example
    exhibits one of the main limitations of the format: it can't comprehend
