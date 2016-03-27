@@ -257,11 +257,10 @@ class BoosterConsole(Console):
         stagesgroup = gauge.GaugeGroup(stages, [
             gauge.StagesGauge(dl, stages.derwin(16, 38, 1, 1), opts.booster),
             ], 'Stages')
-        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
                                       [update, fuelgroup, deltav, throttle, stagesgroup,
-                                       self.status, body, time],
+                                       self.status, time],
                                       "KONRAD: Booster")
     def input(self, key):
         if key >= ord('1') and key <= ord('9'):
