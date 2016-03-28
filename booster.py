@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# For computing how much delta-V your rocket has left
+# For computing how much delta-V your rocket has left, and other goodness
 
 import math
 import json
@@ -7,12 +7,15 @@ import os
 import cfg
 
 class Propellant(object):
-    def __init__(self, name, volume, density, mainEngine):
+    def __init__(self, name, volume, density, mainEngine, filled=None):
         self.name = name
         self.volume = volume
-        self.filled = volume
+        self.filled = volume if filled is None else filled
         self.density = density
         self.mainEngine = mainEngine
+    @classmethod
+    def clone(cls, other):
+        return cls(other.name, other.volume, other.density, other.mainEngine, other.filled)
     @property
     def mass(self):
         return self.filled * self.density
@@ -26,14 +29,18 @@ class Propellant(object):
         return cls(name, d['volume'], d['density'], d.get('mainEngine', True))
 
 class Stage(object):
-    def __init__(self, props, isp, dry):
-        self.props = props # list of Propellant instances
+    def __init__(self, props, isp, dry, thrust=None):
+        self.props = list(props) # list of Propellant instances
         check = [p.name for p in props]
         if len(check) != len(set(check)):
             raise Exception("A propellant name was repeated within a stage, we don't like that")
         self.isp = isp # I_sp(Vac) of main engine, in seconds
+        self.thrust = thrust # Thrust(Vac) of main engine, in kN.  Optional
         self._dry = dry # stage dry mass, in tons
         self._load = None
+    @classmethod
+    def clone(cls, other): # does not clone link to payload!
+        return cls([prop.clone() for prop in other.props], other.isp, other._dry, other.thrust)
     @property
     def dry(self):
         return self._dry + self.load + sum(p.mass for p in self.props if not p.mainEngine)
@@ -44,6 +51,10 @@ class Stage(object):
         if self._load is None:
             return 0
         return self._load.wet
+    @property
+    def twr(self): # thrust to weight ratio, in m/s^2
+        if self.thrust is None: return None
+        return self.thrust / self.wet
     @property
     def veff(self): # effective exhaust velocity, in m/s
         return self.isp * 9.80665
@@ -76,13 +87,19 @@ class Stage(object):
         return [str(p) for p in self.props]
     @classmethod
     def from_dict(cls, d):
-        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'])
+        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'))
 
 class Booster(object):
     def __init__(self, stages):
-        self.stages = stages # list of Stage instances
+        self.stages = list(stages) # list of Stage instances
         for i in xrange(len(self.stages) - 1, 0, -1):
             self.stages[i - 1].add_payload(self.stages[i])
+    @classmethod
+    def clone(cls, other):
+        return cls([stage.clone() for stage in other.stages])
+    @property
+    def twr(self): # thrust to weight ratio, in m/s^2
+        return self.stages[0].twr if self.stages else 0
     def stage(self):
         del self.stages[0]
     @property
