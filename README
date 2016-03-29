@@ -41,8 +41,12 @@ console it should display.  So far we have the following:
     - space for staging
 * retro
     Retrograde Guidance.  For judging landings on airless bodies.
+    See section "Landings" below for more information.
     Pass option --ground-map=<csvfile> to supply a SCANsat CSV map of ground
     elevation, or --ground-alt=<altitude> to assume a fixed value.
+    Pass option -b <body-id> for the body you're landing on.
+    Requires an accurate JSON Booster file, supplied with --booster.  See the
+    section "JSON Booster" below for more information.
     Inputs:
     - f to select 'Fixed' mode (assume vehicle holds current pitch)
     - r to select 'Retro' mode (assume retrograde hold)
@@ -128,3 +132,63 @@ You can, however, avoid having to look up all the densities: just set the
  environment variable KSPPATH to point at your KSP top-level directory, and
  KONRAD will read GameData/ModuleManager.ConfigCache to find them out.  That
  way, you can leave the "density" key out of Propellant specifications.
+
+Landings
+--------
+The Retro console may seem rather intimidating at first, with its large array
+of poorly-labelled numbers.  But don't panic, the layout is very logical and
+it's quite simple to use.  The first thing to notice is that there are two
+blocks with similar layout, for "At current throttle" and "At 100% throttle".
+This is so that you know if full throttle suffices to prevent lithobraking.
+Now, for each of those two throttle settings, KONRAD will run a simulation.
+It will assume either that you maintain your current pitch (Fixed mode) or
+that you hold surface retrograde (Retro mode), and that your heading is that
+corresponding to surface retrograde.  This simulation takes into account the
+decreasing mass of your craft as propellants are burned, the curvature of the
+target body, etc.  There are four 'events' of interest which the simulation
+will record:
+* Horizontal - the horizontal component of velocity becomes zero.  (If using
+  Fixed mode, from this point the sim will assume a pitch of 90°.)
+* Vertical - the vertical component of velocity becomes zero.
+* Surface - the altitude above terrain becomes zero.
+* Burnout - the vehicle is emptied of all propellants.
+For each of these events, various parameters are recorded, a selection of
+which are displayed (different for each event).
+T: time after simulation start
+Y: altitude above terrain
+X: distance downrange from simulation start
+V: vertical speed (upwards positive)
+H: horizontal speed
+The various displayed numbers will mostly be coloured red or green to tell you
+whether they are bad or good news.  For instance, if Vertical Y is negative,
+this means you won't stop descending before you hit the ground, which is Bad.
+
+So how does one use this information?  Assuming you're on a sub-orbital
+trajectory, point retrograde, select Fixed mode, look at the "full throttle"
+output, then increase pitch until Vertical Y is green (positive).  Check that
+Burnout T is green (greater than Surface T) - if not, you'll run out of fuel
+before landing at this rate, which probably means you need to wait a while and
+descend further before running the engine.
+Check that Horizontal T is green (less than Vertical T) - if not, you need to
+point at a higher pitch to increase the time you have for
+horizontal braking.
+Assuming everything's green, throttle up to 100% and watch the descent.  The
+numbers should all remain roughly constant, except that X decreases and T
+counts down.
+Wait until your retrograde marker passes through your current pitch (i.e.
+you're descending more steeply than you're pointing).  At this point, switch
+your SAS to Retrograde Hold, and switch KONRAD into Retro mode (by pressing
+'r').  You should find that the board is still green (except maybe for
+Horizontal T, which should now be equal to Vertical T), but that Vertical Y is
+now rather larger than it was.  Throttle down until Vertical Y is only just
+above zero - you want to aim for about 40 metres.  (At this point you may need
+to start making an adjustment for errors in your terrain map.  This is because
+unfortunately SCANsat maps only have ½° resolution, which does not always
+capture enough terrain detail on a cratered moon.  You also, of course, need
+to start looking at the "At current throttle" board.)
+Once your vertical speed is suitably low, throttle back further; try and keep
+your Vertical Y at a few seconds' descent above the surface.  Once you're
+descending vertically at a good landing speed, throttle back to bring your TWR
+as close to 1 as you can.  After a few more seconds you should touch down
+gently on the surface; cut your engine, sit back, and relax.  Congratulations,
+you've landed!
