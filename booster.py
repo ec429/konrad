@@ -29,18 +29,19 @@ class Propellant(object):
         return cls(name, d['volume'], d['density'], d.get('mainEngine', True))
 
 class Stage(object):
-    def __init__(self, props, isp, dry, thrust=None):
+    def __init__(self, props, isp, dry, thrust=None, minThrottle=0):
         self.props = list(props) # list of Propellant instances
         check = [p.name for p in props]
         if len(check) != len(set(check)):
             raise Exception("A propellant name was repeated within a stage, we don't like that")
         self.isp = isp # I_sp(Vac) of main engine, in seconds
         self.thrust = thrust # Thrust(Vac) of main engine, in kN.  Optional
+        self.minThrottle = minThrottle # Minimum throttle, in %
         self._dry = dry # stage dry mass, in tons
         self._load = None
     @classmethod
     def clone(cls, other): # does not clone link to payload!
-        return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust)
+        return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust, other.minThrottle)
     @property
     def dry(self):
         return self._dry + self.load + sum(p.mass for p in self.props if not p.mainEngine)
@@ -91,11 +92,18 @@ class Stage(object):
     @property
     def propnames(self):
         return [str(p) for p in self.props]
+    def convert_throttle(self, throttle):
+        if throttle == 0: return 0
+        minThrottle = self.minThrottle / 100.0
+        return (throttle * (1.0 - minThrottle)) + minThrottle
     def simulate(self, throttle, dt):
         if self.thrust is None: return None
+        throttle = self.convert_throttle(throttle)
         twr0 = self.twr * throttle
         dm = self.thrust * throttle * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
         mtot = self.prop_mass
+        if mtot <= 0:
+            return 0
         if dm > mtot: # will empty stage this timestep
             dv = self.deltaV
             for p in self.props:
@@ -110,7 +118,7 @@ class Stage(object):
         return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
     def from_dict(cls, d):
-        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'))
+        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'), d.get('minThrottle'))
 
 class Booster(object):
     def __init__(self, stages):
@@ -123,6 +131,8 @@ class Booster(object):
     @property
     def twr(self): # thrust to weight ratio, in m/s^2
         return self.stages[0].twr if self.stages else 0
+    def convert_throttle(self, throttle):
+        return self.stages[0].convert_throttle(throttle) if self.stages else throttle
     def stage(self):
         del self.stages[0]
     @property

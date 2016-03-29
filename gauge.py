@@ -121,12 +121,16 @@ class OneLineGauge(Gauge):
             self.cw.chgat(off, off + xoff, num, attr)
 
 class FixedLabel(OneLineGauge):
-    def __init__(self, dl, cw, text):
+    def __init__(self, dl, cw, text, centered=False):
         super(FixedLabel, self).__init__(dl, cw)
         self.text = text
+        self.centered = centered
     def draw(self):
         super(FixedLabel, self).draw()
-        self.addstr(self.text)
+        text = self.text
+        if self.centered:
+            text = self.centext(text)
+        self.addstr(text)
 
 class VariableLabel(OneLineGauge):
     def __init__(self, dl, cw, d, key, centered=False):
@@ -371,6 +375,29 @@ class AltitudeGauge(SIGauge):
             if self.vac:
                 self.vac = False
                 return 'Entered atmosphere'
+
+class TerrainAltitudeGauge(SIGauge):
+    unit = 'm'
+    label = 'Height'
+    def __init__(self, dl, cw, ground_map):
+        super(TerrainAltitudeGauge, self).__init__(dl, cw)
+        self.ground_map = ground_map
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('lat', 'v.lat')
+        self.add_prop('lon', 'v.long')
+    def draw(self):
+        alt = self.get('alt')
+        lat = self.get('lat')
+        lon = self.get('lon')
+        if None in (alt, lat, lon):
+            alt = None
+        else:
+            mlat = int(round(lat * 2))
+            mlon = int(round(lon * 2)) % 720
+            if mlon >= 360: mlon -= 720
+            elif mlon < -360: mlon += 720
+            alt -= self.ground_map[mlon][mlat]
+        super(TerrainAltitudeGauge, self).draw(alt)
 
 class PeriapsisGauge(SIGauge):
     unit = 'm'
@@ -718,18 +745,60 @@ class StagesGauge(Gauge):
                 deltav = 'Vac.dV: %dm/s'%(s.deltaV,)
                 self.cw.addnstr(i * 2 + 1, 0, deltav, self.width)
 
+class TWRGauge(OneLineGauge):
+    label = 'TWR'
+    def __init__(self, dl, cw, booster, body):
+        super(TWRGauge, self).__init__(dl, cw)
+        self.booster = booster
+        self.add_prop('throttle', 'f.throttle')
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('brad', "b.radius[%d]"%(body,))
+        self.add_prop('bgm', "b.o.gravParameter[%d]"%(body,))
+    def draw(self):
+        super(TWRGauge, self).draw()
+        throttle = self.get('throttle')
+        alt = self.get('alt')
+        brad = self.get('brad')
+        bgm = self.get('bgm')
+        if throttle is None:
+            tmr = None
+        else:
+            tmr = self.booster.twr * self.booster.convert_throttle(throttle)
+        if None in (alt, brad, bgm):
+            g = None
+        else:
+            g = bgm / (alt + brad)**2
+        if None in (tmr, g):
+            twr = None
+        else:
+            twr = tmr / float(g)
+        if twr is None:
+            self.addstr(self.centext('NO DATA'))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        else:
+            width = self.width - len(self.label)  - 1
+            prec = min(3, width - 3)
+            self.addstr('%s:%+*.*f'%(self.label, width, prec, twr))
+
 class UpdateRetroSim(Gauge):
-    def __init__(self, dl, cw, booster, sim):
+    def __init__(self, dl, cw, body, booster, use_throttle, sim):
         super(UpdateRetroSim, self).__init__(dl, cw)
         self.booster = booster
         # Assumes you already have an UpdateBooster keeping booster updated!
         self.sim = sim
+        self.use_throttle = use_throttle
         self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
         self.add_prop('alt', 'v.altitude')
-        self.add_prop('throttle', 'f.throttle')
+        if use_throttle:
+            self.add_prop('throttle', 'f.throttle')
         self.add_prop('pit', 'n.pitch2')
-        self.add_prop('g', 's.sensor.grav')
+        self.add_prop('hdg', 'n.heading2')
+        self.add_prop('lat', 'v.lat')
+        self.add_prop('lon', 'v.long')
+        self.add_prop('brad', "b.radius[%d]"%(body,))
+        self.add_prop('bgm', "b.o.gravParameter[%d]"%(body,))
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
@@ -737,13 +806,20 @@ class UpdateRetroSim(Gauge):
         hs = self.get('hs')
         vs = self.get('vs')
         alt = self.get('alt')
-        throttle = self.get('throttle')
+        if self.use_throttle:
+            throttle = self.get('throttle')
+        else:
+            throttle = 1.0
         pit = self.get('pit')
-        g = self.get('g')
-        if None in (hs, vs, alt, throttle, pit, g):
+        hdg = self.get('hdg')
+        lat = self.get('lat')
+        lon = self.get('lon')
+        brad = self.get('brad')
+        bgm = self.get('bgm')
+        if None in (hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
             self.sim.has_data = False
         else:
-            self.sim.simulate(b, hs, vs, alt, throttle, pit, g)
+            self.sim.simulate(b, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -759,9 +835,9 @@ class RSTime(OneLineGauge):
                 col = 0
                 if self.key in 'hv':
                     if 's' in self.sim.data and self.sim.data['s']['time'] < t:
-                        col = 3
-                    else:
                         col = 1
+                    else:
+                        col = 3
                 elif self.key == 'b':
                     if 's' in self.sim.data and self.sim.data['s']['time'] > t:
                         col = 1
@@ -770,7 +846,9 @@ class RSTime(OneLineGauge):
             else:
                 self.addstr('T'+'-'*(self.olg_width - 1))
                 col = 1
-                if self.key == 'b':
+                if self.key == 's':
+                    col = 2
+                elif self.key == 'b':
                     col = 3
         else:
             self.addstr('T'+'-'*(self.olg_width - 1))
@@ -818,6 +896,8 @@ class RSDownrange(SIGauge):
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))
                 col = 1
+                if self.key == 's':
+                    col = 2
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -836,11 +916,13 @@ class RSVSpeed(SIGauge):
                 vs = self.sim.data[self.key]['vs']
                 super(RSVSpeed, self).draw(vs)
                 col = 3
-                if vs > 8: # TODO parametrise
+                if vs < -8: # TODO parametrise
                     col = 1
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))
                 col = 1
+                if self.key == 's':
+                    col = 2
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -864,6 +946,8 @@ class RSHSpeed(SIGauge):
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))
                 col = 1
+                if self.key == 's':
+                    col = 2
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2

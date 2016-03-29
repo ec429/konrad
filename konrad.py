@@ -5,6 +5,7 @@ import gauge
 import curses, curses.ascii
 import optparse
 import math
+import csv
 import booster
 import retro
 
@@ -289,36 +290,65 @@ class RetroConsole(Console):
         update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
-        self.rs = retro.RetroSim()
-        sim = gauge.UpdateRetroSim(dl, scr, opts.booster, self.rs)
-        hwin = scr.derwin(5, 16, 4, 1)
-        h = gauge.GaugeGroup(hwin, [gauge.RSTime(dl, hwin.derwin(1, 14, 1, 1), 'h', self.rs),
-                                    gauge.RSAlt(dl, hwin.derwin(1, 14, 2, 1), 'h', self.rs),
-                                    gauge.RSDownrange(dl, hwin.derwin(1, 14, 3, 1), 'h', self.rs)],
-                             "Horizontal")
-        vwin = scr.derwin(5, 16, 4, 17)
-        v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', self.rs),
-                                    gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', self.rs),
-                                    gauge.RSDownrange(dl, vwin.derwin(1, 14, 3, 1), 'v', self.rs)],
-                             "Vertical")
-        swin = scr.derwin(6, 16, 4, 33)
-        s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', self.rs),
-                                    gauge.RSDownrange(dl, swin.derwin(1, 14, 3, 1), 's', self.rs),
-                                    gauge.RSVSpeed(dl, swin.derwin(1, 14, 2, 1), 's', self.rs),
-                                    gauge.RSHSpeed(dl, swin.derwin(1, 14, 4, 1), 's', self.rs)],
-                             "Surface")
-        bwin = scr.derwin(6, 16, 4, 49)
-        b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.rs),
-                                    gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.rs),
-                                    gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.rs),
-                                    gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', self.rs)],
-                             "Burnout")
+        twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
+        self.vars = {'mode': 'Mode: Fixed'}
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 32), self.vars, 'mode', centered=True)
+        if opts.ground_map:
+            map_csv = csv.reader(file(opts.ground_map, "r"))
+            ground_map = {}
+            for i,row in enumerate(map_csv):
+                if not i:
+                    assert row == ['Row','Column','Lat','Long','Height'], row
+                    continue
+                lat = int(float(row[2]) * 2)
+                lon = int(float(row[3]) * 2)
+                alt = float(row[4])
+                ground_map.setdefault(lon, {})[lat] = alt
+        else:
+            ground_map = None
+        sim_blocks = []
+        self.rs = [None, None]
+        for i in xrange(2):
+            y = i * 6
+            use_throttle = not i
+            rs = retro.RetroSim(ground_map=ground_map, mode=0)
+            self.rs[i] = rs
+            sim = gauge.UpdateRetroSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            wtext = "At 100% throttle" if i else "At current throttle"
+            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 8), wtext, centered=True)
+            hwin = scr.derwin(5, 16, 8 + y, 8)
+            h = gauge.GaugeGroup(hwin, [gauge.RSTime(dl, hwin.derwin(1, 14, 1, 1), 'h', rs),
+                                        gauge.RSAlt(dl, hwin.derwin(1, 14, 2, 1), 'h', rs),
+                                        gauge.RSDownrange(dl, hwin.derwin(1, 14, 3, 1), 'h', rs)],
+                                 "Horizontal")
+            vwin = scr.derwin(5, 16, 8 + y, 24)
+            v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', rs),
+                                        gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', rs),
+                                        gauge.RSDownrange(dl, vwin.derwin(1, 14, 3, 1), 'v', rs)],
+                                 "Vertical")
+            swin = scr.derwin(6, 16, 7 + y, 40)
+            s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', rs),
+                                        gauge.RSDownrange(dl, swin.derwin(1, 14, 3, 1), 's', rs),
+                                        gauge.RSVSpeed(dl, swin.derwin(1, 14, 2, 1), 's', rs),
+                                        gauge.RSHSpeed(dl, swin.derwin(1, 14, 4, 1), 's', rs)],
+                                 "Surface")
+            bwin = scr.derwin(6, 16, 7 + y, 56)
+            b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', rs),
+                                        gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', rs),
+                                        gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', rs),
+                                        gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
+                                 "Burnout")
+            sim_blocks.extend([sim, wt, h, v, s, b])
+        if ground_map is not None:
+            alt = gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), ground_map)
+        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle,
-                                       sim, h, v, s, b,
-                                       self.status, time],
-                                      "KONRAD: Booster")
+                                      [update, deltav, throttle, twr, mode, alt, vs] +
+                                      sim_blocks +
+                                      [self.status, body, time],
+                                      "KONRAD: Retro")
     def input(self, key):
         if key >= ord('1') and key <= ord('9'):
             i = int(chr(key))
@@ -332,6 +362,18 @@ class RetroConsole(Console):
             return
         if key == ord(' '):
             self.dl.send_msg({'run':['f.stage']})
+            return
+        if key == ord('f'):
+            self.vars['mode'] = 'Mode: Fixed'
+            for i in xrange(2):
+                if self.rs[i] is not None:
+                    self.rs[i].mode = 0
+            return
+        if key == ord('r'):
+            self.vars['mode'] = 'Mode: Retro'
+            for i in xrange(2):
+                if self.rs[i] is not None:
+                    self.rs[i].mode = 1
             return
         return super(RetroConsole, self).input(key)
     @classmethod
@@ -359,6 +401,7 @@ def parse_opts():
     x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
     x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
+    x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
