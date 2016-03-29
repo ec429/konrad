@@ -745,6 +745,130 @@ class UpdateRetroSim(Gauge):
         else:
             self.sim.simulate(b, hs, vs, alt, throttle, pit, g)
 
+class RSTime(OneLineGauge):
+    def __init__(self, dl, cw, key, sim):
+        super(RSTime, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        super(RSTime, self).draw()
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                t = self.sim.data[self.key]['time']
+                self.addstr('T%*ds'%(self.olg_width - 2, t))
+                col = 0
+                if self.key in 'hv':
+                    if 's' in self.sim.data and self.sim.data['s']['time'] < t:
+                        col = 3
+                    else:
+                        col = 1
+                elif self.key == 'b':
+                    if 's' in self.sim.data and self.sim.data['s']['time'] > t:
+                        col = 1
+                    else:
+                        col = 3
+            else:
+                self.addstr('T'+'-'*(self.olg_width - 1))
+                col = 1
+                if self.key == 'b':
+                    col = 3
+        else:
+            self.addstr('T'+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSAlt(SIGauge):
+    unit = 'm'
+    label = 'Y'
+    def __init__(self, dl, cw, key, sim):
+        super(RSAlt, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                alt = self.sim.data[self.key]['alt']
+                super(RSAlt, self).draw(alt)
+                col = 3 if alt > 0 else 1
+                if self.key == 'b':
+                    col = 1 if alt > 10 else 0 # TODO parametrise
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 1
+                if self.key == 'b':
+                    col = 3
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSDownrange(SIGauge):
+    unit = 'm'
+    label = 'X'
+    def __init__(self, dl, cw, key, sim):
+        super(RSDownrange, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                x = self.sim.data[self.key]['x']
+                super(RSDownrange, self).draw(x)
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 1
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSVSpeed(SIGauge):
+    unit = 'm/s'
+    label = 'V'
+    def __init__(self, dl, cw, key, sim):
+        super(RSVSpeed, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                vs = self.sim.data[self.key]['vs']
+                super(RSVSpeed, self).draw(vs)
+                col = 3
+                if vs > 8: # TODO parametrise
+                    col = 1
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 1
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSHSpeed(SIGauge):
+    unit = 'm/s'
+    label = 'H'
+    def __init__(self, dl, cw, key, sim):
+        super(RSHSpeed, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                hs = self.sim.data[self.key]['hs']
+                super(RSHSpeed, self).draw(hs)
+                col = 3
+                if abs(hs) > 1: # TODO parametrise
+                    col = 1
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 1
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
 global fallover
 
 class GaugeGroup(object):

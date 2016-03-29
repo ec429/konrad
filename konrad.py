@@ -291,10 +291,32 @@ class RetroConsole(Console):
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         self.rs = retro.RetroSim()
         sim = gauge.UpdateRetroSim(dl, scr, opts.booster, self.rs)
+        hwin = scr.derwin(5, 16, 4, 1)
+        h = gauge.GaugeGroup(hwin, [gauge.RSTime(dl, hwin.derwin(1, 14, 1, 1), 'h', self.rs),
+                                    gauge.RSAlt(dl, hwin.derwin(1, 14, 2, 1), 'h', self.rs),
+                                    gauge.RSDownrange(dl, hwin.derwin(1, 14, 3, 1), 'h', self.rs)],
+                             "Horizontal")
+        vwin = scr.derwin(5, 16, 4, 17)
+        v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', self.rs),
+                                    gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', self.rs),
+                                    gauge.RSDownrange(dl, vwin.derwin(1, 14, 3, 1), 'v', self.rs)],
+                             "Vertical")
+        swin = scr.derwin(6, 16, 4, 33)
+        s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', self.rs),
+                                    gauge.RSDownrange(dl, swin.derwin(1, 14, 3, 1), 's', self.rs),
+                                    gauge.RSVSpeed(dl, swin.derwin(1, 14, 2, 1), 's', self.rs),
+                                    gauge.RSHSpeed(dl, swin.derwin(1, 14, 4, 1), 's', self.rs)],
+                             "Surface")
+        bwin = scr.derwin(6, 16, 4, 49)
+        b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.rs),
+                                    gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.rs),
+                                    gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.rs),
+                                    gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', self.rs)],
+                             "Burnout")
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
                                       [update, deltav, throttle,
-                                       sim,
+                                       sim, h, v, s, b,
                                        self.status, time],
                                       "KONRAD: Booster")
     def input(self, key):

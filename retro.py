@@ -17,10 +17,12 @@ class RetroSim(object):
         t = 0
         # time step, in seconds
         dt = 1
-        # are we done?
-        self.have = [False, False, False, False]
-        while not ((self.have[0] and self.have[1]) or
-                   (self.have[2] and self.have[3])):
+        def encode():
+            return {'time': t, 'alt': alt, 'x': downrange, 'hs': hs, 'vs': vs}
+        # results
+        self.data = {}
+        while not (('h' in self.data and 'v' in self.data) or
+                   ('s' in self.data and 'b' in self.data)):
             hs0 = hs
             vs0 = vs
             alt0 = alt
@@ -32,12 +34,9 @@ class RetroSim(object):
             vs += dvs - (g * dt)
             alt += (vs + vs0) / 2.0
             downrange += (hs + hs0) / 2.0
-            if hs <= 0 and not self.have[0]:
-                self.htime = t
-                self.halt = alt
-                self.hx = downrange
-                self.have[0] = True
-            if self.have[0]:
+            if hs <= 0 and 'h' not in  self.data:
+                self.data['h'] = encode()
+            if 'h' in self.data:
                 # Pitch for vertical descent
                 twr = booster.twr
                 if twr > abs(hs):
@@ -46,26 +45,16 @@ class RetroSim(object):
                 else:
                     cx = 0
                     cy = 1
-            if vs >= 0 and not self.have[1]:
-                self.vtime = t
-                self.valt = alt
-                self.vx = downrange
-                self.have[1] = True
-            if alt <= 0 and not self.have[2]:
-                self.stime = t
-                self.shs = hs
-                self.svs = vs
-                self.sx = downrange
-                self.have[2] = True
-            if not booster.stages and not self.have[3]:
-                self.btime = t
-                self.balt = alt
-                self.bvs = vs
-                self.have[3] = True
+            if vs >= 0 and 'v' not in self.data:
+                self.data['v'] = encode()
+            if alt <= 0 and 's' not in self.data:
+                self.data['s'] = encode()
+            if not booster.stages and 'b' not in self.data:
+                self.data['b'] = encode()
             if self.debug:
                 print "time %d"%(t,)
                 print "(%g, %g) -> (%g, %g)"%(downrange, alt, hs, vs)
-                print "%s%s%s%s"%tuple('*' if b else ' ' for b in self.have)
+                print "%s"%(''.join(self.data.keys()),)
         self.has_data = True
 
 if __name__ == '__main__':
@@ -80,19 +69,19 @@ if __name__ == '__main__':
     rs = RetroSim()
     rs.simulate(booster.Booster.clone(b), 100, -10, 2000, 0.88326, 60, 1.6)
     assert rs.has_data
-    if rs.have[0]:
-        print "H %gs %gm (%gm)"%(rs.htime, rs.halt, rs.hx)
+    if 'h' in rs.data:
+        print "H %gs %gm (%gm)"%(rs.data['h']['time'], rs.data['h']['alt'], rs.data['h']['x'])
     else:
         print "!H"
-    if rs.have[1]:
-        print "V %gs %gm (%gm)"%(rs.vtime, rs.valt, rs.vx)
+    if 'v' in rs.data:
+        print "V %gs %gm (%gm)"%(rs.data['v']['time'], rs.data['v']['alt'], rs.data['v']['x'])
     else:
         print "!V"
-    if rs.have[2]:
-        print "Y %gs %gm/s (%gm %gm/s)"%(rs.stime, rs.svs, rs.sx, rs.shs)
+    if 's' in rs.data:
+        print "S %gs %gm/s (%gm %gm/s)"%(rs.data['s']['time'], rs.data['s']['vs'], rs.data['s']['x'], rs.data['s']['hs'])
     else:
-        print "!Y"
-    if rs.have[3]:
-        print "B %gs %gm %gm/s"%(rs.btime, rs.balt, rs.bvs)
+        print "!S"
+    if 'b' in rs.data:
+        print "B %gs %gm %gm/s"%(rs.data['b']['time'], rs.data['b']['alt'], rs.data['b']['vs'])
     else:
         print "!B"
