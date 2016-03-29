@@ -40,7 +40,7 @@ class Stage(object):
         self._load = None
     @classmethod
     def clone(cls, other): # does not clone link to payload!
-        return cls([prop.clone() for prop in other.props], other.isp, other._dry, other.thrust)
+        return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust)
     @property
     def dry(self):
         return self._dry + self.load + sum(p.mass for p in self.props if not p.mainEngine)
@@ -91,10 +91,10 @@ class Stage(object):
     @property
     def propnames(self):
         return [str(p) for p in self.props]
-    def simulate(self, dt):
+    def simulate(self, throttle, dt):
         if self.thrust is None: return None
-        twr0 = self.twr
-        dm = self.thrust * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
+        twr0 = self.twr * throttle
+        dm = self.thrust * throttle * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
         mtot = self.prop_mass
         if dm > mtot: # will empty stage this timestep
             dv = self.deltaV
@@ -106,7 +106,7 @@ class Stage(object):
             if not p.mainEngine: continue
             mfrac = p.mass / mtot
             p.filled -= dm * mfrac
-        twr1 = self.twr
+        twr1 = self.twr * throttle
         return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
     def from_dict(cls, d):
@@ -119,7 +119,7 @@ class Booster(object):
             self.stages[i - 1].add_payload(self.stages[i])
     @classmethod
     def clone(cls, other):
-        return cls([stage.clone() for stage in other.stages])
+        return cls([Stage.clone(stage) for stage in other.stages])
     @property
     def twr(self): # thrust to weight ratio, in m/s^2
         return self.stages[0].twr if self.stages else 0
@@ -140,9 +140,9 @@ class Booster(object):
     @property
     def deltaV(self):
         return sum(s.deltaV for s in self.stages)
-    def simulate(self, dt):
+    def simulate(self, throttle, dt):
         if not self.stages: return 0
-        dv = self.stages[0].simulate(dt)
+        dv = self.stages[0].simulate(throttle, dt)
         if self.stages[0].is_empty:
             self.stage()
         return dv
