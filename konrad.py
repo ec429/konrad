@@ -311,7 +311,7 @@ class RetroConsole(Console):
         for i in xrange(2):
             y = i * 6
             use_throttle = not i
-            rs = retro.RetroSim(ground_map=ground_map, mode=0)
+            rs = retro.RetroSim(ground_map=ground_map, ground_alt=opts.ground_alt, mode=0)
             self.rs[i] = rs
             sim = gauge.UpdateRetroSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
@@ -402,6 +402,7 @@ def parse_opts():
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
     x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
     x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
+    x.add_option('--ground-alt', type='float', help="Constant value to use for ground altitude")
     opts, args = x.parse_args()
     # Magic for the magic target_obt_vel
     opts.target_obt_mu = None
