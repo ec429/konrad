@@ -60,7 +60,7 @@ class Stage(object):
         return self.isp * 9.80665
     @property
     def is_empty(self):
-        return any(p.mass for p in self.props if p.mainEngine)
+        return not any(p.mass for p in self.props if p.mainEngine)
     @property
     def prop_mass(self):
         return sum(p.mass for p in self.props if p.mainEngine)
@@ -98,14 +98,14 @@ class Stage(object):
         mtot = self.prop_mass
         if dm > mtot: # will empty stage this timestep
             dv = self.deltaV
-            for prop in self.props:
+            for p in self.props:
                 if not p.mainEngine: continue
                 p.filled = 0
             return dv
-        for prop in self.props:
+        for p in self.props:
             if not p.mainEngine: continue
             mfrac = p.mass / mtot
-            p.filled -= dm * mfrac
+            p.filled -= dm * mfrac / p.density
         twr1 = self.twr * throttle
         return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
