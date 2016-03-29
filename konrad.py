@@ -6,6 +6,7 @@ import curses, curses.ascii
 import optparse
 import math
 import booster
+import retro
 
 class Console(object):
     group = None
@@ -15,6 +16,9 @@ class Console(object):
     def input(self, key):
         if key == ord(curses.ascii.ctrl('X')):
             return True # exit
+    @classmethod
+    def connect_params(cls):
+        return {}
 
 class FDConsole(Console):
     """Flight Director's console"""
@@ -278,7 +282,41 @@ class BoosterConsole(Console):
             return
         return super(BoosterConsole, self).input(key)
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole}
+class RetroConsole(Console):
+    """Retrograde Propulsion console"""
+    def __init__(self, opts, scr, dl):
+        super(RetroConsole, self).__init__(opts, scr, dl)
+        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
+        self.rs = retro.RetroSim()
+        sim = gauge.UpdateRetroSim(dl, scr, opts.booster, self.rs)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [update, deltav, throttle,
+                                       sim,
+                                       self.status, time],
+                                      "KONRAD: Booster")
+    def input(self, key):
+        if key >= ord('1') and key <= ord('9'):
+            i = int(chr(key))
+            self.dl.send_msg({'run':['f.setThrottle[%f]'%(i/10.0,)]})
+            return
+        if key == ord('z'):
+            self.dl.send_msg({'run':['f.setThrottle[1.0]']})
+            return
+        if key == ord('x'):
+            self.dl.send_msg({'run':['f.setThrottle[0.0]']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        return super(RetroConsole, self).input(key)
+    @classmethod
+    def connect_params(cls):
+        return {'rate': 1000} # update once per second
+
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')

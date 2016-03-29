@@ -3,6 +3,7 @@
 import curses
 import math
 import matrix
+import booster
 
 def initialise():
     register_colours()
@@ -716,6 +717,33 @@ class StagesGauge(Gauge):
                 self.cw.addnstr(i * 2, 0, header, self.width)
                 deltav = 'Vac.dV: %dm/s'%(s.deltaV,)
                 self.cw.addnstr(i * 2 + 1, 0, deltav, self.width)
+
+class UpdateRetroSim(Gauge):
+    def __init__(self, dl, cw, booster, sim):
+        super(UpdateRetroSim, self).__init__(dl, cw)
+        self.booster = booster
+        # Assumes you already have an UpdateBooster keeping booster updated!
+        self.sim = sim
+        self.add_prop('hs', 'v.surfaceSpeed')
+        self.add_prop('vs', 'v.verticalSpeed')
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('throttle', 'f.throttle')
+        self.add_prop('pit', 'n.pitch2')
+        self.add_prop('g', 's.sensor.grav')
+    def draw(self):
+        # we don't actually draw anything...
+        # we just do some calculations!
+        b = booster.Booster.clone(self.booster)
+        hs = self.get('hs')
+        vs = self.get('vs')
+        alt = self.get('alt')
+        throttle = self.get('throttle')
+        pit = self.get('pit')
+        g = self.get('g')
+        if None in (hs, vs, alt, throttle, pit, g):
+            self.sim.has_data = False
+        else:
+            self.sim.simulate(b, hs, vs, alt, throttle, pit, g)
 
 global fallover
 
