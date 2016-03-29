@@ -39,6 +39,17 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+* retro
+    Retrograde Guidance.  For judging landings on airless bodies.
+    Pass option --ground-map=<csvfile> to supply a SCANsat CSV map of ground
+    elevation, or --ground-alt=<altitude> to assume a fixed value.
+    Inputs:
+    - f to select 'Fixed' mode (assume vehicle holds current pitch)
+    - r to select 'Retro' mode (assume retrograde hold)
+    - x to cut throttle
+    - 1-9 for 10-90% throttle
+    - z for 100% throttle
+    - space for staging
 
 Global Inputs
 -------------
@@ -76,6 +87,10 @@ A Stage is a dictionary, with the following items:
   "props": list of Propellants
   "isp": main engine Isp in seconds
   "dry": stage dry mass in tons
+Two further items can optionally be specified; they are used only by the Retro
+console, so are needed only on lander engines:
+  "thrust": main engine thrust in kN
+  "minThrottle": main engine minimum throttle setting in percent
 A Propellant is a dictionary, with the following items:
   "name": the KSP resource name of the propellant
   "volume": the volume of the tank (this is in litres if using RealismOverhaul)
