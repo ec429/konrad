@@ -836,6 +836,8 @@ class RSTime(OneLineGauge):
                 if self.key in 'hv':
                     if 's' in self.sim.data and self.sim.data['s']['time'] < t:
                         col = 1
+                    elif self.key == 'h' and 'v' in self.sim.data and self.sim.data['v']['time'] < t:
+                        col = 1
                     else:
                         col = 3
                 elif self.key == 'b':
