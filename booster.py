@@ -59,8 +59,14 @@ class Stage(object):
     def veff(self): # effective exhaust velocity, in m/s
         return self.isp * 9.80665
     @property
+    def is_empty(self):
+        return any(p.mass for p in self.props if p.mainEngine)
+    @property
+    def prop_mass(self):
+        return sum(p.mass for p in self.props if p.mainEngine)
+    @property
     def wet(self):
-        return self.dry + sum(p.mass for p in self.props if p.mainEngine)
+        return self.dry + self.prop_mass
     @property
     def deltaV(self):
         mr = self.wet / float(self.dry)
@@ -85,6 +91,23 @@ class Stage(object):
     @property
     def propnames(self):
         return [str(p) for p in self.props]
+    def simulate(self, dt):
+        if self.thrust is None: return None
+        twr0 = self.twr
+        dm = self.thrust * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
+        mtot = self.prop_mass
+        if dm > mtot: # will empty stage this timestep
+            dv = self.deltaV
+            for prop in self.props:
+                if not p.mainEngine: continue
+                p.filled = 0
+            return dv
+        for prop in self.props:
+            if not p.mainEngine: continue
+            mfrac = p.mass / mtot
+            p.filled -= dm * mfrac
+        twr1 = self.twr
+        return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
     def from_dict(cls, d):
         return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'))
@@ -117,6 +140,12 @@ class Booster(object):
     @property
     def deltaV(self):
         return sum(s.deltaV for s in self.stages)
+    def simulate(self, dt):
+        if not self.stages: return 0
+        dv = self.stages[0].simulate(dt)
+        if self.stages[0].is_empty:
+            self.stage()
+        return dv
     @classmethod
     def from_dict(cls, d):
         return cls([Stage.from_dict(s) for s in d])
