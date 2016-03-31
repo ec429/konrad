@@ -162,6 +162,9 @@ H: horizontal speed
 The various displayed numbers will mostly be coloured red or green to tell you
 whether they are bad or good news.  For instance, if Vertical Y is negative,
 this means you won't stop descending before you hit the ground, which is Bad.
+There's also 'Touchdown' - which is 'Surface' if it happens, 'Horizontal'
+otherwise - at which the latitude and longitude are recorded.  These can be
+used for targeting a specific landing site.
 
 So how does one use this information?  Assuming you're on a sub-orbital
 trajectory, point retrograde, select Fixed mode, look at the "full throttle"
