@@ -955,6 +955,37 @@ class RSHSpeed(SIGauge):
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
+class RSLatitude(OneLineGauge):
+    param = 'lat'
+    labels = 'NS'
+    def __init__(self, dl, cw, key, sim):
+        super(RSLatitude, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        super(RSLatitude, self).draw()
+        if self.sim.has_data:
+            keys = [k for k in list(self.key) if k in self.sim.data]
+            if keys:
+                angle = self.sim.data[keys[0]][self.param]
+                label = self.labels[angle < 0]
+                width = self.olg_width - 3
+                prec = min(3, width - 4)
+                self.addstr('%s:%+*.*f'%(label, width, prec, angle))
+                col = 0
+            else:
+                self.addstr('-'*self.olg_width)
+                col = 2
+        else:
+            self.addstr('-'*self.olg_width)
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+        self.addch(self.olg_width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
+
+class RSLongitude(RSLatitude):
+    param = 'lon'
+    labels = 'EW'
+
 global fallover
 
 class GaugeGroup(object):

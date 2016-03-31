@@ -315,30 +315,34 @@ class RetroConsole(Console):
             self.rs[i] = rs
             sim = gauge.UpdateRetroSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
-            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 8), wtext, centered=True)
-            hwin = scr.derwin(5, 16, 8 + y, 8)
+            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
+            hwin = scr.derwin(5, 16, 8 + y, 1)
             h = gauge.GaugeGroup(hwin, [gauge.RSTime(dl, hwin.derwin(1, 14, 1, 1), 'h', rs),
                                         gauge.RSAlt(dl, hwin.derwin(1, 14, 2, 1), 'h', rs),
                                         gauge.RSDownrange(dl, hwin.derwin(1, 14, 3, 1), 'h', rs)],
                                  "Horizontal")
-            vwin = scr.derwin(5, 16, 8 + y, 24)
+            vwin = scr.derwin(5, 16, 8 + y, 17)
             v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', rs),
                                         gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', rs),
                                         gauge.RSDownrange(dl, vwin.derwin(1, 14, 3, 1), 'v', rs)],
                                  "Vertical")
-            swin = scr.derwin(6, 16, 7 + y, 40)
+            swin = scr.derwin(6, 16, 7 + y, 33)
             s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', rs),
                                         gauge.RSDownrange(dl, swin.derwin(1, 14, 3, 1), 's', rs),
                                         gauge.RSVSpeed(dl, swin.derwin(1, 14, 2, 1), 's', rs),
                                         gauge.RSHSpeed(dl, swin.derwin(1, 14, 4, 1), 's', rs)],
                                  "Surface")
-            bwin = scr.derwin(6, 16, 7 + y, 56)
+            bwin = scr.derwin(6, 16, 7 + y, 49)
             b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', rs),
                                         gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', rs),
                                         gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', rs),
                                         gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
                                  "Burnout")
-            sim_blocks.extend([sim, wt, h, v, s, b])
+            twin = scr.derwin(4, 14, 7 + y, 65)
+            t = gauge.GaugeGroup(twin, [gauge.RSLatitude(dl, twin.derwin(1, 12, 1, 1), 'sh', rs),
+                                        gauge.RSLongitude(dl, twin.derwin(1, 12, 2, 1), 'sh', rs)],
+                                 "Touchdown")
+            sim_blocks.extend([sim, wt, h, v, s, b, t])
         if ground_map is not None:
             alt = gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), ground_map)
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))

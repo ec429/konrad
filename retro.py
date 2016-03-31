@@ -25,10 +25,14 @@ class RetroSim(object):
         downrange = 0
         t = 0
         ground_alt = None
+        lat = math.radians(lat)
+        lon = math.radians(lon)
         # time step, in seconds
         dt = 1
         def encode():
-            return {'time': t, 'alt': alt - ground_alt, 'x': downrange, 'hs': hs, 'vs': vs}
+            return {'time': t, 'alt': alt - ground_alt, 'x': downrange,
+                    'hs': hs, 'vs': vs,
+                    'lat': math.degrees(lat), 'lon': math.degrees(lon)}
         # results
         self.data = {}
         while not ((
@@ -65,15 +69,27 @@ class RetroSim(object):
             if brad is not None:
                 # update lat & long
                 lat += mhs * clat / (brad + alt)
+                if abs(lat) > (math.pi / 2):
+                    if lat > 0:
+                        # crossed north pole
+                        lat = math.pi - lat
+                    else:
+                        # crossed south pole
+                        lat = -math.pi - lat
+                    lon += math.pi
+                    # heading switches around too
+                    clat = -clat
+                    clong = -clong
                 lon += mhs * clong / ((brad + alt) * math.cos(lat))
+                lon %= (math.pi * 2)
                 # transform our velocity - planet is curving away beneath us
                 rot = mhs / (brad + alt)
                 nhs = hs * math.cos(rot) - vs * math.sin(rot)
                 nvs = hs * math.sin(rot) + vs * math.cos(rot)
                 hs, vs = nhs, nvs
             if self.ground_map is not None:
-                mlat = int(round(lat * 2))
-                mlon = int(round(lon * 2)) % 720
+                mlat = int(round(math.degrees(lat) * 2))
+                mlon = int(round(math.degrees(lon) * 2)) % 720
                 if mlon >= 360: mlon -= 720
                 elif mlon < -360: mlon += 720
                 ground_alt = self.ground_map[mlon][mlat]
@@ -103,32 +119,3 @@ class RetroSim(object):
                 print "(%g, %g) -> (%g, %g)"%(downrange, alt, hs, vs)
                 print "%s"%(''.join(self.data.keys()),)
         self.has_data = True
-
-if __name__ == '__main__':
-    import booster
-    b = booster.Booster.from_json('''[{
-    "props": [{"name": "MON10", "volume": 48.4},
-              {"name": "MMH", "volume": 51.6}],
-    "isp": 260,
-    "dry": 0.4,
-    "thrust": 1
-    }]''')
-    rs = RetroSim(ground_alt=6700)#booster, hs, vs, alt, throttle, pit, hdg, lat, lon, g):
-    rs.simulate(booster.Booster.clone(b), 100, -10, 2000, 0.88326, 60, 90, 0, 0, 1.6)
-    assert rs.has_data
-    if 'h' in rs.data:
-        print "H %gs %gm (%gm)"%(rs.data['h']['time'], rs.data['h']['alt'], rs.data['h']['x'])
-    else:
-        print "!H"
-    if 'v' in rs.data:
-        print "V %gs %gm (%gm)"%(rs.data['v']['time'], rs.data['v']['alt'], rs.data['v']['x'])
-    else:
-        print "!V"
-    if 's' in rs.data:
-        print "S %gs %gm/s (%gm %gm/s)"%(rs.data['s']['time'], rs.data['s']['vs'], rs.data['s']['x'], rs.data['s']['hs'])
-    else:
-        print "!S"
-    if 'b' in rs.data:
-        print "B %gs %gm %gm/s"%(rs.data['b']['time'], rs.data['b']['alt'], rs.data['b']['vs'])
-    else:
-        print "!B"
