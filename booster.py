@@ -150,8 +150,8 @@ class Booster(object):
     @property
     def deltaV(self):
         return sum(s.deltaV for s in self.stages)
-    def simulate(self, throttle, dt):
-        if not self.stages: return 0
+    def simulate(self, throttle, dt, stagecap=0):
+        if len(self.stages) <= stagecap: return 0
         dv = self.stages[0].simulate(throttle, dt)
         if self.stages[0].is_empty:
             self.stage()

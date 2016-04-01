@@ -291,8 +291,11 @@ class RetroConsole(Console):
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
-        self.vars = {'mode': 'Mode: Fixed'}
-        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 32), self.vars, 'mode', centered=True)
+        self.stagecap = 0
+        self.mode = 0
+        self.vars = {}
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
+        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         if opts.ground_map:
             map_csv = csv.reader(file(opts.ground_map, "r"))
             ground_map = {}
@@ -349,10 +352,18 @@ class RetroConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, alt, vs] +
+                                      [update, deltav, throttle, twr, mode, scap, alt, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Retro")
+        self.update_vars()
+    def update_vars(self):
+        self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
+        self.vars['mode'] = 'Mode: %s'%(['Fixed', 'Retro'][self.mode],)
+        for i in xrange(2):
+            if self.rs[i] is not None:
+                self.rs[i].mode = self.mode
+                self.rs[i].stagecap = self.stagecap
     def input(self, key):
         if key >= ord('1') and key <= ord('9'):
             i = int(chr(key))
@@ -368,16 +379,20 @@ class RetroConsole(Console):
             self.dl.send_msg({'run':['f.stage']})
             return
         if key == ord('f'):
-            self.vars['mode'] = 'Mode: Fixed'
-            for i in xrange(2):
-                if self.rs[i] is not None:
-                    self.rs[i].mode = 0
+            self.mode = 0
+            self.update_vars()
             return
         if key == ord('r'):
-            self.vars['mode'] = 'Mode: Retro'
-            for i in xrange(2):
-                if self.rs[i] is not None:
-                    self.rs[i].mode = 1
+            self.mode = 1
+            self.update_vars()
+            return
+        if key == curses.KEY_PPAGE:
+            self.stagecap += 1
+            self.update_vars()
+            return
+        if key == curses.KEY_NPAGE:
+            self.stagecap = max(self.stagecap - 1, 0)
+            self.update_vars()
             return
         return super(RetroConsole, self).input(key)
     @classmethod

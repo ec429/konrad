@@ -9,6 +9,7 @@ class RetroSim(object):
         self.ground_alt = ground_alt
         self.ground_map = ground_map
         self.mode = mode
+        self.stagecap = 0
         self.debug = debug
     def simulate(self, booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
         if self.ground_alt is not None:
@@ -48,7 +49,7 @@ class RetroSim(object):
             vs0 = vs
             alt0 = alt
             t += dt
-            dv = booster.simulate(throttle, dt)
+            dv = booster.simulate(throttle, dt, stagecap=self.stagecap)
             if self.mode == 1:
                 vel = math.hypot(hs, vs)
                 if vel > 0:
