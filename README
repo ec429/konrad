@@ -65,6 +65,7 @@ console it should display.  So far we have the following:
     Inputs:
     - f to select 'Fixed' mode (assume vehicle holds current pitch)
     - r to select 'Retro' mode (assume retrograde hold)
+    - PgUp/PgDn to increment/decrement Reserved Stages
     - x to cut throttle
     - 1-9 for 10-90% throttle
     - z for 100% throttle
@@ -166,7 +167,10 @@ will record:
   Fixed mode, from this point the sim will assume a pitch of 90°.)
 * Vertical - the vertical component of velocity becomes zero.
 * Surface - the altitude above terrain becomes zero.
-* Burnout - the vehicle is emptied of all propellants.
+* Burnout - the vehicle is emptied of all propellants.  (If your vehicle has a
+  separate ascent stage, like the Apollo LEM, you can use 'Rsvd.Stg.' - i.e.
+  reserved stages - to exclude it, so that this event correctly shows burnout
+  of the descent stage.)
 For each of these events, various parameters are recorded, a selection of
 which are displayed (different for each event).
 T: time after simulation start
