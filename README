@@ -2,6 +2,21 @@ KONRAD - Kerbal Operations, Naughty Rockets, Aerial Debris
 
 A telemachus control panel with a retro feel.  Built on curses technology.
 
+License
+-------
+KONRAD is licensed under the GNU General Public License version 2,
+incorporated herein by reference.
+
+Dependencies
+------------
+* Python
+  - tested with 2.7.11 but should work on any 2.6 or later
+  - doesn't work with Python3 yet
+* curses
+* websocket-client, https://pypi.python.org/pypi/websocket-client/
+  - can be found in Debian package "python-websocket"
+* Telemachus, https://github.com/richardbunt/Telemachus
+
 Consoles
 --------
 konrad.py must always be run with a 'consname' argument, indicating which
