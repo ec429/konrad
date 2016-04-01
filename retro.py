@@ -113,7 +113,7 @@ class RetroSim(object):
                 self.data['v'] = encode()
             if alt <= ground_alt and 's' not in self.data:
                 self.data['s'] = encode()
-            if not booster.stages and 'b' not in self.data:
+            if len(booster.stages) <= self.stagecap and 'b' not in self.data:
                 self.data['b'] = encode()
             if self.debug:
                 print "time %d"%(t,)
