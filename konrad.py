@@ -403,6 +403,8 @@ consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retr
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
+    x.add_option('--server', type='string', help='Hostname or IP address of Telemachus server', default=downlink.DEFAULT_HOST)
+    x.add_option('--port', type='int', help='Port number of Telemachus server', default=downlink.DEFAULT_PORT)
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
     x.add_option('-b', '--body', type='int', help="ID of body to assume we're at", default=1)
     x.add_option('--target-alt', type='int', help="Target altitude above MSL (m)")
@@ -459,7 +461,7 @@ if __name__ == '__main__':
     if opts.dry_run:
         dl = downlink.FakeDownlink()
     else:
-        dl = downlink.connect_default(logf=logf)
+        dl = downlink.connect_default(host=opts.server, port=opts.port, logf=logf)
     vessel = None
     dl.subscribe('v.name')
     if opts.target_alt and not (opts.target_peri or opts.target_apo):
