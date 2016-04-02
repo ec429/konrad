@@ -29,7 +29,7 @@ class Propellant(object):
         return cls(name, d['volume'], d['density'], d.get('mainEngine', True))
 
 class Stage(object):
-    def __init__(self, props, isp, dry, thrust=None, minThrottle=0):
+    def __init__(self, props, isp, dry, thrust=None, minThrottle=100.0):
         self.props = list(props) # list of Propellant instances
         check = [p.name for p in props]
         if len(check) != len(set(check)):
@@ -118,7 +118,7 @@ class Stage(object):
         return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
     def from_dict(cls, d):
-        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'), d.get('minThrottle'))
+        return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'), d.get('minThrottle', 100.0))
 
 class Booster(object):
     def __init__(self, stages):
