@@ -4,6 +4,7 @@
 import sim
 
 class RetroSim(sim.RocketSim):
+    surface = True
     def simulate(self, booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
         self.sim_setup(booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
         self.data = {}

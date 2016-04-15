@@ -802,7 +802,6 @@ class UpdateRetroSim(Gauge):
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
-        b = booster.Booster.clone(self.booster)
         hs = self.get('hs')
         vs = self.get('vs')
         alt = self.get('alt')
@@ -819,7 +818,7 @@ class UpdateRetroSim(Gauge):
         if None in (hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
             self.sim.has_data = False
         else:
-            self.sim.simulate(b, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
+            self.sim.simulate(self.booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -867,7 +866,7 @@ class RSAlt(SIGauge):
     def draw(self):
         if self.sim.has_data:
             if self.key in self.sim.data:
-                alt = self.sim.data[self.key]['alt']
+                alt = self.sim.data[self.key]['height']
                 super(RSAlt, self).draw(alt)
                 col = 3 if alt > 0 else 1
                 if self.key == 'b':

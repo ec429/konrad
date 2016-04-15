@@ -9,6 +9,8 @@ class RocketSim(object):
     MODE_PROGRADE = 1
     MODE_RETROGRADE = 2
     MODE_VL = 3
+    surface = False
+    orbitals = False
     def __init__(self, ground_alt=None, ground_map=None, mode=0, debug=False):
         self.has_data = False
         self.ground_alt = ground_alt
@@ -38,29 +40,46 @@ class RocketSim(object):
         self.bgm = bgm
         self.hs = hs
         self.vs = vs
+        self.act_mode = self.mode
         # time step, in seconds
         self.dt = 1
     def encode(self):
-        return {'time': self.t, 'alt': self.alt - self.local_ground_alt, 'x': self.downrange,
-                'hs': self.hs, 'vs': self.vs,
-                'lat': math.degrees(self.lat), 'lon': math.degrees(self.lon)}
+        d = {'time': self.t, 'alt': self.alt, 'x': self.downrange,
+             'hs': self.hs, 'vs': self.vs,
+             'lat': math.degrees(self.lat), 'lon': math.degrees(self.lon)}
+        if self.surface:
+            if self.local_ground_alt is not None:
+                d['height'] = self.alt - self.local_ground_alt
+        return d
     def step(self):
         hs0 = self.hs
         vs0 = self.vs
         alt0 = self.alt
         self.t += self.dt
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
-        if self.mode != self.MODE_FIXED:
+        if self.act_mode == self.MODE_FIXED:
+            pass
+        elif self.act_mode == self.MODE_PROGRADE:
             vel = math.hypot(self.hs, self.vs)
             if vel > 0:
-                if self.mode == self.MODE_PROGRADE:
-                    self.cx = self.hs / vel
-                    self.cy = self.vs / vel
-                elif self.mode == self.MODE_RETROGRADE:
-                    self.cx = -self.hs / vel
-                    self.cy = -self.vs / vel
-                else:
-                    raise Exception("Unhandled mode", self.mode)
+                self.cx = self.hs / vel
+                self.cy = self.vs / vel
+        elif self.act_mode == self.MODE_RETROGRADE:
+            vel = math.hypot(self.hs, self.vs)
+            if vel > 0:
+                self.cx = -self.hs / vel
+                self.cy = -self.vs / vel
+        elif self.act_mode == self.MODE_VL:
+            # Pitch for vertical descent
+            twr = self.booster.twr
+            if twr > abs(self.hs):
+                self.cx = -self.hs / twr
+                self.cy = math.sqrt(1 - self.cx*self.cx)
+            else:
+                self.cx = 0
+                self.cy = 1
+        else:
+            raise Exception("Unhandled mode", self.mode)
         dhs = dv * self.cx
         dvs = dv * self.cy
         self.hs += dhs
@@ -94,24 +113,20 @@ class RocketSim(object):
             nhs = self.hs * math.cos(rot) - self.vs * math.sin(rot)
             nvs = self.hs * math.sin(rot) + self.vs * math.cos(rot)
             self.hs, self.vs = nhs, nvs
-        if self.ground_map is not None:
-            mlat = int(round(math.degrees(self.lat) * 2))
-            mlon = int(round(math.degrees(self.lon) * 2)) % 720
-            if mlon >= 360: mlon -= 720
-            elif mlon < -360: mlon += 720
-            self.local_ground_alt = self.ground_map[mlon][mlat]
-        elif self.ground_alt is not None:
-            self.local_ground_alt = self.ground_alt
-        else:
-            self.local_ground_alt = 0
-        if self.hs <= 0 and self.mode == self.MODE_RETROGRADE:
-            self.mode = self.MODE_VL
-        if self.mode == self.MODE_VL:
-            # Pitch for vertical descent
-            twr = self.booster.twr
-            if twr > abs(self.hs):
-                self.cx = -self.hs / twr
-                self.cy = math.sqrt(1 - self.cx*self.cx)
+            if self.orbitals and self.bgm is not None:
+                # Vcirc at current altitude
+                sma = self.brad + self.alt
+                self.tgt_obt_vel = math.sqrt(self.bgm / sma)
+        if self.surface:
+            if self.ground_map is not None:
+                mlat = int(round(math.degrees(self.lat) * 2))
+                mlon = int(round(math.degrees(self.lon) * 2)) % 720
+                if mlon >= 360: mlon -= 720
+                elif mlon < -360: mlon += 720
+                self.local_ground_alt = self.ground_map[mlon][mlat]
+            elif self.ground_alt is not None:
+                self.local_ground_alt = self.ground_alt
             else:
-                self.cx = 0
-                self.cy = 1
+                self.local_ground_alt = 0
+        if self.hs <= 0 and self.act_mode == self.MODE_RETROGRADE:
+            self.act_mode = self.MODE_VL
