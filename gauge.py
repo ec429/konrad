@@ -783,13 +783,16 @@ class TWRGauge(OneLineGauge):
             self.addstr('%s:%+*.*f'%(self.label, width, prec, twr))
 
 class UpdateRocketSim(Gauge):
-    def __init__(self, dl, cw, body, booster, use_throttle, sim):
+    def __init__(self, dl, cw, body, booster, use_throttle, use_orbital, sim):
         super(UpdateRocketSim, self).__init__(dl, cw)
         self.booster = booster
         # Assumes you already have an UpdateBooster keeping booster updated!
         self.sim = sim
         self.use_throttle = use_throttle
-        self.add_prop('hs', 'v.surfaceSpeed')
+        if use_orbital:
+            self.add_prop('hs', 'v.orbitalVelocity')
+        else:
+            self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
         self.add_prop('alt', 'v.altitude')
         if use_throttle:

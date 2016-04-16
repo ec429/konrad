@@ -317,7 +317,7 @@ class RetroConsole(Console):
             use_throttle = not i
             rs = retro.RetroSim(ground_map=ground_map, ground_alt=opts.ground_alt, mode=self.mode)
             self.rs[i] = rs
-            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, False, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
             wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
             hwin = scr.derwin(5, 16, 8 + y, 1)
@@ -422,7 +422,7 @@ class AscentConsole(Console):
             use_throttle = not i
             rs = ascent.AscentSim(mode=self.mode)
             self.rs[i] = rs
-            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, True, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
             wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
             owin = scr.derwin(5, 16, 8 + y, 1)
