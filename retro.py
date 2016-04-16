@@ -6,7 +6,7 @@ import sim
 class RetroSim(sim.RocketSim):
     surface = True
     def simulate(self, booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
-        self.sim_setup(booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
+        self.sim_setup(booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm, True)
         self.data = {}
         while not ((
                     (
@@ -17,7 +17,8 @@ class RetroSim(sim.RocketSim):
                     'b' in self.data
                    ) or
                    self.t > 1200):
-            self.step()
+            if self.step():
+                break
             if self.hs <= 0 and 'h' not in self.data:
                 self.data['h'] = self.encode()
             if self.vs >= 0 and 'v' not in self.data:

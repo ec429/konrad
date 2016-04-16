@@ -760,10 +760,11 @@ class TWRGauge(OneLineGauge):
         alt = self.get('alt')
         brad = self.get('brad')
         bgm = self.get('bgm')
-        if throttle is None:
+        twr = self.booster.twr
+        if None in (throttle, twr):
             tmr = None
         else:
-            tmr = self.booster.twr * self.booster.convert_throttle(throttle)
+            tmr = twr * self.booster.convert_throttle(throttle)
         if None in (alt, brad, bgm):
             g = None
         else:
@@ -781,9 +782,9 @@ class TWRGauge(OneLineGauge):
             prec = min(3, width - 3)
             self.addstr('%s:%+*.*f'%(self.label, width, prec, twr))
 
-class UpdateRetroSim(Gauge):
+class UpdateRocketSim(Gauge):
     def __init__(self, dl, cw, body, booster, use_throttle, sim):
-        super(UpdateRetroSim, self).__init__(dl, cw)
+        super(UpdateRocketSim, self).__init__(dl, cw)
         self.booster = booster
         # Assumes you already have an UpdateBooster keeping booster updated!
         self.sim = sim
@@ -866,7 +867,8 @@ class RSAlt(SIGauge):
     def draw(self):
         if self.sim.has_data:
             if self.key in self.sim.data:
-                alt = self.sim.data[self.key]['height']
+                d = self.sim.data[self.key]
+                alt = d.get('height', d['alt'])
                 super(RSAlt, self).draw(alt)
                 col = 3 if alt > 0 else 1
                 if self.key == 'b':
@@ -917,7 +919,10 @@ class RSVSpeed(SIGauge):
                 vs = self.sim.data[self.key]['vs']
                 super(RSVSpeed, self).draw(vs)
                 col = 3
-                if vs < -8: # TODO parametrise
+                if self.key == 'o':
+                    if abs(vs) > 20: # TODO parametrise
+                        col = 1
+                elif vs < -8: # TODO parametrise
                     col = 1
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))
@@ -942,7 +947,9 @@ class RSHSpeed(SIGauge):
                 hs = self.sim.data[self.key]['hs']
                 super(RSHSpeed, self).draw(hs)
                 col = 3
-                if abs(hs) > 1: # TODO parametrise
+                if self.key == 'o':
+                    col = 0
+                elif abs(hs) > 1: # TODO parametrise
                     col = 1
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))

@@ -6,11 +6,12 @@ import sim
 class AscentSim(sim.RocketSim):
     orbitals = True
     def simulate(self, booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
-        self.sim_setup(booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
+        self.sim_setup(booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm, False)
         self.data = {}
         while not (('o' in self.data and 'v' in self.data and 'b' in self.data) or
                    self.t > 1200):
-            self.step()
+            if self.step():
+                break
             if self.hs > self.tgt_obt_vel and 'o' not in self.data:
                 self.data['o'] = self.encode()
             if self.vs <= 0 and 'v' not in self.data:

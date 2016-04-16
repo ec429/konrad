@@ -9,6 +9,11 @@ class RocketSim(object):
     MODE_PROGRADE = 1
     MODE_RETROGRADE = 2
     MODE_VL = 3
+    @classmethod
+    def modename(cls, mode):
+        return {cls.MODE_FIXED: "Fixed", cls.MODE_PROGRADE: "Progd",
+                cls.MODE_RETROGRADE: "Retro", cls.MODE_VL: "VertL",
+                }.get(mode, "%r?"%(mode,))
     surface = False
     orbitals = False
     def __init__(self, ground_alt=None, ground_map=None, mode=0, debug=False):
@@ -18,17 +23,24 @@ class RocketSim(object):
         self.mode = mode
         self.stagecap = 0
         self.debug = debug
-    def sim_setup(self, bstr, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
+    def sim_setup(self, bstr, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm, retro):
         self.booster = booster.Booster.clone(bstr)
         self.alt = alt
         # components of unit thrust
         pitch = math.radians(pit)
         self.cy = math.sin(pitch)
-        self.cx = -math.cos(pitch)
-        # components of unit 'x', assumes hdg is retrograde
+        if retro:
+            self.cx = -math.cos(pitch)
+        else:
+            self.cx = math.cos(pitch)
+        # components of unit 'x', assumes hdg is prograde (or retrograde if retro)
         heading = math.radians(hdg)
-        self.clat = -math.cos(heading)
-        self.clong = -math.sin(heading)
+        if retro:
+            self.clat = -math.cos(heading)
+            self.clong = -math.sin(heading)
+        else:
+            self.clat = math.cos(heading)
+            self.clong = math.sin(heading)
         # state
         self.downrange = 0
         self.t = 0
@@ -57,6 +69,8 @@ class RocketSim(object):
         alt0 = self.alt
         self.t += self.dt
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
+        if dv is None:
+            return True
         if self.act_mode == self.MODE_FIXED:
             pass
         elif self.act_mode == self.MODE_PROGRADE:

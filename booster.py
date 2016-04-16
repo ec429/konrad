@@ -98,6 +98,7 @@ class Stage(object):
         return (throttle * (1.0 - minThrottle)) + minThrottle
     def simulate(self, throttle, dt):
         if self.thrust is None: return None
+        if self.thrust == 0: return 0
         throttle = self.convert_throttle(throttle)
         twr0 = self.twr * throttle
         dm = self.thrust * throttle * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons

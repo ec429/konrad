@@ -8,6 +8,7 @@ import math
 import csv
 import booster
 import retro
+import ascent
 
 class Console(object):
     group = None
@@ -292,7 +293,7 @@ class RetroConsole(Console):
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
         self.stagecap = 0
-        self.mode = 0
+        self.mode = retro.RetroSim.MODE_FIXED
         self.vars = {}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
@@ -314,9 +315,9 @@ class RetroConsole(Console):
         for i in xrange(2):
             y = i * 6
             use_throttle = not i
-            rs = retro.RetroSim(ground_map=ground_map, ground_alt=opts.ground_alt, mode=0)
+            rs = retro.RetroSim(ground_map=ground_map, ground_alt=opts.ground_alt, mode=self.mode)
             self.rs[i] = rs
-            sim = gauge.UpdateRetroSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
             wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
             hwin = scr.derwin(5, 16, 8 + y, 1)
@@ -347,19 +348,21 @@ class RetroConsole(Console):
                                  "Touchdown")
             sim_blocks.extend([sim, wt, h, v, s, b, t])
         if ground_map is not None:
-            alt = gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), ground_map)
+            alt = [gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), ground_map)]
+        else:
+            alt = []
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, scap, alt, vs] +
+                                      [update, deltav, throttle, twr, mode, scap, vs] + alt +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Retro")
         self.update_vars()
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
-        self.vars['mode'] = 'Mode: %s'%(['Fixed', 'Retro'][self.mode],)
+        self.vars['mode'] = 'Mode: %s'%(retro.RetroSim.modename(self.mode),)
         for i in xrange(2):
             if self.rs[i] is not None:
                 self.rs[i].mode = self.mode
@@ -379,11 +382,11 @@ class RetroConsole(Console):
             self.dl.send_msg({'run':['f.stage']})
             return
         if key == ord('f'):
-            self.mode = 0
+            self.mode = retro.RetroSim.MODE_FIXED
             self.update_vars()
             return
         if key == ord('r'):
-            self.mode = 1
+            self.mode = retro.RetroSim.MODE_RETROGRADE
             self.update_vars()
             return
         if key == curses.KEY_PPAGE:
@@ -399,7 +402,98 @@ class RetroConsole(Console):
     def connect_params(cls):
         return {'rate': 1000} # update once per second
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole}
+class AscentConsole(Console):
+    """Ascent Guidance console"""
+    def __init__(self, opts, scr, dl):
+        super(AscentConsole, self).__init__(opts, scr, dl)
+        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
+        twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
+        self.stagecap = 0
+        self.mode = ascent.AscentSim.MODE_FIXED
+        self.vars = {}
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
+        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
+        sim_blocks = []
+        self.rs = [None, None]
+        for i in xrange(2):
+            y = i * 6
+            use_throttle = not i
+            rs = ascent.AscentSim(mode=self.mode)
+            self.rs[i] = rs
+            sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            wtext = "At 100% throttle" if i else "At current throttle"
+            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
+            owin = scr.derwin(5, 16, 8 + y, 1)
+            o = gauge.GaugeGroup(owin, [gauge.RSTime(dl, owin.derwin(1, 14, 1, 1), 'o', rs),
+                                        gauge.RSAlt(dl, owin.derwin(1, 14, 2, 1), 'o', rs),
+                                        gauge.RSVSpeed(dl, owin.derwin(1, 14, 3, 1), 'o', rs)],
+                                 "Orb-Vel")
+            vwin = scr.derwin(5, 16, 8 + y, 17)
+            v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', rs),
+                                        gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', rs),
+                                        gauge.RSHSpeed(dl, vwin.derwin(1, 14, 3, 1), 'v', rs)],
+                                 "Vertical")
+            bwin = scr.derwin(6, 16, 7 + y, 33)
+            b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', rs),
+                                        gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', rs),
+                                        gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', rs),
+                                        gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
+                                 "Burnout")
+            sim_blocks.extend([sim, wt, o, v, b])
+        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [update, deltav, throttle, twr, mode, scap, vs] +
+                                      sim_blocks +
+                                      [self.status, body, time],
+                                      "KONRAD: Ascent")
+        self.update_vars()
+    def update_vars(self):
+        self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
+        self.vars['mode'] = 'Mode: %s'%(ascent.AscentSim.modename(self.mode),)
+        for i in xrange(2):
+            if self.rs[i] is not None:
+                self.rs[i].mode = self.mode
+                self.rs[i].stagecap = self.stagecap
+    def input(self, key):
+        if key >= ord('1') and key <= ord('9'):
+            i = int(chr(key))
+            self.dl.send_msg({'run':['f.setThrottle[%f]'%(i/10.0,)]})
+            return
+        if key == ord('z'):
+            self.dl.send_msg({'run':['f.setThrottle[1.0]']})
+            return
+        if key == ord('x'):
+            self.dl.send_msg({'run':['f.setThrottle[0.0]']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        if key == ord('f'):
+            self.mode = ascent.AscentSim.MODE_FIXED
+            self.update_vars()
+            return
+        if key == ord('p'):
+            self.mode = ascent.AscentSim.MODE_PROGRADE
+            self.update_vars()
+            return
+        if key == curses.KEY_PPAGE:
+            self.stagecap += 1
+            self.update_vars()
+            return
+        if key == curses.KEY_NPAGE:
+            self.stagecap = max(self.stagecap - 1, 0)
+            self.update_vars()
+            return
+        return super(AscentConsole, self).input(key)
+    @classmethod
+    def connect_params(cls):
+        return {'rate': 1000} # update once per second
+
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole}
 
 def parse_opts():
     x = optparse.OptionParser(usage='%prog consname')
