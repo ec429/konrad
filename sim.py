@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Simulation engine for RetroSim
+# Simulation engine for RetroSim and AscentSim
 
 import math
 import booster

@@ -70,6 +70,19 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+* asc
+    Ascent Guidance.  For judging launches to orbit (ignores air drag).
+    See section "Ascent Guidance" below for more information.
+    Requires an accurate JSON Booster file, supplied with --booster.  See the
+    section "JSON Booster" below for more information.
+    Inputs:
+    - f to select 'Fixed' mode (assume vehicle holds current pitch)
+    - p to select 'Progd' mode (assume prograde hold)
+    - PgUp/PgDn to increment/decrement Reserved Stages
+    - x to cut throttle
+    - 1-9 for 10-90% throttle
+    - z for 100% throttle
+    - space for staging
 
 Global Inputs
 -------------
@@ -108,7 +121,7 @@ A Stage is a dictionary, with the following items:
   "isp": main engine Isp in seconds
   "dry": stage dry mass in tons
 Two further items can optionally be specified; they are used only by the Retro
-console, so are needed only on lander engines:
+and Ascent consoles:
   "thrust": main engine thrust in kN
   "minThrottle": main engine minimum throttle setting in percent
 A Propellant is a dictionary, with the following items:
@@ -214,3 +227,30 @@ descending vertically at a good landing speed, throttle back to bring your TWR
 as close to 1 as you can.  After a few more seconds you should touch down
 gently on the surface; cut your engine, sit back, and relax.  Congratulations,
 you've landed!
+
+Ascent Guidance
+---------------
+The Ascent console is based on the same principle as Retro, namely running a
+simulation based on certain assumptions, and recording motion parameters at
+various events.  The AscentSim recognises three events:
+* Orb-Vel - the horizontal component of velocity reaches the velocity for a
+  circular orbit at the current altitude.
+* Vertical - the vertical component of velocity becomes zero.
+* Burnout - the vehicle is emptied of all propellants, excluding any reserved
+  stages.
+Because the AscentSim ignores atmospheric drag, it won't be useful until the
+air thins out.  On the other hand, you won't have much freedom to steer
+anyway while in thick air, because aerodynamic forces will destroy a rocket
+that doesn't stick pretty closely to a gravity turn.  (Judging the pitch kick
+to start your gravity turn is a separate problem, which AscentSim can't help
+you with.  Try running some simulations in Kerbal Construction Time.)
+If you just want to reach a circular orbit, and don't care too much about the
+altitude, select Fixed mode and aim to get Orb-Vel V close to zero.  This
+means that on reaching orbital velocity, your vertical speed will be zero, so
+you will be in a circular orbit at that altitude.
+Conveniently, the Orb-Vel section also displays altitude (Y), so if you want
+to target a specific (circular) orbit, you can aim either above or below the
+angle for circularisation to slowly 'pull' your final orbital altitude one way
+or the other.  This can take a bit of practice and judgement (or just an
+intuitive understanding of the underlying dynamics) to get right, though.
+And remember to keep an eye on Burnout time!
