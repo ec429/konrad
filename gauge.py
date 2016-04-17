@@ -736,14 +736,24 @@ class StagesGauge(Gauge):
     def __init__(self, dl, cw, booster):
         super(StagesGauge, self).__init__(dl, cw)
         self.booster = booster
+        self.add_prop('throttle', 'f.throttle')
     def draw(self):
         self.cw.clear()
+        throttle = self.get('throttle')
         for i,s in enumerate(self.booster.stages):
             if i * 2 < self.height:
                 header = 'Stage %d [%s]'%(i + 1, ', '.join(s.propnames))
                 self.cw.addnstr(i * 2, 0, header, self.width)
                 deltav = 'Vac.dV: %dm/s'%(s.deltaV,)
-                self.cw.addnstr(i * 2 + 1, 0, deltav, self.width)
+                bt = s.burn_time(throttle)
+                if bt is None or self.width < 28:
+                    row = deltav
+                else:
+                    mins = bt / 60
+                    secs = bt % 60
+                    bts = 'BT %02d:%02d'%(mins, secs)
+                    row = deltav.ljust(20) + bts
+                self.cw.addnstr(i * 2 + 1, 0, row, self.width)
 
 class TWRGauge(OneLineGauge):
     label = 'TWR'

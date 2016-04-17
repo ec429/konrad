@@ -61,6 +61,7 @@ class Stage(object):
         return self.isp * 9.80665
     @property
     def is_empty(self):
+        if self.thrust == 0: return True # Always stage straight past this, it's dead weight
         return not any(p.mass for p in self.props if p.mainEngine)
     @property
     def prop_mass(self):
@@ -92,7 +93,16 @@ class Stage(object):
     @property
     def propnames(self):
         return [str(p) for p in self.props]
+    def burn_time(self, throttle):
+        if self.thrust is None: return None
+        throttle = self.convert_throttle(throttle)
+        if throttle is None: return None
+        mdot = self.thrust * throttle / self.veff # tons/s
+        mtot = self.prop_mass
+        if mdot <= 0: return None
+        return mtot / mdot
     def convert_throttle(self, throttle):
+        if throttle is None: return None
         if throttle == 0: return 0
         minThrottle = self.minThrottle / 100.0
         return (throttle * (1.0 - minThrottle)) + minThrottle
@@ -100,6 +110,7 @@ class Stage(object):
         if self.thrust is None: return None
         if self.thrust == 0: return 0
         throttle = self.convert_throttle(throttle)
+        if throttle is None: return None
         twr0 = self.twr * throttle
         dm = self.thrust * throttle * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
         mtot = self.prop_mass
