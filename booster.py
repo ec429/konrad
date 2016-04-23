@@ -95,6 +95,7 @@ class Stage(object):
         return [str(p) for p in self.props]
     def burn_time(self, throttle):
         if self.thrust is None: return None
+        if self.thrust == 0: return 0
         throttle = self.convert_throttle(throttle)
         if throttle is None: return None
         mdot = self.thrust * throttle / self.veff # tons/s
