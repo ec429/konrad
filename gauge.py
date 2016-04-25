@@ -316,7 +316,7 @@ class SIGauge(FractionGauge):
             self.addstr('%s: %s %s'%(self.label, bad, self.unit))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
-            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), value / pfx[1], pfx[0], self.unit))
+            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), int(value / pfx[1] + 0.5), pfx[0], self.unit))
             if self.target is not None:
                 self.colour(value, self.target)
 
