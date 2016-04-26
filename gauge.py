@@ -308,7 +308,7 @@ class SIGauge(FractionGauge):
             pfx = ('G', 1e9)
         if sz >= digits + 8:
             pfx = ('T', 1e12)
-        if value is None:
+        if value is None or math.isnan(value) or math.isinf(value):
             bad = 'NO DATA'
             if width < 8:
                 bad = '-'*(width - 1)
