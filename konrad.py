@@ -40,36 +40,21 @@ class FDConsole(Console):
             gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1)),
             ], 'Orbital')
         xcons = len(opts.consumable)
-        strs = scr.derwin(4, 27, 14 if opts.unmanned else 10 - xcons, 1)
+        strs = scr.derwin(4, 27, 15 - xcons, 1)
         strsgroup = gauge.GaugeGroup(strs, [
             gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
             gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
             ], 'Stresses')
-        if opts.unmanned:
-            capsys = scr.derwin(4, 27, 18, 1)
-            capsysgroup = gauge.GaugeGroup(capsys, [
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
-                gauge.Light(dl, capsys.derwin(1, 6, 2, 1), 'SAS', 'v.sasValue'),
-                gauge.Light(dl, capsys.derwin(1, 6, 2, 7), 'RCS', 'v.rcsValue'),
-                gauge.VLine(dl, capsys.derwin(1, 1, 2, 13)),
-                gauge.Light(dl, capsys.derwin(1, 6, 2, 14), 'GEAR', 'v.gearValue'),
-                gauge.Light(dl, capsys.derwin(1, 6, 2, 20), 'BRK', 'v.brakeValue'),
-                ], 'Avionics')
-        else:
-            capsys = scr.derwin(8 + xcons, 27, 14 - xcons, 1)
-            capsysgroup = gauge.GaugeGroup(capsys, [
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 1, 1), 'ElectricCharge'),
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 2, 1), 'Ablator'),
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 3, 1), 'Food'),
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 4, 1), 'Water'),
-                gauge.FuelGauge(dl, capsys.derwin(1, 25, 5, 1), 'Oxygen')] +
-                [gauge.FuelGauge(dl, capsys.derwin(1, 25, 6 + i, 1), c) for i,c in enumerate(opts.consumable)] + [
-                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 1), 'SAS', 'v.sasValue'),
-                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 7), 'RCS', 'v.rcsValue'),
-                gauge.VLine(dl, capsys.derwin(1, 1, 6 + xcons, 13)),
-                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 14), 'GEAR', 'v.gearValue'),
-                gauge.Light(dl, capsys.derwin(1, 6, 6 + xcons, 20), 'BRK', 'v.brakeValue'),
-                ], 'CapSys')
+        capsystitle = 'Avionics' if opts.unmanned else 'Capsys'
+        capsys = scr.derwin(3 + xcons, 27, 19 - xcons, 1)
+        capsysgroup = gauge.GaugeGroup(capsys,
+            [gauge.FuelGauge(dl, capsys.derwin(1, 25, 1 + i, 1), c) for i,c in enumerate(opts.consumable)] + [
+            gauge.Light(dl, capsys.derwin(1, 6, 1 + xcons, 1), 'SAS', 'v.sasValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 1 + xcons, 7), 'RCS', 'v.rcsValue'),
+            gauge.VLine(dl, capsys.derwin(1, 1, 1 + xcons, 13)),
+            gauge.Light(dl, capsys.derwin(1, 6, 1 + xcons, 14), 'GEAR', 'v.gearValue'),
+            gauge.Light(dl, capsys.derwin(1, 6, 1 + xcons, 20), 'BRK', 'v.brakeValue'),
+            ], capsystitle)
         orient = scr.derwin(13, 25, 9, 28)
         origroup = gauge.GaugeGroup(orient, [
             gauge.NavBall(dl, orient.derwin(11, 23, 1, 1)),
@@ -506,7 +491,7 @@ def parse_opts():
     x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
     x.add_option('--target-obt-vel', type='int', help="Target orbital velocity (m/s)")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
-    x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys)", default=[])
+    x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
     x.add_option('-r', '--retrograde', action='store_true', help='Assume vessel travelling blunt end first')
     x.add_option('--init-lat', type='float', help="Latitude of launch (or target) site")
@@ -534,12 +519,21 @@ def parse_opts():
         opts.booster = booster.Booster.from_json(opts.booster.read())
         if not opts.propellant:
             opts.propellant = opts.booster.all_props
+    consumable = ['ElectricCharge']
+    if not opts.unmanned:
+        consumable += ['Ablator', 'Food', 'Water', 'Oxygen']
+    for c in opts.consumable:
+        if c == '-':
+            consumable = []
+        else:
+            consumable.append(c)
+    opts.consumable = consumable
     if not opts.propellant:
         opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
-    if len(opts.propellant) > 13:
-        x.error("Too many propellants!  Max is 13")
-    if len(opts.consumable) > 9:
-        x.error("Too many consumables!  Max is 9")
+    if len(opts.propellant) > 11:
+        x.error("Too many propellants!  Max is 11")
+    if len(opts.consumable) > 12:
+        x.error("Too many consumables!  Max is 12")
     if opts.ccafs:
         opts.init_lat = 28.608389
         opts.init_long = -80.604333
