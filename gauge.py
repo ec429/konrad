@@ -35,6 +35,10 @@ class Gauge(object):
     def add_prop(self, name, apistr):
         self.props[name] = apistr
         self.dl.subscribe(apistr)
+    def del_prop(self, name):
+        if name in self.props:
+            self.dl.unsubscribe(self.props[name])
+            del self.props[name]
     def get(self, key, default=None):
         if key not in self.props:
             return default
@@ -236,6 +240,11 @@ class BodyGauge(OneLineGauge):
         self.add_prop('name', 'b.name[%d]'%(body,))
         self.add_prop('body', 'v.body')
         self.warn = False
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('name')
+            self.add_prop('name', 'b.name[%d]'%(kwargs['body'],))
+        super(BodyGauge, self)._changeopt(**kwargs)
     def draw(self):
         super(BodyGauge, self).draw()
         name = self.get('name')
@@ -328,9 +337,14 @@ class DownrangeGauge(SIGauge):
         super(DownrangeGauge, self).__init__(dl, cw)
         self.add_prop('lat', 'v.lat')
         self.add_prop('lon', 'v.long')
-        self.add_prop('brad', 'b.radius[%d]'%(body,))
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
         self.init_lat = init_lat
         self.init_long = init_long
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
+        super(DownrangeGauge, self)._changeopt(**kwargs)
     def draw(self):
         lat = self.get('lat')
         lon = self.get('lon')
@@ -362,6 +376,11 @@ class AltitudeGauge(SIGauge):
         self.add_prop('alt', 'v.altitude')
         self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
         self.vac = False
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('atm_top')
+            self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(kwargs['body'],))
+        super(AltitudeGauge, self)._changeopt(**kwargs)
     def draw(self):
         alt = self.get('alt')
         super(AltitudeGauge, self).draw(alt)
@@ -408,6 +427,11 @@ class PeriapsisGauge(SIGauge):
         self.add_prop('peri', 'o.PeA')
         self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(body,))
         self.orb = False
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('atm_top')
+            self.add_prop('atm_top', 'b.maxAtmosphere[%d]'%(kwargs['body'],))
+        super(PeriapsisGauge, self)._changeopt(**kwargs)
     def draw(self):
         peri = self.get('peri')
         super(PeriapsisGauge, self).draw(peri)
@@ -449,6 +473,14 @@ class ObtVelocityGauge(SIGauge):
         self.add_prop('orbV', 'v.orbitalVelocity')
         self.add_prop('brad', orbit.ParentBody.rad_api(self.body))
         self.add_prop('bgm', orbit.ParentBody.gm_api(self.body))
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.body = kwargs['body']
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(self.body))
+            self.del_prop('bgm')
+            self.add_prop('bgm', orbit.ParentBody.gm_api(self.body))
+        super(ObtVelocityGauge, self)._changeopt(**kwargs)
     def draw(self):
         alt = self.get('alt')
         brad = self.get('brad')
@@ -774,8 +806,15 @@ class TWRGauge(OneLineGauge):
         self.booster = booster
         self.add_prop('throttle', 'f.throttle')
         self.add_prop('alt', 'v.altitude')
-        self.add_prop('brad', "b.radius[%d]"%(body,))
-        self.add_prop('bgm', "b.o.gravParameter[%d]"%(body,))
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(body))
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
+            self.del_prop('bgm')
+            self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
+        super(TWRGauge, self)._changeopt(**kwargs)
     def draw(self):
         super(TWRGauge, self).draw()
         throttle = self.get('throttle')
@@ -825,6 +864,13 @@ class UpdateRocketSim(Gauge):
         self.add_prop('lon', 'v.long')
         self.add_prop('brad', orbit.ParentBody.rad_api(body))
         self.add_prop('bgm', orbit.ParentBody.gm_api(body))
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
+            self.del_prop('bgm')
+            self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
+        super(UpdateRocketSim, self)._changeopt(**kwargs)
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
