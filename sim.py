@@ -3,6 +3,7 @@
 
 import math
 import booster
+import orbit
 
 class RocketSim(object):
     MODE_FIXED = 0
@@ -50,6 +51,7 @@ class RocketSim(object):
         self.throttle = throttle
         self.brad = brad
         self.bgm = bgm
+        self.pbody = orbit.ParentBody(brad, bgm)
         self.hs = hs
         self.vs = vs
         self.act_mode = self.mode
@@ -127,10 +129,9 @@ class RocketSim(object):
             nhs = self.hs * math.cos(rot) - self.vs * math.sin(rot)
             nvs = self.hs * math.sin(rot) + self.vs * math.cos(rot)
             self.hs, self.vs = nhs, nvs
-            if self.orbitals and self.bgm is not None:
+            if self.orbitals:
                 # Vcirc at current altitude
-                sma = self.brad + self.alt
-                self.tgt_obt_vel = math.sqrt(self.bgm / sma)
+                self.tgt_obt_vel = self.pbody.vcirc(self.alt)
         if self.surface:
             if self.ground_map is not None:
                 mlat = int(round(math.degrees(self.lat) * 2))

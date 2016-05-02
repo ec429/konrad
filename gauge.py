@@ -4,6 +4,7 @@ import curses
 import math
 import matrix
 import booster
+import orbit
 
 def initialise():
     register_colours()
@@ -433,25 +434,36 @@ class ApoapsisGauge(SIGauge):
 class ObtVelocityGauge(SIGauge):
     unit = 'm/s'
     label = 'Velocity'
-    fly_v = False
-    def __init__(self, dl, cw, target=None, tmu=None, tsma=None, trad=None):
-        super(ObtVelocityGauge, self).__init__(dl, cw, target)
-        self.tmu = tmu
-        self.tsma = tsma
-        self.trad = trad
-        if self.target is None and None not in [self.tmu, self.tsma, self.trad]:
-            self.fly_v = True
+    mode = 0
+    def __init__(self, dl, cw, body, target_alt=None, target_apo=None, target_peri=None):
+        self.body = body
+        super(ObtVelocityGauge, self).__init__(dl, cw, None)
+        self.target_alt = target_alt
+        self.target_apo = target_apo
+        self.target_peri = target_peri
+        if None not in (self.target_apo, self.target_peri):
+            self.mode = 1
             self.add_prop('alt', 'v.altitude')
+        elif self.target_alt is not None:
+            self.mode = 2
         self.add_prop('orbV', 'v.orbitalVelocity')
+        self.add_prop('brad', orbit.ParentBody.rad_api(self.body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(self.body))
     def draw(self):
-        if self.fly_v:
-            # sqrt(mu * (2/r - 1/a))
-            alt = self.get('alt')
+        alt = self.get('alt')
+        brad = self.get('brad')
+        bgm = self.get('bgm')
+        if None in (brad, bgm):
+            self.target = None
+        elif self.mode == 1:
             if alt is not None:
-                squared = self.tmu * (2.0 / (alt + self.trad) - 1.0 / self.tsma)
-                self.target = None if squared < 0 else math.sqrt(squared)
+                self.target = orbit.ParentBody(brad, bgm).vellip(self.target_peri, self.target_apo, alt)
             else:
                 self.target = None
+        elif self.mode == 2:
+            self.target = orbit.ParentBody(brad, bdm).vcirc(self.target_alt)
+        else:
+            self.target = None
         super(ObtVelocityGauge, self).draw(self.get('orbV'))
 
 class HSpeedGauge(SIGauge):
@@ -811,8 +823,8 @@ class UpdateRocketSim(Gauge):
         self.add_prop('hdg', 'n.heading2')
         self.add_prop('lat', 'v.lat')
         self.add_prop('lon', 'v.long')
-        self.add_prop('brad', "b.radius[%d]"%(body,))
-        self.add_prop('bgm', "b.o.gravParameter[%d]"%(body,))
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(body))
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!

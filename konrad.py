@@ -37,7 +37,7 @@ class FDConsole(Console):
             gauge.AltitudeGauge(dl, obt.derwin(1, 24, 1, 1), opts.body),
             gauge.PeriapsisGauge(dl, obt.derwin(1, 24, 2, 1), opts.body),
             gauge.ApoapsisGauge(dl, obt.derwin(1, 24, 3, 1)),
-            gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1)),
+            gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1), opts.body),
             ], 'Orbital')
         xcons = len(opts.consumable)
         strs = scr.derwin(4, 27, 15 - xcons, 1)
@@ -107,7 +107,7 @@ class TrajConsole(Console):
             gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
             gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
             gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
-            gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), target=opts.target_obt_vel, tmu=opts.target_obt_mu, tsma=opts.target_obt_sma, trad=opts.target_obt_rad),
+            gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), opts.body, target_alt=opts.target_alt, target_apo=opts.target_apo, target_peri=opts.target_peri),
             gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
             ], 'Orbital')
@@ -489,7 +489,6 @@ def parse_opts():
     x.add_option('--target-alt', type='int', help="Target altitude above MSL (m)")
     x.add_option('--target-peri', type='int', help="Target periapsis altitude (m)")
     x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
-    x.add_option('--target-obt-vel', type='int', help="Target orbital velocity (m/s)")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
@@ -504,10 +503,6 @@ def parse_opts():
     x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
     x.add_option('--ground-alt', type='float', help="Constant value to use for ground altitude")
     opts, args = x.parse_args()
-    # Magic for the magic target_obt_vel
-    opts.target_obt_mu = None
-    opts.target_obt_sma = None
-    opts.target_obt_rad = None
     if len(args) != 1:
         x.error("Missing consname (choose from %s)"%('|'.join(consoles.keys()),))
     consname = args[0]
@@ -552,28 +547,6 @@ if __name__ == '__main__':
         dl = downlink.connect_default(host=opts.server, port=opts.port, logf=logf)
     vessel = None
     dl.subscribe('v.name')
-    if opts.target_alt and not (opts.target_peri or opts.target_apo):
-        # Assume they want circular at target alt
-        opts.target_peri = opts.target_alt
-        opts.target_apo = opts.target_alt
-    if opts.target_peri and opts.target_apo and not opts.target_obt_vel:
-        # Supply GM and sma, so we can compute v on-the-fly
-        brad = "b.radius[%d]"%(opts.body,)
-        bgm = "b.o.gravParameter[%d]"%(opts.body,)
-        dl.subscribe(brad)
-        dl.subscribe(bgm)
-        dl.update()
-        r = dl.get(brad, None)
-        gm = dl.get(bgm, None)
-        if None not in (r, gm):
-            sma = r + (opts.target_peri + opts.target_apo) / 2.0
-            if opts.target_peri == opts.target_apo:
-                # Circular, just find v_0 ~= sqrt(mu/a)
-                opts.target_obt_vel = math.sqrt(gm / sma)
-            else:
-                opts.target_obt_mu = gm
-                opts.target_obt_sma = sma
-                opts.target_obt_rad = r
     scr = curses.initscr()
     try:
         curses.noecho()
