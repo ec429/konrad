@@ -31,6 +31,12 @@ console it should display.  So far we have the following:
 * traj
     Trajectory.  The guy who's steering probably wants this one.  If you want
     remote control, pass option --mj to enable MechJeb commands
+    Pass option --target-alt or both of --target-apo and --target-peri to get
+    nice FractionGauges.  Note: --target-alt=X does not mean the same thing
+    as --target-apo=X --target-peri=X; the former will have a target velocity
+    of the Vcirc at altitude X, while the latter will have a target velocity
+    dependent on your current altitude (determined from vis-viva equation),
+    just like it would if target apo and target peri were different.
     Inputs: < (retrograde) and > (prograde) control AoA gauge behaviour.  The
     rest are MechJeb commands:
     - P/R to select (orbital) Prograde or Retrograde hold
