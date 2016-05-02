@@ -493,7 +493,7 @@ class ObtVelocityGauge(SIGauge):
             else:
                 self.target = None
         elif self.mode == 2:
-            self.target = orbit.ParentBody(brad, bdm).vcirc(self.target_alt)
+            self.target = orbit.ParentBody(brad, bgm).vcirc(self.target_alt)
         else:
             self.target = None
         super(ObtVelocityGauge, self).draw(self.get('orbV'))
