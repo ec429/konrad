@@ -88,6 +88,7 @@ Global Inputs
 -------------
 The following inputs are recognised by any console:
 - Ctrl-X to exit
+- (/) to select prev/next body
 
 Useful Notes
 ------------

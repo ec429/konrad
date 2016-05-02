@@ -14,8 +14,19 @@ class Console(object):
     group = None
     def __init__(self, opts, scr, dl):
         self.dl = dl
+        self.dl.subscribe('b.number')
         self.status = gauge.StatusReadout(dl, scr.derwin(1, 78, 22, 1), 'status:')
     def input(self, key):
+        if key == ord('('): # prev body
+            if opts.body > 0:
+                opts.body -= 1
+                self.group.changeopt(gauge.Gauge, body=opts.body)
+            return
+        if key == ord(')'): # next body
+            if opts.body + 1 < self.dl.get('b.number'):
+                opts.body += 1
+                self.group.changeopt(gauge.Gauge, body=opts.body)
+            return
         if key == ord(curses.ascii.ctrl('X')):
             return True # exit
     @classmethod
