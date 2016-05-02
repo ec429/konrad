@@ -507,7 +507,7 @@ def parse_opts():
     x.add_option('--init-lat', type='float', help="Latitude of launch (or target) site")
     x.add_option('--init-long', type='float', help="Longitude of launch (or target) site")
     x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
-    x.add_option('--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
+    x.add_option('-n', '--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
     x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
     x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
