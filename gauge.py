@@ -789,7 +789,7 @@ class StagesGauge(Gauge):
                 header = 'Stage %d [%s]'%(i + 1, ', '.join(s.propnames))
                 self.cw.addnstr(i * 2, 0, header, self.width)
                 deltav = 'Vac.dV: %dm/s'%(s.deltaV,)
-                bt = s.burn_time(throttle)
+                bt = s.burn_time(throttle or 1.0)
                 if bt is None or self.width < 28:
                     row = deltav
                 else:
