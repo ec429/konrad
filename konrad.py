@@ -116,8 +116,8 @@ class TrajConsole(Console):
         obt = scr.derwin(8, 27, 14, 52)
         obtgroup = gauge.GaugeGroup(obt, [
             gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
-            gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri),
-            gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo),
+            gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri or opts.target_alt),
+            gauge.ApoapsisGauge(dl, obt.derwin(1, 25, 3, 1), target=opts.target_apo or opts.target_alt),
             gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), opts.body, target_alt=opts.target_alt, target_apo=opts.target_apo, target_peri=opts.target_peri),
             gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
