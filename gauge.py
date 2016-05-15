@@ -797,7 +797,12 @@ class StagesGauge(Gauge):
                     secs = bt % 60
                     bts = 'BT %02d:%02d'%(mins, secs)
                     row = deltav.ljust(20) + bts
-                self.cw.addnstr(i * 2 + 1, 0, row, self.width)
+                try:
+                    self.cw.addnstr(i * 2 + 1, 0, row, self.width)
+                except curses.error:
+                    # for some reason addnstr doesn't like the bottom-right cell in a
+                    # window.  maybe it's trying to move the cursor past it...
+                    pass
 
 class TWRGauge(OneLineGauge):
     label = 'TWR'
