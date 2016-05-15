@@ -438,11 +438,15 @@ class AscentConsole(Console):
                                         gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
                                  "Burnout")
             sim_blocks.extend([sim, wt, o, v, b])
+        stages = scr.derwin(12, 30, 7, 49)
+        stagesgroup = gauge.GaugeGroup(stages, [
+            gauge.StagesGauge(dl, stages.derwin(10, 28, 1, 1), opts.booster),
+            ], 'Stages')
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, scap, vs] +
+                                      [update, deltav, throttle, twr, mode, scap, stagesgroup, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Ascent")
