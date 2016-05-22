@@ -9,7 +9,10 @@ import orbit
 def initialise():
     register_colours()
     curses.nonl()
-    curses.curs_set(0)
+    try:
+        curses.curs_set(0)
+    except:
+        pass
 
 def register_colours():
     curses.start_color()
