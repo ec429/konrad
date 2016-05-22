@@ -58,7 +58,10 @@ class Downlink(object):
                 self.disconnect()
                 raise
         self.log('< ' + msg)
-        return json.loads(msg)
+        try:
+            return json.loads(msg)
+        except ValueError: # unparseable JSON, did the link break?
+            return None
     def update(self):
         d = self.listen()
         if not d: # Loss of Signal
