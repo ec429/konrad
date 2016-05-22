@@ -559,7 +559,9 @@ if __name__ == '__main__':
     if opts.dry_run:
         dl = downlink.FakeDownlink()
     else:
-        dl = downlink.connect_default(host=opts.server, port=opts.port, logf=logf)
+        connect_opts = {'host': opts.server, 'port': opts.port, 'logf': logf}
+        connect_opts.update(console.connect_params())
+        dl = downlink.connect_default(**connect_opts)
     vessel = None
     dl.subscribe('v.name')
     scr = curses.initscr()
