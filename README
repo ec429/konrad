@@ -17,6 +17,10 @@ Dependencies
   - can be found in Debian package "python-websocket"
 * Telemachus, https://github.com/richardbunt/Telemachus
 
+Arguments
+---------
+For details of command line arguments, run with -h or --help.
+
 Consoles
 --------
 konrad.py must always be run with a 'consname' argument, indicating which
