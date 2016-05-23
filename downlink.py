@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import websocket
+import websocket, socket
 import json
 import time
 
@@ -18,11 +18,18 @@ class Downlink(object):
         self.reconnect()
         self.subscribe('v.missionTime')
     def reconnect(self):
-        self.ws = websocket.create_connection(self.uri)
+        try:
+            self.ws = websocket.create_connection(self.uri)
+        except socket.error:
+            # Failed to connect; enter 'link down' state
+            self.ws = None
+            self.data = {}
+            return
         self.set_rate()
         self.resubscribe()
     def disconnect(self):
-        self.ws.close()
+        if self.ws is not None:
+            self.ws.close()
         self.ws = None
         self.data = {}
     def log(self, s):
@@ -37,10 +44,12 @@ class Downlink(object):
     def send_msg(self, d):
         s = json.dumps(d)
         self.log('> ' + s)
-        self.ws.send(s)
+        if self.ws is not None:
+            self.ws.send(s)
     def set_rate(self):
         self.send_msg({'rate': self.rate})
-        self.ws.settimeout(self.rate / 500.0)
+        if self.ws is not None:
+            self.ws.settimeout(self.rate / 500.0)
     def resubscribe(self):
         for key in self.subscriptions:
             self._subscribe(key)
@@ -48,12 +57,15 @@ class Downlink(object):
         msg = '{}'
         for i in xrange(3):
             try:
-                msg = self.ws.recv()
-                break
+                if self.ws is None:
+                    self.reconnect()
+                else:
+                    msg = self.ws.recv()
+                    break
             except websocket.WebSocketTimeoutException:
                 break
             except websocket.WebSocketConnectionClosedException:
-                self.reconnect()
+                continue
             except KeyboardInterrupt:
                 self.disconnect()
                 raise
