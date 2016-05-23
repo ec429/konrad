@@ -397,7 +397,7 @@ class RetroConsole(Console):
         return super(RetroConsole, self).input(key)
     @classmethod
     def connect_params(cls):
-        return {'rate': 1000} # update once per second
+        return {'rate': 500} # update twice per second
 
 class AscentConsole(Console):
     """Ascent Guidance console"""
@@ -492,7 +492,7 @@ class AscentConsole(Console):
         return super(AscentConsole, self).input(key)
     @classmethod
     def connect_params(cls):
-        return {'rate': 1000} # update once per second
+        return {'rate': 500} # update twice per second
 
 consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole}
 
