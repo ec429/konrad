@@ -107,11 +107,12 @@ class TrajConsole(Console):
     def __init__(self, opts, scr, dl):
         super(TrajConsole, self).__init__(opts, scr, dl)
         self.want = {'PIT': 90, 'HDG': 90, 'RLL': 0, 'mode': 'Off'}
-        loxn = scr.derwin(4, 27, 10, 52)
+        loxn = scr.derwin(5, 27, 9, 52)
         loxngroup = gauge.GaugeGroup(loxn, [
             gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
             gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
             gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body, opts.init_lat, opts.init_long),
+            gauge.BearingGauge(dl, loxn.derwin(1, 12, 3, 1), opts.init_lat, opts.init_long),
             ], 'Location')
         obt = scr.derwin(8, 27, 14, 52)
         obtgroup = gauge.GaugeGroup(obt, [

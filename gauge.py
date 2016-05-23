@@ -627,6 +627,7 @@ class AngleGauge(FractionGauge):
     label = ''
     fsd = 180
     api = None
+    signed = True
     def __init__(self, dl, cw, want=None):
         super(AngleGauge, self).__init__(dl, cw)
         self.want = want
@@ -645,6 +646,8 @@ class AngleGauge(FractionGauge):
             self.addstr(self.centext('NO DATA'))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
+            if angle < 0 and not self.signed:
+                angle += 360
             self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
             self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
@@ -684,6 +687,35 @@ class LatitudeGauge(AngleGauge):
     api = 'v.lat'
     def colour(self, *args):
         pass
+
+class BearingGauge(AngleGauge):
+    label = 'VOR'
+    api = None
+    signed = False
+    def __init__(self, dl, cw, body, init_lat=None, init_long=None):
+        super(BearingGauge, self).__init__(dl, cw)
+        self.add_prop('lat', 'v.lat')
+        self.add_prop('lon', 'v.long')
+        self.init_lat = init_lat
+        self.init_long = init_long
+    @property
+    def angle(self):
+        lat = self.get('lat')
+        lon = self.get('lon')
+        if self.init_lat is None:
+            self.init_lat = lat
+        if self.init_long is None:
+            self.init_long = lon
+        if None in (lat, lon, self.init_lat, self.init_long):
+            return
+        # http://www.movable-type.co.uk/scripts/latlong.html
+        phi1 = math.radians(lat)
+        lbd1 = math.radians(lon)
+        phi2 = math.radians(self.init_lat)
+        lbd2 = math.radians(self.init_long)
+        dlbd = lbd2 - lbd1
+        bear = math.atan2(math.sin(dlbd) * math.cos(phi2), math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dlbd))
+        return math.degrees(bear)
 
 class ClimbAngleGauge(AngleGauge):
     label = 'Elev'
