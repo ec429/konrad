@@ -314,6 +314,7 @@ class SIGauge(FractionGauge):
     def draw(self, value):
         super(SIGauge, self).draw()
         sgn = '' if value >= 0 else '-'
+        sgnval = -1 if sgn else 1
         width = self.width - len(self.label) - len(self.unit) - 2
         digits = min(width, self.maxwidth)
         sz = math.log10(abs(value)) if value else 1
@@ -335,7 +336,7 @@ class SIGauge(FractionGauge):
             self.addstr('%s: %s %s'%(self.label, bad, self.unit))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
-            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), int(value / pfx[1] + 0.5), pfx[0], self.unit))
+            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), int(value / pfx[1] + 0.5*sgnval), pfx[0], self.unit))
             if self.target is not None:
                 self.colour(value, self.target)
 
