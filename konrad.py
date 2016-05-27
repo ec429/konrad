@@ -112,7 +112,8 @@ class TrajConsole(Console):
             gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
             gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
             gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body, opts.init_lat, opts.init_long),
-            gauge.BearingGauge(dl, loxn.derwin(1, 12, 3, 1), opts.init_lat, opts.init_long),
+            gauge.BearingGauge(dl, loxn.derwin(1, 12, 3, 1), opts.body, opts.init_lat, opts.init_long),
+            gauge.LandingPointGauge(dl, loxn.derwin(1, 12, 3, 14)),
             ], 'Location')
         obt = scr.derwin(8, 27, 14, 52)
         obtgroup = gauge.GaugeGroup(obt, [
@@ -294,25 +295,12 @@ class RetroConsole(Console):
         self.vars = {}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
-        if opts.ground_map:
-            map_csv = csv.reader(file(opts.ground_map, "r"))
-            ground_map = {}
-            for i,row in enumerate(map_csv):
-                if not i:
-                    assert row == ['Row','Column','Lat','Long','Height'], row
-                    continue
-                lat = int(float(row[2]) * 2)
-                lon = int(float(row[3]) * 2)
-                alt = float(row[4])
-                ground_map.setdefault(lon, {})[lat] = alt
-        else:
-            ground_map = None
         sim_blocks = []
         self.rs = [None, None]
         for i in xrange(2):
             y = i * 6
             use_throttle = not i
-            rs = retro.RetroSim(ground_map=ground_map, ground_alt=opts.ground_alt, mode=self.mode)
+            rs = retro.RetroSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
             self.rs[i] = rs
             sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, False, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
@@ -344,10 +332,7 @@ class RetroConsole(Console):
                                         gauge.RSLongitude(dl, twin.derwin(1, 12, 2, 1), 'sh', rs)],
                                  "Touchdown")
             sim_blocks.extend([sim, wt, h, v, s, b, t])
-        if ground_map is not None:
-            alt = [gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), ground_map)]
-        else:
-            alt = []
+        alt = [gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), opts.ground_map, opts.ground_alt)]
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
@@ -548,6 +533,18 @@ def parse_opts():
     if opts.ccafs:
         opts.init_lat = 28.608389
         opts.init_long = -80.604333
+    if opts.ground_map:
+        with file(opts.ground_map, "r") as f:
+            map_csv = csv.reader(f)
+            opts.ground_map = {}
+            for i,row in enumerate(map_csv):
+                if not i:
+                    assert row == ['Row','Column','Lat','Long','Height'], row
+                    continue
+                lat = int(float(row[2]) * 2)
+                lon = int(float(row[3]) * 2)
+                alt = float(row[4])
+                opts.ground_map.setdefault(lon, {})[lat] = alt
     return (opts, console)
 
 if __name__ == '__main__':

@@ -82,6 +82,9 @@ class Downlink(object):
         return self.data
     def get(self, key, default=None):
         return self.data.get(key, default)
+    def put(self, key, value):
+        # Used for recording derived / calculated values
+        self.data[key] = value
     def subscribe(self, key):
         self.subscriptions[key] = self.subscriptions.get(key, 0) + 1
         self._subscribe(key)
@@ -120,7 +123,9 @@ class FakeDownlink(object):
         time.sleep(DEFAULT_RATE / 1000.0)
         return {}
     def get(self, key, default=None):
-        return default
+        return self.data.get(key, default)
+    def put(self, key, value):
+        self.data[key] = value
 
 if __name__ == '__main__':
     # Simple test code

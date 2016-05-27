@@ -46,6 +46,8 @@ class Gauge(object):
         if key not in self.props:
             return default
         return self.dl.get(self.props[key], default)
+    def put(self, key, value):
+        self.dl.put(key, value)
     def draw(self):
         self.cw.clear()
         self.cw.border()
@@ -270,6 +272,10 @@ class FractionGauge(OneLineGauge):
         if d is None or d < 0:
             self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
             return
+        if self.fracmode <= 0:
+            # Fixed colour
+            self.chgat(0, self.width, curses.color_pair(-fracmode))
+            return
         frac = n / float(d) if d > 0 else 0
         frac = max(frac, 0)
         blocks = self.width * self.fracmode
@@ -369,6 +375,7 @@ class DownrangeGauge(SIGauge):
             ds = math.acos(math.sin(phi1) * math.sin(phi2) + math.cos(phi1) * math.cos(phi2) * math.cos(dlbd))
             # d = r dsigma
             d = brad * ds
+        self.put('downrange.d', d)
         super(DownrangeGauge, self).draw(d)
 
 class AltitudeGauge(SIGauge):
@@ -402,9 +409,10 @@ class AltitudeGauge(SIGauge):
 class TerrainAltitudeGauge(SIGauge):
     unit = 'm'
     label = 'Height'
-    def __init__(self, dl, cw, ground_map):
+    def __init__(self, dl, cw, ground_map, ground_alt=None):
         super(TerrainAltitudeGauge, self).__init__(dl, cw)
         self.ground_map = ground_map
+        self.ground_alt = ground_alt
         self.add_prop('alt', 'v.altitude')
         self.add_prop('lat', 'v.lat')
         self.add_prop('lon', 'v.long')
@@ -412,15 +420,46 @@ class TerrainAltitudeGauge(SIGauge):
         alt = self.get('alt')
         lat = self.get('lat')
         lon = self.get('lon')
-        if None in (alt, lat, lon):
-            alt = None
+        self.fracmode = 0
+        if None in (lat, lon, self.ground_map):
+            ground_alt = self.ground_alt
+            self.fracmode = -2 # yellow for inaccurate data
         else:
             mlat = int(round(lat * 2))
             mlon = int(round(lon * 2)) % 720
             if mlon >= 360: mlon -= 720
             elif mlon < -360: mlon += 720
-            alt -= self.ground_map[mlon][mlat]
+            ground_alt = self.ground_map[mlon][mlat]
+        if None in (alt, ground_alt):
+            alt = None
+        else:
+            alt = alt - ground_alt
+        self.put('terrain.alt', alt)
         super(TerrainAltitudeGauge, self).draw(alt)
+
+class LandingPointGauge(SIGauge):
+    unit = 'm'
+    label = 'ILS'
+    def __init__(self, dl, cw):
+        super(LandingPointGauge, self).__init__(dl, cw)
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('ta', 'terrain.alt')
+        self.add_prop('dr', 'downrange.d')
+        self.add_prop('vs', 'v.verticalSpeed')
+    def draw(self):
+        self.fracmode = 0
+        alt = self.get('ta')
+        if alt is None:
+            self.fracmode = -2 # yellow for inaccurate data
+            alt = self.get('alt')
+        dr = self.get('dr')
+        vs = self.get('vs')
+        if None in (alt, dr, vs) or vs >= 0:
+            lp = None
+        else:
+            ld = -(alt / vs)
+            lp = dr - ld # assumes inward radial heading
+        super(LandingPointGauge, self).draw(lp)
 
 class PeriapsisGauge(SIGauge):
     unit = 'm'
