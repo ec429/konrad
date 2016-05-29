@@ -543,7 +543,7 @@ class ObtVelocityGauge(SIGauge):
 
 class HSpeedGauge(SIGauge):
     unit = 'm/s'
-    label = 'HSpeed'
+    label = 'HSpd'
     def __init__(self, dl, cw):
         super(HSpeedGauge, self).__init__(dl, cw)
         self.add_prop('hs', 'v.surfaceSpeed')
@@ -552,7 +552,7 @@ class HSpeedGauge(SIGauge):
 
 class VSpeedGauge(SIGauge):
     unit = 'm/s'
-    label = 'VSpeed'
+    label = 'VSpd'
     def __init__(self, dl, cw):
         super(VSpeedGauge, self).__init__(dl, cw)
         self.add_prop('vs', 'v.verticalSpeed')
