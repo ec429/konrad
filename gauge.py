@@ -559,6 +559,15 @@ class VSpeedGauge(SIGauge):
     def draw(self):
         super(VSpeedGauge, self).draw(self.get('vs'))
 
+class SrfSpeedGauge(SIGauge):
+    unit = 'm/s'
+    label = 'Speed'
+    def __init__(self, dl, cw):
+        super(SrfSpeedGauge, self).__init__(dl, cw)
+        self.add_prop('spd', 'v.surfaceVelocity')
+    def draw(self):
+        super(SrfSpeedGauge, self).draw(self.get('spd'))
+
 class DynPresGauge(SIGauge):
     unit = 'Pa'
     label = 'Dyn.Pres.'

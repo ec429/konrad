@@ -125,13 +125,15 @@ class TrajConsole(Console):
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
             ], 'Orbital')
         shift = 3 if opts.mj else 0
-        motion = scr.derwin(4, 34, 15 - shift, 1)
+        motion = scr.derwin(5, 34, 14 - shift, 1)
         mogroup = gauge.GaugeGroup(motion, [
             gauge.ClimbAngleGauge(dl, motion.derwin(1, 16, 1, 1)),
             gauge.HSpeedGauge(dl, motion.derwin(1, 16, 2, 1)),
-            gauge.VLine(dl, motion.derwin(2, 1, 1, 17)),
+            gauge.SrfSpeedGauge(dl, motion.derwin(1, 16, 3, 1)),
+            gauge.VLine(dl, motion.derwin(3, 1, 1, 17)),
             gauge.AoAGauge(dl, motion.derwin(1, 15, 1, 18), opts.retrograde),
             gauge.VSpeedGauge(dl, motion.derwin(1, 15, 2, 18)),
+            gauge.GeeGauge(dl, motion.derwin(1, 15, 3, 18)),
             ], 'Motion-(Surface)')
         orient = scr.derwin(3, 34, 19 - shift, 1)
         origroup = gauge.GaugeGroup(orient, [
