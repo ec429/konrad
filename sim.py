@@ -56,7 +56,7 @@ class RocketSim(object):
         self.vs = vs
         self.act_mode = self.mode
         # time step, in seconds
-        self.dt = 1
+        self.dt = 1.0
     def encode(self):
         d = {'time': self.t, 'alt': self.alt, 'x': self.downrange,
              'hs': self.hs, 'vs': self.vs,

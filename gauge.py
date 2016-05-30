@@ -939,8 +939,9 @@ class UpdateRocketSim(Gauge):
         # Assumes you already have an UpdateBooster keeping booster updated!
         self.sim = sim
         self.use_throttle = use_throttle
-        if use_orbital:
-            self.add_prop('hs', 'v.orbitalVelocity')
+        self.use_orbital = use_orbital
+        if self.use_orbital:
+            self.add_prop('ov', 'v.orbitalVelocity')
         else:
             self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
@@ -963,8 +964,20 @@ class UpdateRocketSim(Gauge):
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
-        hs = self.get('hs')
         vs = self.get('vs')
+        if self.use_orbital:
+            # Compute hs by pythagoras
+            ov = self.get('ov')
+            if None in (vs, ov):
+                hs = None
+            else:
+                hs2 = ov*ov - vs*vs
+                if hs2 < 0:
+                    hs = None
+                else:
+                    hs = math.sqrt(hs2)
+        else:
+            hs = self.get('hs')
         alt = self.get('alt')
         if self.use_throttle:
             throttle = self.get('throttle')

@@ -128,7 +128,7 @@ class Stage(object):
             mfrac = p.mass / mtot
             p.filled -= dm * mfrac / p.density
         twr1 = self.twr * throttle
-        return (twr0 + twr1) / 2.0 # very approximate integration, hope the curvature isn't too great!
+        return (twr0 + twr1) * dt / 2.0 # very approximate integration, hope the curvature isn't too great!
     @classmethod
     def from_dict(cls, d):
         return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'), d.get('minThrottle', 100.0))
