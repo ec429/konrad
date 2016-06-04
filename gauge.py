@@ -455,7 +455,7 @@ class LandingPointGauge(SIGauge):
             self.fracmode = -2 # yellow for inaccurate data
             alt = self.get('alt')
         dr = self.get('dr')
-        hs = self.get('vs')
+        hs = self.get('hs')
         vs = self.get('vs')
         if None in (alt, dr, vs, hs) or vs >= 0:
             lp = None
