@@ -446,6 +446,7 @@ class LandingPointGauge(SIGauge):
         self.add_prop('alt', 'v.altitude')
         self.add_prop('ta', 'terrain.alt')
         self.add_prop('dr', 'downrange.d')
+        self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
     def draw(self):
         self.fracmode = 0
@@ -454,12 +455,13 @@ class LandingPointGauge(SIGauge):
             self.fracmode = -2 # yellow for inaccurate data
             alt = self.get('alt')
         dr = self.get('dr')
+        hs = self.get('vs')
         vs = self.get('vs')
-        if None in (alt, dr, vs) or vs >= 0:
+        if None in (alt, dr, vs, hs) or vs >= 0:
             lp = None
         else:
-            ld = -(alt / vs)
-            lp = dr - ld # assumes inward radial heading
+            lt = -(alt / vs)
+            lp = dr - lt * hs # assumes inward radial heading
         super(LandingPointGauge, self).draw(lp)
 
 class PeriapsisGauge(SIGauge):
