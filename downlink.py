@@ -65,6 +65,7 @@ class Downlink(object):
             except websocket.WebSocketTimeoutException:
                 break
             except websocket.WebSocketConnectionClosedException:
+                time.sleep(self.rate / 2000.0)
                 continue
             except KeyboardInterrupt:
                 self.disconnect()
