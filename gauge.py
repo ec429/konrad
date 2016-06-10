@@ -407,35 +407,50 @@ class AltitudeGauge(SIGauge):
                 self.vac = False
                 return 'Entered atmosphere'
 
-class TerrainAltitudeGauge(SIGauge):
+class DeltaHGauge(SIGauge):
     unit = 'm'
-    label = 'Height'
+    label = 'DeltaH'
     def __init__(self, dl, cw, ground_map, ground_alt=None):
-        super(TerrainAltitudeGauge, self).__init__(dl, cw)
+        super(DeltaHGauge, self).__init__(dl, cw)
         self.ground_map = ground_map
         self.ground_alt = ground_alt
-        self.add_prop('alt', 'v.altitude')
         self.add_prop('lat', 'v.lat')
         self.add_prop('lon', 'v.long')
+        self.add_prop('th', 'v.terrainHeight')
+        self.fracmode = 0
     def draw(self):
-        alt = self.get('alt')
         lat = self.get('lat')
         lon = self.get('lon')
-        self.fracmode = 0
+        th = self.get('th')
         if None in (lat, lon, self.ground_map):
             ground_alt = self.ground_alt
-            self.fracmode = -2 # yellow for inaccurate data
         else:
             mlat = int(round(lat * 2))
             mlon = int(round(lon * 2)) % 720
             if mlon >= 360: mlon -= 720
             elif mlon < -360: mlon += 720
             ground_alt = self.ground_map[mlon][mlat]
-        if None in (alt, ground_alt):
+        if None in (ground_alt, th):
+            dh = None
+        else:
+            dh = alt - ground_alt
+        super(DeltaHGauge, self).draw(dh)
+
+class TerrainAltitudeGauge(SIGauge):
+    unit = 'm'
+    label = 'Height'
+    def __init__(self, dl, cw):
+        super(TerrainAltitudeGauge, self).__init__(dl, cw)
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('th', 'v.terrainHeight')
+    def draw(self):
+        alt = self.get('alt')
+        th = self.get('th')
+        self.fracmode = 0
+        if None in (alt, th):
             alt = None
         else:
-            alt = alt - ground_alt
-        self.put('terrain.alt', alt)
+            alt = alt - th
         super(TerrainAltitudeGauge, self).draw(alt)
 
 class LandingPointGauge(SIGauge):
@@ -444,22 +459,21 @@ class LandingPointGauge(SIGauge):
     def __init__(self, dl, cw):
         super(LandingPointGauge, self).__init__(dl, cw)
         self.add_prop('alt', 'v.altitude')
-        self.add_prop('ta', 'terrain.alt')
+        self.add_prop('th', 'v.terrainHeight')
         self.add_prop('dr', 'downrange.d')
         self.add_prop('hs', 'v.surfaceSpeed')
         self.add_prop('vs', 'v.verticalSpeed')
     def draw(self):
         self.fracmode = 0
-        alt = self.get('ta')
-        if alt is None:
-            self.fracmode = -2 # yellow for inaccurate data
-            alt = self.get('alt')
+        alt = self.get('alt')
+        th = self.get('th')
         dr = self.get('dr')
         hs = self.get('hs')
         vs = self.get('vs')
-        if None in (alt, dr, vs, hs) or vs >= 0:
+        if None in (alt, dr, th, vs, hs) or vs >= 0:
             lp = None
         else:
+            alt -= th
             lt = -(alt / vs)
             lp = dr - lt * hs # assumes inward radial heading
         super(LandingPointGauge, self).draw(lp)

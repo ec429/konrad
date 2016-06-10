@@ -335,12 +335,13 @@ class RetroConsole(Console):
                                         gauge.RSLongitude(dl, twin.derwin(1, 12, 2, 1), 'sh', rs)],
                                  "Touchdown")
             sim_blocks.extend([sim, wt, h, v, s, b, t])
-        alt = [gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 32, 19, 8), opts.ground_map, opts.ground_alt)]
-        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
+        alt = gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 22, 19, 8))
+        dh = gauge.DeltaHGauge(dl, scr.derwin(3, 22, 19, 30), opts.ground_map, opts.ground_alt)
+        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 21, 19, 52))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, scap, vs] + alt +
+                                      [update, deltav, throttle, twr, mode, scap, alt, dh, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Retro")
