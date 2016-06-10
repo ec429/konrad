@@ -114,7 +114,7 @@ class TrajConsole(Console):
             gauge.DownrangeGauge(dl, loxn.derwin(1, 25, 2, 1), opts.body, opts.init_lat, opts.init_long),
             gauge.BearingGauge(dl, loxn.derwin(1, 12, 3, 1), opts.body, opts.init_lat, opts.init_long),
             gauge.LandingPointGauge(dl, loxn.derwin(1, 12, 3, 14)),
-            gauge.TerrainAltitudeGauge(dl, loxn.derwin(1, 25, 4, 1), opts.ground_map, opts.ground_alt),
+            gauge.TerrainAltitudeGauge(dl, loxn.derwin(1, 25, 4, 1)),
             ], 'Location')
         obt = scr.derwin(8, 27, 14, 52)
         obtgroup = gauge.GaugeGroup(obt, [
