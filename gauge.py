@@ -819,6 +819,53 @@ class AoAGauge(ClimbAngleGauge):
             return None
         return pit + th if self.retro else pit - th
 
+class AngleRateGauge(OneLineGauge):
+    def __init__(self, dl, cw):
+        super(AngleRateGauge, self).__init__(dl, cw)
+        self.add_prop('T', 'v.missionTime')
+        self.add_prop('angle', self.api)
+        self.old = (None, None)
+    @property
+    def rate(self):
+        t = self.get('T')
+        a = self.get('angle')
+        ot, oa = self.old
+        self.old = (t, a)
+        if None in (t, a, ot, oa):
+            return None
+        dt = t - ot
+        da = a - oa
+        if dt <= 0:
+            return None
+        if da < -180:
+            da += 380
+        if da > 180:
+            da -= 360
+        return da / dt
+    def draw(self):
+        super(AngleRateGauge, self).draw()
+        rate = self.rate
+        if rate is None:
+            self.addstr(self.centext('NO DATA'))
+            self.chgat(0, self.width, curses.color_pair(2))
+        else:
+            width = self.width - len(self.label) - 3
+            prec = width - 2
+            self.addstr('%s:%+*.*f'%(self.label, width, prec, rate))
+        self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
+
+class PitchRateGauge(AngleRateGauge):
+    label = 'P.R'
+    api = 'n.pitch2'
+
+class HeadingRateGauge(AngleRateGauge):
+    label = 'H.R'
+    api = 'n.heading2'
+
+class RollRateGauge(AngleRateGauge):
+    label = 'R.R'
+    api = 'n.roll2'
+
 class Light(OneLineGauge):
     def __init__(self, dl, cw, text, api):
         super(Light, self).__init__(dl, cw)

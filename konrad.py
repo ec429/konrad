@@ -126,7 +126,7 @@ class TrajConsole(Console):
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
             ], 'Orbital')
         shift = 3 if opts.mj else 0
-        motion = scr.derwin(5, 34, 14 - shift, 1)
+        motion = scr.derwin(5, 34, 13 - shift, 1)
         mogroup = gauge.GaugeGroup(motion, [
             gauge.ClimbAngleGauge(dl, motion.derwin(1, 16, 1, 1)),
             gauge.HSpeedGauge(dl, motion.derwin(1, 16, 2, 1)),
@@ -136,13 +136,16 @@ class TrajConsole(Console):
             gauge.VSpeedGauge(dl, motion.derwin(1, 15, 2, 18)),
             gauge.GeeGauge(dl, motion.derwin(1, 15, 3, 18)),
             ], 'Motion-(Surface)')
-        orient = scr.derwin(3, 34, 19 - shift, 1)
+        orient = scr.derwin(4, 34, 18 - shift, 1)
         origroup = gauge.GaugeGroup(orient, [
             gauge.PitchGauge(dl, orient.derwin(1, 10, 1, 1)),
-            gauge.VLine(dl, orient.derwin(1, 1, 1, 11)),
+            gauge.PitchRateGauge(dl, orient.derwin(1, 10, 2, 1)),
+            gauge.VLine(dl, orient.derwin(2, 1, 1, 11)),
             gauge.HeadingGauge(dl, orient.derwin(1, 10, 1, 12)),
-            gauge.VLine(dl, orient.derwin(1, 1, 1, 22)),
+            gauge.HeadingRateGauge(dl, orient.derwin(1, 10, 2, 12)),
+            gauge.VLine(dl, orient.derwin(2, 1, 1, 22)),
             gauge.RollGauge(dl, orient.derwin(1, 10, 1, 23)),
+            gauge.RollRateGauge(dl, orient.derwin(1, 10, 2, 23)),
             ], 'Orientation')
         navball = scr.derwin(9, 17, 13 - shift, 35)
         navgroup = gauge.GaugeGroup(navball, [
