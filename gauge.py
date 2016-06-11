@@ -433,7 +433,7 @@ class DeltaHGauge(SIGauge):
         if None in (ground_alt, th):
             dh = None
         else:
-            dh = alt - ground_alt
+            dh = th - ground_alt
         super(DeltaHGauge, self).draw(dh)
 
 class TerrainAltitudeGauge(SIGauge):
