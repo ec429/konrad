@@ -11,7 +11,7 @@ class RetroSim(sim.RocketSim):
         while not ((
                     (
                      ('h' in self.data and 'v' in self.data)
-                     or
+                     and
                      's' in self.data
                     ) and
                     'b' in self.data
