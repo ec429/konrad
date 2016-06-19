@@ -886,15 +886,16 @@ class Light(OneLineGauge):
         self.chgat(0, self.width, curses.color_pair(col))
 
 class UpdateBooster(Gauge):
-    def __init__(self, dl, cw, booster):
+    def __init__(self, dl, cw, bstr):
         super(UpdateBooster, self).__init__(dl, cw)
-        self.init_booster = booster
+        self.booster = bstr
+        self.init_booster = booster.Booster.clone(bstr)
         self.reset()
         for p in self.booster.all_props:
             self.add_prop(p, 'r.resource[%s]'%(p,))
             self.add_prop('%s_max'%(p,), 'r.resourceMax[%s]'%(p,))
     def reset(self):
-        self.booster = booster.Booster.clone(self.init_booster)
+        self.booster.stages = booster.Booster.clone(self.init_booster).stages
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
