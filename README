@@ -68,6 +68,7 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+    - ? to refresh stage detection
 * retro
     Retrograde Guidance.  For judging landings on airless bodies.
     See section "Landings" below for more information.
@@ -84,6 +85,7 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+    - ? to refresh stage detection
 * asc
     Ascent Guidance.  For judging launches to orbit (ignores air drag).
     See section "Ascent Guidance" below for more information.
@@ -97,6 +99,7 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+    - ? to refresh stage detection
 
 Global Inputs
 -------------

@@ -254,7 +254,7 @@ class BoosterConsole(Console):
     """Booster Dynamics console"""
     def __init__(self, opts, scr, dl):
         super(BoosterConsole, self).__init__(opts, scr, dl)
-        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         props = len(opts.propellant)
         fuel = scr.derwin(2 + props, 26, 20 - props, 53)
         fuelgroup = gauge.GaugeGroup(fuel, [
@@ -269,7 +269,7 @@ class BoosterConsole(Console):
             ], 'Stages')
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, fuelgroup, deltav, throttle, stagesgroup,
+                                      [self.update, fuelgroup, deltav, throttle, stagesgroup,
                                        self.status, time],
                                       "KONRAD: Booster")
     def input(self, key):
@@ -286,13 +286,16 @@ class BoosterConsole(Console):
         if key == ord(' '):
             self.dl.send_msg({'run':['f.stage']})
             return
+        if key == ord('?'):
+            self.update.reset()
+            return
         return super(BoosterConsole, self).input(key)
 
 class RetroConsole(Console):
     """Retrograde Propulsion console"""
     def __init__(self, opts, scr, dl):
         super(RetroConsole, self).__init__(opts, scr, dl)
-        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
@@ -344,7 +347,7 @@ class RetroConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, scap, alt, dh, vs] +
+                                      [self.update, deltav, throttle, twr, mode, scap, alt, dh, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Retro")
@@ -386,6 +389,9 @@ class RetroConsole(Console):
             self.stagecap = max(self.stagecap - 1, 0)
             self.update_vars()
             return
+        if key == ord('?'):
+            self.update.reset()
+            return
         return super(RetroConsole, self).input(key)
     @classmethod
     def connect_params(cls):
@@ -395,7 +401,7 @@ class AscentConsole(Console):
     """Ascent Guidance console"""
     def __init__(self, opts, scr, dl):
         super(AscentConsole, self).__init__(opts, scr, dl)
-        update = gauge.UpdateBooster(dl, scr, opts.booster)
+        self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
@@ -439,7 +445,7 @@ class AscentConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [update, deltav, throttle, twr, mode, scap, stagesgroup, vs] +
+                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Ascent")
@@ -480,6 +486,9 @@ class AscentConsole(Console):
         if key == curses.KEY_NPAGE:
             self.stagecap = max(self.stagecap - 1, 0)
             self.update_vars()
+            return
+        if key == ord('?'):
+            self.update.reset()
             return
         return super(AscentConsole, self).input(key)
     @classmethod

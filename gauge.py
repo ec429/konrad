@@ -888,10 +888,13 @@ class Light(OneLineGauge):
 class UpdateBooster(Gauge):
     def __init__(self, dl, cw, booster):
         super(UpdateBooster, self).__init__(dl, cw)
-        self.booster = booster
+        self.init_booster = booster
+        self.reset()
         for p in self.booster.all_props:
             self.add_prop(p, 'r.resource[%s]'%(p,))
             self.add_prop('%s_max'%(p,), 'r.resourceMax[%s]'%(p,))
+    def reset(self):
+        self.booster = booster.Booster.clone(self.init_booster)
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
