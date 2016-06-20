@@ -230,6 +230,21 @@ class TimeGauge(OneLineGauge, TimeFormatterMixin):
             return
         self.addstr('T+%s'%(self.fmt_time(t, 3)))
 
+class TimeToApGauge(OneLineGauge, TimeFormatterMixin):
+    label = "ttAp"
+    def __init__(self, dl, cw):
+        super(TimeToApGauge, self).__init__(dl, cw)
+        self.add_prop('ttAp', 'o.timeToAp')
+    def draw(self):
+        super(TimeToApGauge, self).draw()
+        t = self.get('ttAp')
+        if t is None:
+            self.addstr('%s: NO DATA'%(self.label,))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        elts = (self.width-1-len(self.label))/3
+        self.addstr('%s: %s'%(self.label, self.fmt_time(t, elts)))
+
 class ObtPeriodGauge(OneLineGauge):
     def __init__(self, dl, cw):
         super(ObtPeriodGauge, self).__init__(dl, cw)
