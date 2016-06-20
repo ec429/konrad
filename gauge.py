@@ -194,6 +194,7 @@ class StatusReadout(OneLineGauge):
 class TimeFormatterMixin(object):
     @classmethod
     def mktime(cls, t):
+        t = max(int(t), 0)
         s = t % 60
         t /= 60
         m = t % 60
@@ -206,7 +207,7 @@ class TimeFormatterMixin(object):
     def fmt_time(cls, t, elts):
         """Return time formatted with at most elts elements"""
         d,h,m,s = cls.mktime(t)
-        parts = [(d, 'd'), (h, ':'), (m, ':'), (s, None)]
+        parts = [(d, 'd'), (h, 'h'), (m, ':'), (s, None)]
         while len(parts) > elts and not parts[0][0]:
             parts = parts[1:]
         ret = ""
@@ -960,7 +961,7 @@ class DeltaVGauge(SIGauge):
     def draw(self):
         super(DeltaVGauge, self).draw(self.booster.deltaV)
 
-class StagesGauge(Gauge):
+class StagesGauge(Gauge, TimeFormatterMixin):
     def __init__(self, dl, cw, booster):
         super(StagesGauge, self).__init__(dl, cw)
         self.booster = booster
@@ -977,9 +978,7 @@ class StagesGauge(Gauge):
                 if bt is None or self.width < 28:
                     row = deltav
                 else:
-                    mins = bt / 60
-                    secs = bt % 60
-                    bts = 'BT %02d:%02d'%(mins, secs)
+                    bts = 'BT %s'%(self.fmt_time(bt, 2),)
                     row = deltav.ljust(20) + bts
                 try:
                     self.cw.addnstr(i * 2 + 1, 0, row, self.width)
