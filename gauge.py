@@ -191,7 +191,33 @@ class StatusReadout(OneLineGauge):
     def push(self, txt):
         self.text = ("%s < %s"%(self.text, txt))[-self.width:]
 
-class TimeGauge(OneLineGauge):
+class TimeFormatterMixin(object):
+    @classmethod
+    def mktime(cls, t):
+        s = t % 60
+        t /= 60
+        m = t % 60
+        t /= 60
+        h = t % 24
+        t /= 24
+        d = t
+        return (d, h, m, s)
+    @classmethod
+    def fmt_time(cls, t, elts):
+        """Return time formatted with at most elts elements"""
+        d,h,m,s = cls.mktime(t)
+        parts = [(d, 'd'), (h, ':'), (m, ':'), (s, None)]
+        while len(parts) > elts and not parts[0][0]:
+            parts = parts[1:]
+        ret = ""
+        for i,p in enumerate(parts):
+            if i >= elts: break
+            ret += '%02d'%(p[0],)
+            if i + 1 < elts and p[1] is not None:
+                ret += p[1]
+        return ret
+
+class TimeGauge(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw):
         super(TimeGauge, self).__init__(dl, cw)
         self.add_prop('T', 'v.missionTime')
@@ -202,15 +228,7 @@ class TimeGauge(OneLineGauge):
             self.addstr('LINK DOWN')
             self.chgat(0, self.width, curses.color_pair(2))
             return
-        s = t % 60
-        m = (t / 60) % 60
-        h = (t / 3600)
-        if h < 24:
-            self.addstr('T+%02d:%02d:%02d'%(h, m, s))
-        else:
-            d = h / 24
-            h %= 24
-            self.addstr('T+%02dd%02d:%02d'%(d, h, m))
+        self.addstr('T+%s'%(self.fmt_time(t, 3)))
 
 class ObtPeriodGauge(OneLineGauge):
     def __init__(self, dl, cw):
