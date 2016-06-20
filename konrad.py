@@ -261,6 +261,7 @@ class BoosterConsole(Console):
             gauge.FuelGauge(dl, fuel.derwin(1, 24, i + 1, 1), p)
             for i,p in enumerate(opts.propellant)
             ], 'Propellants')
+        ttap = gauge.TimeToApGauge(dl, scr.derwin(3, 16, 1, 12))
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
         stages = scr.derwin(18, 40, 4, 1)
@@ -269,7 +270,7 @@ class BoosterConsole(Console):
             ], 'Stages')
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, fuelgroup, deltav, throttle, stagesgroup,
+                                      [self.update, fuelgroup, ttap, deltav, throttle, stagesgroup,
                                        self.status, time],
                                       "KONRAD: Booster")
     def input(self, key):
@@ -441,11 +442,12 @@ class AscentConsole(Console):
         stagesgroup = gauge.GaugeGroup(stages, [
             gauge.StagesGauge(dl, stages.derwin(10, 28, 1, 1), opts.booster),
             ], 'Stages')
+        ttap = gauge.TimeToApGauge(dl, scr.derwin(3, 16, 19, 24))
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, vs] +
+                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, ttap, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Ascent")
