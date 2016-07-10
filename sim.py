@@ -136,6 +136,7 @@ class RocketSim(object):
             if self.ground_map is not None:
                 mlat = int(round(math.degrees(self.lat) * 2))
                 mlon = int(round(math.degrees(self.lon) * 2)) % 720
+                mlat = min(mlat, 179)
                 if mlon >= 360: mlon -= 720
                 elif mlon < -360: mlon += 720
                 self.local_ground_alt = self.ground_map[mlon][mlat]
