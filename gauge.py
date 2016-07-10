@@ -925,14 +925,18 @@ class UpdateBooster(Gauge):
         self.booster = bstr
         self.init_booster = booster.Booster.clone(bstr)
         self.reset()
+        if self.booster is None: return
         for p in self.booster.all_props:
             self.add_prop(p, 'r.resource[%s]'%(p,))
             self.add_prop('%s_max'%(p,), 'r.resourceMax[%s]'%(p,))
     def reset(self):
-        self.booster.stages = booster.Booster.clone(self.init_booster).stages
+        if self.booster is not None:
+            self.booster.stages = booster.Booster.clone(self.init_booster).stages
     def draw(self):
         # we don't actually draw anything...
         # we just do some calculations!
+        if self.booster is None:
+            return
         has_staged = False
         for p in self.booster.all_props:
             mx = self.get('%s_max'%(p,))
@@ -959,6 +963,8 @@ class DeltaVGauge(SIGauge):
         super(DeltaVGauge, self).__init__(dl, cw)
         self.booster = booster
     def draw(self):
+        if self.booster is None:
+            return
         super(DeltaVGauge, self).draw(self.booster.deltaV)
 
 class StagesGauge(Gauge, TimeFormatterMixin):
@@ -968,6 +974,8 @@ class StagesGauge(Gauge, TimeFormatterMixin):
         self.add_prop('throttle', 'f.throttle')
     def draw(self):
         self.cw.clear()
+        if self.booster is None:
+            return
         throttle = self.get('throttle')
         for i,s in enumerate(self.booster.stages):
             if i * 2 < self.height:

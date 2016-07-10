@@ -140,6 +140,8 @@ class Booster(object):
             self.stages[i - 1].add_payload(self.stages[i])
     @classmethod
     def clone(cls, other):
+        if other is None:
+            return cls([])
         return cls([Stage.clone(stage) for stage in other.stages])
     @property
     def twr(self): # thrust to weight ratio, in m/s^2
