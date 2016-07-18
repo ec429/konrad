@@ -942,7 +942,7 @@ class UpdateBooster(Gauge):
             mx = self.get('%s_max'%(p,))
             if mx is None: continue
             if mx < self.booster.stages[0].prop_all(p) * 0.99:
-                has_staged = True
+                has_staged = p
         if has_staged:
             self.booster.stage()
         for p in self.booster.all_props:
@@ -954,7 +954,7 @@ class UpdateBooster(Gauge):
                     prop.filled = min(amt, prop.volume)
                     amt -= prop.filled
         if has_staged:
-            return "Booster staged"
+            return "Booster staged (%s)"%(has_staged,)
 
 class DeltaVGauge(SIGauge):
     unit = 'm/s'
