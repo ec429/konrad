@@ -641,6 +641,35 @@ class DynPresGauge(SIGauge):
         else:
             self.warn = False
 
+class HeatingGauge(SIGauge):
+    """A figure vaguely relevant to re-entry heating.
+
+    Heating Coefficient is w = 2 * v * a
+    Neglecting changes in PE,
+    d(KE)/dt = d(mv^2)/dt = 2mv(dv/dt) = 2mva
+    power / mass = 2va
+    """
+    unit = 'W/kg'
+    label = 'Pwr.Coeff'
+    def __init__(self, dl, cw):
+        super(HeatingGauge, self).__init__(dl, cw)
+        self.add_prop('gee', 'v.geeForce')
+        self.add_prop('spd', 'v.surfaceVelocity')
+    def draw(self):
+        spd = self.get('spd')
+        gee = self.get('gee')
+        if None in [spd, gee]:
+            w = None
+        else:
+            w = 2 * spd * gee * 9.80665 # 2 * velocity * acceleration
+        super(HeatingGauge, self).draw(w)
+        col = 3
+        if w > 200000 or w is None:
+            col = 2
+        if w > 600000:
+            col = 1
+        self.chgat(0, self.width, curses.color_pair(col))
+
 class GeeGauge(OneLineGauge):
     unit = 'g'
     label = 'g-Force'

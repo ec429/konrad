@@ -51,11 +51,13 @@ class FDConsole(Console):
             gauge.ObtVelocityGauge(dl, obt.derwin(1, 24, 4, 1), opts.body),
             ], 'Orbital')
         xcons = len(opts.consumable)
-        strs = scr.derwin(4, 27, 15 - xcons, 1)
+        strs = scr.derwin(4 + opts.reentry, 27, 15 - opts.reentry - xcons, 1)
+        heat = [gauge.HeatingGauge(dl, strs.derwin(1, 25, 3, 1))] if opts.reentry else []
         strsgroup = gauge.GaugeGroup(strs, [
             gauge.GeeGauge(dl, strs.derwin(1, 25, 1, 1)),
             gauge.DynPresGauge(dl, strs.derwin(1, 25, 2, 1)),
-            ], 'Stresses')
+            ] + heat,
+            'Stresses')
         capsystitle = 'Avionics' if opts.unmanned else 'Capsys'
         capsys = scr.derwin(3 + xcons, 27, 19 - xcons, 1)
         capsysgroup = gauge.GaugeGroup(capsys,
@@ -511,7 +513,8 @@ def parse_opts():
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
-    x.add_option('-r', '--retrograde', action='store_true', help='Assume vessel travelling blunt end first')
+    x.add_option('-r', '--reentry', action='store_true', help='Show re-entry related gauges (FD).  Implied unless -u.', default=False)
+    x.add_option('--retrograde', action='store_true', help='Assume vessel travelling blunt end first')
     x.add_option('--init-lat', type='float', help="Latitude of launch (or target) site")
     x.add_option('--init-long', type='float', help="Longitude of launch (or target) site")
     x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
@@ -535,7 +538,10 @@ def parse_opts():
             opts.propellant = opts.booster.all_props
     consumable = ['ElectricCharge']
     if not opts.unmanned:
-        consumable += ['Ablator', 'Food', 'Water', 'Oxygen']
+        consumable += ['Food', 'Water', 'Oxygen']
+        opts.reentry = True
+    if opts.reentry:
+        consumable.append('Ablator')
     for c in opts.consumable:
         if c == '-':
             consumable = []
@@ -546,8 +552,8 @@ def parse_opts():
         opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
     if len(opts.propellant) > 11:
         x.error("Too many propellants!  Max is 11")
-    if len(opts.consumable) > 12:
-        x.error("Too many consumables!  Max is 12")
+    if len(opts.consumable) > 11:
+        x.error("Too many consumables!  Max is 11")
     if opts.ccafs:
         opts.init_lat = 28.608389
         opts.init_long = -80.604333
