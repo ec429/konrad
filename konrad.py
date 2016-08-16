@@ -9,6 +9,7 @@ import csv
 import booster
 import retro
 import ascent
+from copy import copy
 
 class Console(object):
     group = None
@@ -501,15 +502,35 @@ class AscentConsole(Console):
 
 consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole}
 
+def parse_si(option, opt, value):
+    prefixes = {'k': 3, 'M': 6, 'G': 9}
+    l = 0
+    while value and value[-1] in prefixes:
+        l += prefixes[value[-1]]
+        value = value[:-1]
+    try:
+        v = int(value)
+    except ValueError:
+        try:
+            v = float(value)
+        except ValueError:
+            raise optparse.OptionValueError("%s: invalid numeric value %s"%(opt,v))
+    return v * (10**l)
+
+class Option(optparse.Option):
+    TYPES = optparse.Option.TYPES + ("si",)
+    TYPE_CHECKER = copy(optparse.Option.TYPE_CHECKER)
+    TYPE_CHECKER["si"] = parse_si
+
 def parse_opts():
-    x = optparse.OptionParser(usage='%prog consname')
+    x = optparse.OptionParser(usage='%prog consname', option_class=Option)
     x.add_option('--server', type='string', help='Hostname or IP address of Telemachus server', default=downlink.DEFAULT_HOST)
     x.add_option('--port', type='int', help='Port number of Telemachus server', default=downlink.DEFAULT_PORT)
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
     x.add_option('-b', '--body', type='int', help="ID of body to assume we're at", default=1)
-    x.add_option('--target-alt', type='int', help="Target altitude above MSL (m)")
-    x.add_option('--target-peri', type='int', help="Target periapsis altitude (m)")
-    x.add_option('--target-apo', type='int', help="Target apoapsis altitude (m)")
+    x.add_option('--target-alt', type='si', help="Target altitude above MSL (m)")
+    x.add_option('--target-peri', type='si', help="Target periapsis altitude (m)")
+    x.add_option('--target-apo', type='si', help="Target apoapsis altitude (m)")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
@@ -523,7 +544,7 @@ def parse_opts():
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
     x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
     x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
-    x.add_option('--ground-alt', type='float', help="Constant value to use for ground altitude")
+    x.add_option('--ground-alt', type='si', help="Constant value to use for ground altitude")
     opts, args = x.parse_args()
     if len(args) != 1:
         x.error("Missing consname (choose from %s)"%('|'.join(consoles.keys()),))
