@@ -17,6 +17,8 @@ class Downlink(object):
         self.logf = logf
         self.reconnect()
         self.subscribe('v.missionTime')
+        self.body_ids = {} # name => ID
+        self.bodies_subscribed = False
     def reconnect(self):
         try:
             self.ws = websocket.create_connection(self.uri)
@@ -80,7 +82,23 @@ class Downlink(object):
         if not d: # Loss of Signal
             self.data = {}
         self.data.update(d)
+        self.update_bodies()
         return self.data
+    def update_bodies(self):
+        # Assumes self.data has been updated already
+        self.body_ids = {} # name => ID
+        nbodies = self.get('b.number')
+        if nbodies is None:
+            return # can't do anything
+        if not self.bodies_subscribed:
+            for i in xrange(nbodies):
+                self.subscribe('b.name[%d]'%(i,))
+            self.bodies_subscribed = True
+            return # have to wait till next time
+        for i in xrange(nbodies):
+            n = self.get('b.name[%d]'%(i,))
+            if n is not None:
+                self.body_ids[n] = i
     def get(self, key, default=None):
         return self.data.get(key, default)
     def put(self, key, value):

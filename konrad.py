@@ -629,6 +629,9 @@ if __name__ == '__main__':
             if vname != vessel and vname is not None:
                 console.status.push("Tracking %s"%(vname,))
                 vessel = vname
+            if dl.get('body_id') is not None:
+                opts.body = dl.get('body_id')
+                console.group.changeopt(gauge.Gauge, body=opts.body)
             ml = console.group.draw()
             console.group.post_draw()
             if ml is not None:

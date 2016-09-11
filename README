@@ -105,7 +105,7 @@ Global Inputs
 -------------
 The following inputs are recognised by any console:
 - Ctrl-X to exit
-- (/) to select prev/next body
+- (/) to select prev/next body (if autodetection fails)
 
 Useful Notes
 ------------
@@ -120,13 +120,6 @@ value being displayed (e.g. altitude, apsides or velocity).  These gauges also
 fill up with green, with yellow denoting a 1/2 block.  However, once they
 overshoot the target, they 'bounce off' the end in red.  So a bar 3/4 green and
 the rest red indicates a value 125% of the target.
-
-Because Telemachus won't give us the bodyID (only its name), KONRAD has to be
-told it by the user (-b option, defaults to 1).  If the current body name does
-not match the name retrieved for the bodyID, KONRAD will warn the user, showing
-a value of <current>!<expected> in the BodyGauge (and pushing a "Change Body"
-message to the status line).  In this situation, calculated values such as the
-target orbital velocity will be bogus.
 
 JSON Booster
 ------------

@@ -293,6 +293,10 @@ class BodyGauge(OneLineGauge):
             return
         body = self.get('body')
         wrong = body != name
+        if body in self.dl.body_ids:
+            self.put('body_id', self.dl.body_ids[body])
+        else:
+            self.put('body_id', None)
         text = '%s!%s'%(body, name) if wrong else name
         self.addstr(self.centext(text))
         if wrong:
