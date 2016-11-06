@@ -1134,6 +1134,26 @@ class UpdateRocketSim(Gauge):
         else:
             self.sim.simulate(self.booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
+class UpdateManeuverSim(UpdateRocketSim):
+    def __init__(self, *args):
+        super(UpdateManeuverSim, self).__init__(*args)
+        self.add_prop('UT', 't.universalTime')
+    def draw(self):
+        UT = self.get('UT')
+        self.sim.UT = UT
+        self.sim.burnUT = max(self.sim.burnUT, UT)
+
+class UpdateSimElements(Gauge):
+    # Computes orbital elements from RocketSim results
+    def __init__(self, dl, cw, sim, keys):
+        super(UpdateSimElements, self).__init__(dl, cw)
+        self.sim = sim
+        self.keys = keys
+    def draw(self):
+        if self.sim.has_data:
+            for key in self.keys:
+                self.sim.compute_elements(key)
+
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
         super(RSTime, self).__init__(dl, cw)

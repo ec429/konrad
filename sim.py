@@ -146,3 +146,7 @@ class RocketSim(object):
                 self.local_ground_alt = 0
         if self.hs <= 0 and self.act_mode == self.MODE_RETROGRADE:
             self.act_mode = self.MODE_VL
+    def compute_elements(self, key):
+        if self.has_data and key in self.data:
+            elts = self.pbody.compute_elements(self.data[key])
+            self.data[key].update(elts)
