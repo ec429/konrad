@@ -1296,6 +1296,48 @@ class RSHSpeed(SIGauge):
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
+class RSApoapsis(SIGauge):
+    unit = 'm'
+    label = 'A'
+    def __init__(self, dl, cw, key, sim):
+        super(RSApoapsis, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                apa = self.sim.data[self.key]['apa']
+                super(RSApoapsis, self).draw(apa)
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 2
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSPeriapsis(SIGauge):
+    unit = 'm'
+    label = 'P'
+    def __init__(self, dl, cw, key, sim):
+        super(RSPeriapsis, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            if self.key in self.sim.data:
+                apa = self.sim.data[self.key]['pea']
+                super(RSPeriapsis, self).draw(apa)
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 2
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
 class RSLatitude(OneLineGauge):
     param = 'lat'
     labels = 'NS'

@@ -148,5 +148,6 @@ class RocketSim(object):
             self.act_mode = self.MODE_VL
     def compute_elements(self, key):
         if self.has_data and key in self.data:
-            elts = self.pbody.compute_elements(self.data[key])
+            sv = self.data[key]
+            elts = self.pbody.compute_elements(sv['alt'], sv['vs'], sv['hs'])
             self.data[key].update(elts)
