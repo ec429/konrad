@@ -273,6 +273,19 @@ class ObtPeriodGauge(OneLineGauge):
         width = self.width - len(label) - 2
         self.addstr('%s: %s'%(label, text.rjust(width)[:width]))
 
+class BodyNameGauge(OneLineGauge):
+    def __init__(self, dl, cw, body):
+        super(BodyNameGauge, self).__init__(dl, cw)
+        self.add_prop('name', 'b.name[%d]'%(body,))
+    def draw(self):
+        super(BodyNameGauge, self).draw()
+        name = self.get('name')
+        if name is None:
+            self.addstr(self.centext("LINK DOWN"))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        self.addstr(self.centext(name))
+
 class BodyGauge(OneLineGauge):
     def __init__(self, dl, cw, body):
         super(BodyGauge, self).__init__(dl, cw)
@@ -784,6 +797,44 @@ class AngleGauge(FractionGauge):
             self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
 
+class PhaseAngleGauge(AngleGauge):
+    label = 'Q'
+    fsd = None
+    def __init__(self, dl, cw, tgt):
+        self.api = 'b.o.phaseAngle[%d]'%(tgt,)
+        super(PhaseAngleGauge, self).__init__(dl, cw)
+    def colour(self, *args):
+        pass
+
+class RelIncGauge(AngleGauge):
+    label = 'RI'
+    fsd = 5
+    def __init__(self, dl, cw, tgt):
+        super(RelIncGauge, self).__init__(dl, cw)
+        self.add_prop('inc', 'o.inclination')
+        self.add_prop('lan', 'o.lan')
+        if tgt is None:
+            self.add_prop('inc', 'tar.o.inclination')
+            self.add_prop('lan', 'tar.o.lan')
+        else:
+            self.add_prop('tinc', 'b.o.inclination[%d]'%(tgt,))
+            self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
+    @property
+    def angle(self):
+        inc = self.get('inc')
+        lan = self.get('lan')
+        tinc = self.get('tinc')
+        tlan = self.get('tlan')
+        if None in (inc, lan, tinc, tlan):
+            return None
+        inc, lan, tinc, tlan = map(math.radians, (inc, lan, tinc, tlan))
+        w = (math.sin(inc) * math.cos(lan), math.sin(inc) * math.sin(lan), math.cos(inc))
+        z = (math.sin(tinc) * math.cos(tlan), math.sin(tinc) * math.sin(tlan), math.cos(tinc))
+        dot = sum(wi*zi for wi,zi in zip(w, z))
+        cross = w[0] * z[1] - w[0] * z[2] + w[1] * z[2] - w[1] * z[0] + w[2] * z[0] - w[2] * z[1]
+        theta = math.atan2(-cross, dot)
+        return math.degrees(theta)
+
 class InclinationGauge(AngleGauge):
     label = 'Inclination'
     fsd = None
@@ -1185,11 +1236,10 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tsma', 'b.o.sma[%d]'%(tgt,))
         self.add_prop('tecc', 'b.o.eccentricity[%d]'%(tgt,))
         self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
-        self.add_prop('tape', 'b.o.argumentOfPeriapsis[%d]'%(tgt,))
-        self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
     def draw(self):
         tsma = self.get('tsma')
         tmae = self.get('tmae')
+        tecc = self.get('tecc')
         if tsma is None:
             tmmo = None
         else:
@@ -1214,10 +1264,6 @@ class UpdateTgtProximity(Gauge):
                 tdma = math.fmod(tta * tmmo, 2.0 * math.pi)
                 self.sim.data[key]['tdma'] = tdma
                 trap = self.sim.data[key].get('trap')
-                if trap is not None:
-                    # phase angle ignoring tecc; +ve is behind
-                    tpx = trap - tdma
-                    self.sim.data[key]['tpx'] = tpx
                 if tmae is None:
                     continue
                 # target mean anomaly at T
@@ -1245,11 +1291,15 @@ class UpdateTgtProximity(Gauge):
                 self.sim.data[key]['tr0'] = tr0
                 self.sim.data[key]['tr1'] = tr1
                 # target true anomaly change over tta
-                tdta = math.fmod(tra - tr0, 2.0 * math.pi)
+                tdta = math.fmod(tr1 - tr0, 2.0 * math.pi)
                 self.sim.data[key]['tdta'] = tdta
                 # true phase angle; +ve is behind
                 tpy = trap - tdta
                 self.sim.data[key]['tpy'] = tpy
+                # target altitude at T
+                trad = tsma * (1.0 - tecc * math.cos(te1))
+                talt = trad - self.sim.pbody.rad
+                self.sim.data[key]['talt'] = talt
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -1514,10 +1564,6 @@ class RSTrAp(RSAngleGauge):
     param = 'trap'
     label = 'd'
 
-class RSTgtPx(RSAngleGauge):
-    param = 'tpx'
-    label = 'p'
-
 class RSTgtPy(RSAngleGauge):
     param = 'tpy'
     label = 'q'
@@ -1529,6 +1575,32 @@ class RSTgtMA(RSAngleGauge):
 class RSTgtTA(RSAngleGauge):
     param = 'tr1'
     label = 'N'
+
+class RSTgtAlt(SIGauge):
+    unit = 'm'
+    param = 'talt'
+    label = 'Z'
+    def __init__(self, dl, cw, key, sim):
+        super(RSTgtAlt, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        if self.sim.has_data:
+            keys = [k for k in list(self.key)
+                    if k in self.sim.data and
+                       self.param in self.sim.data[k]]
+            if keys:
+                d = self.sim.data[keys[0]]
+                alt = d.get(self.param)
+                super(RSTgtAlt, self).draw(alt)
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 2
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
 
 class RSLatitude(OneLineGauge):
     param = 'lat'
