@@ -1150,10 +1150,106 @@ class UpdateSimElements(Gauge):
         super(UpdateSimElements, self).__init__(dl, cw)
         self.sim = sim
         self.keys = keys
+        self.add_prop('inc', 'o.inclination')
+        self.add_prop('lan', 'o.lan')
     def draw(self):
+        inc = self.get('inc')
+        lan = self.get('lan')
         if self.sim.has_data:
             for key in self.keys:
                 self.sim.compute_elements(key)
+                lon = self.sim.data[key].get('lon')
+                tra = self.sim.data[key].get('tra')
+                if tra is None:
+                    continue
+                trap = math.pi - tra
+                if trap < 0: trap += 2.0 * math.pi
+                self.sim.data[key]['trap'] = trap
+                if None in (lon, inc, lan):
+                    continue
+                inc = math.radians(inc)
+                lan = math.radians(lan)
+                dlon = lon - lan
+                current_tra = math.atan2(math.sin(dlon), math.cos(dlon) / math.cos(inc))
+                ape = current_tra - tra
+                lpe = math.atan2(math.sin(ape), math.cos(ape) * math.cos(inc))
+                self.sim.data[key]['lpe'] = lpe + lan
+
+class UpdateTgtProximity(Gauge):
+    # Computes target offset at apoapsis from RocketSim results
+    def __init__(self, dl, cw, sim, keys, tgt):
+        super(UpdateTgtProximity, self).__init__(dl, cw)
+        self.sim = sim
+        self.keys = keys
+        self.tgt = tgt
+        self.add_prop('tsma', 'b.o.sma[%d]'%(tgt,))
+        self.add_prop('tecc', 'b.o.eccentricity[%d]'%(tgt,))
+        self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
+        self.add_prop('tape', 'b.o.argumentOfPeriapsis[%d]'%(tgt,))
+        self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
+    def draw(self):
+        tsma = self.get('tsma')
+        tmae = self.get('tmae')
+        if tsma is None:
+            tmmo = None
+        else:
+            # target mean motion n = sqrt(mu / a^3)
+            tmmo = math.sqrt(self.sim.pbody.gm / tsma ** 3)
+        if self.sim.has_data:
+            for key in self.keys:
+                man = self.sim.data[key].get('man')
+                per = self.sim.data[key].get('per')
+                if None in (man, per):
+                    continue
+                # mean anomaly to (next) apoapsis
+                mta = math.pi - man
+                # time to Ap
+                tta = per * mta / (math.pi * 2.0)
+                if tta < 0:
+                    tta += 1.0
+                self.sim.data[key]['tta'] = tta
+                if tmmo is None:
+                    continue
+                # target mean anomaly change over tta
+                tdma = math.fmod(tta * tmmo, 2.0 * math.pi)
+                self.sim.data[key]['tdma'] = tdma
+                trap = self.sim.data[key].get('trap')
+                if trap is not None:
+                    # phase angle ignoring tecc; +ve is behind
+                    tpx = trap - tdma
+                    self.sim.data[key]['tpx'] = tpx
+                if tmae is None:
+                    continue
+                # target mean anomaly at T
+                tma = math.fmod(tmae + (self.sim.UT + tta) * tmmo, 2.0 * math.pi)
+                self.sim.data[key]['tma'] = tma
+                if tecc is None:
+                    continue
+                # target eccentric anomalies
+                def ean_from_man(man, ecc, k):
+                    # Iterated approximation; k is number of iterations
+                    ean = man
+                    for i in xrange(k):
+                        ean = man + ecc * math.sin(ean)
+                    return ean
+                tm0 = math.fmod(tmae + self.sim.UT * tmmo, 2.0 * math.pi)
+                te0 = ean_from_man(tm0, tecc, 6)
+                te1 = ean_from_man(tma, tecc, 6)
+                # target true anomalies
+                def tra_from_ean(ean, ecc):
+                    tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
+                    tra = 2 * math.atan(tjh)
+                    return tra
+                tr0 = tra_from_ean(te0, tecc)
+                tr1 = tra_from_ean(te1, tecc)
+                self.sim.data[key]['tr0'] = tr0
+                self.sim.data[key]['tr1'] = tr1
+                # target true anomaly change over tta
+                tdta = math.fmod(tra - tr0, 2.0 * math.pi)
+                self.sim.data[key]['tdta'] = tdta
+                # true phase angle; +ve is behind
+                tpy = trap - tdta
+                self.sim.data[key]['tpy'] = tpy
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -1339,17 +1435,17 @@ class RSPeriapsis(SIGauge):
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
-class RSTrueAnom(OneLineGauge):
-    param = 'tra'
-    label = 'J'
+class RSAngleGauge(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
-        super(RSTrueAnom, self).__init__(dl, cw)
+        super(RSAngleGauge, self).__init__(dl, cw)
         self.sim = sim
         self.key = key
     def draw(self):
-        super(RSTrueAnom, self).draw()
+        super(RSAngleGauge, self).draw()
         if self.sim.has_data:
-            keys = [k for k in list(self.key) if k in self.sim.data]
+            keys = [k for k in list(self.key)
+                    if k in self.sim.data and
+                       self.param in self.sim.data[k]]
             if keys:
                 angle = math.degrees(self.sim.data[keys[0]][self.param])
                 width = self.olg_width - 3
@@ -1364,6 +1460,75 @@ class RSTrueAnom(OneLineGauge):
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
         self.addch(self.olg_width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
+
+class RSTrueAnom(RSAngleGauge):
+    param = 'tra'
+    label = 'J' # a random letter that stands in for theta
+
+class RSLongPe(RSAngleGauge):
+    param = 'lpe'
+    label = 'w' # omega bar, really
+
+class RSTimeGauge(OneLineGauge, TimeFormatterMixin):
+    def __init__(self, dl, cw, key, sim):
+        super(RSTimeGauge, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        super(RSTimeGauge, self).draw()
+        if self.sim.has_data:
+            keys = [k for k in list(self.key)
+                    if k in self.sim.data and
+                       self.param in self.sim.data[k]]
+            if keys:
+                t = self.sim.data[keys[0]][self.param]
+                text = self.fmt_time(t, 3)
+                width = self.olg_width - 2
+                self.addstr('%s:%*s'%(self.label, width, text))
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 2
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSObtPeriod(RSTimeGauge):
+    param = 'per'
+    label = 'D'
+
+class RSTTAp(RSTimeGauge):
+    param = 'tta'
+    label = 'T'
+
+class RSTgtDeltaMA(RSAngleGauge):
+    param = 'tdma'
+    label = 'm'
+
+class RSTgtDeltaTA(RSAngleGauge):
+    param = 'tdma'
+    label = 'j'
+
+class RSTrAp(RSAngleGauge):
+    param = 'trap'
+    label = 'd'
+
+class RSTgtPx(RSAngleGauge):
+    param = 'tpx'
+    label = 'p'
+
+class RSTgtPy(RSAngleGauge):
+    param = 'tpy'
+    label = 'q'
+
+class RSTgtMA(RSAngleGauge):
+    param = 'tma'
+    label = 'M'
+
+class RSTgtTA(RSAngleGauge):
+    param = 'tr1'
+    label = 'N'
 
 class RSLatitude(OneLineGauge):
     param = 'lat'

@@ -516,24 +516,36 @@ class AstroConsole(Console):
         self.ms = burns.ManeuverSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
         sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, True, self.ms)
         elts = gauge.UpdateSimElements(dl, scr, self.ms, 'b')
+        tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, 'b', opts.target_body)
         zwin = scr.derwin(4, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms)],
                              "Start")
-        bwin = scr.derwin(9, 16, 7, 17)
+        bwin = scr.derwin(11, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSTrueAnom(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms)],
+                                    gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms),
+                                    gauge.RSTrueAnom(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms),
+                                    gauge.RSLongPe(dl, bwin.derwin(1, 14, 9, 1), 'b', self.ms)],
                              "End")
+        awin = scr.derwin(9, 16, 7, 33)
+        a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'b', self.ms),
+                                    gauge.RSTgtDeltaMA(dl, awin.derwin(1, 14, 2, 1), 'b', self.ms),
+                                    gauge.RSTrAp(dl, awin.derwin(1, 14, 3, 1), 'b', self.ms),
+                                    gauge.RSTgtPy(dl, awin.derwin(1, 14, 4, 1), 'b', self.ms),
+                                    gauge.RSTgtTA(dl, awin.derwin(1, 14, 5, 1), 'b', self.ms),
+                                    gauge.RSTgtPx(dl, awin.derwin(1, 14, 6, 1), 'b', self.ms),
+                                    gauge.RSTgtMA(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms)],
+                             "Apo")
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
                                       [self.update, deltav, twr, mode, scap,
-                                       sim, elts, z, b,
+                                       sim, elts, tgt, z, b, a,
                                        self.status, body, time],
                                       "KONRAD: Astrogation")
         self.update_vars()
@@ -560,6 +572,24 @@ class AstroConsole(Console):
         if key == ord('p'):
             self.mode = burns.ManeuverSim.MODE_PROGRADE
             self.update_vars()
+            return
+        if key == ord(')'):
+            self.ms.burnUT += 1
+            return
+        if key == ord('('):
+            self.ms.burnUT -= 1
+            return
+        if key == ord(']'):
+            self.ms.burnUT += 10
+            return
+        if key == ord('['):
+            self.ms.burnUT -= 10
+            return
+        if key == ord('}'):
+            self.ms.burnUT += 100
+            return
+        if key == ord('{'):
+            self.ms.burnUT -= 100
             return
         if key == curses.KEY_PPAGE:
             self.stagecap += 1
@@ -608,6 +638,7 @@ def parse_opts():
     x.add_option('--target-alt', type='si', help="Target altitude above MSL (m)")
     x.add_option('--target-peri', type='si', help="Target periapsis altitude (m)")
     x.add_option('--target-apo', type='si', help="Target apoapsis altitude (m)")
+    x.add_option('-t', '--target-body', type='int', help="ID of body we want to intercept", default=10)
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')

@@ -54,10 +54,28 @@ class ParentBody(object):
         ecc = math.sqrt(1 - ne)
         apa = (1 + ecc) * sma
         pea = (1 - ecc) * sma
-        # eccentric anomaly E: e cos E = 1 - (r/a)
-        ecosE = 1.0 - (r / sma)
-        ean = math.acos(ecosE / ecc)
-        # true anomaly j: (1 - e) tan^2 (j/2) = (1 + e) tan^2 (E/2)
-        tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
-        tra = 2 * math.atan(tjh)
-        return {'sma': sma, 'ecc': ecc, 'apa': apa - self.rad, 'pea': pea - self.rad, 'ean': ean, 'tra': tra}
+        data = {'sma': sma, 'ecc': ecc,
+                'apa': apa - self.rad,
+                'pea': pea - self.rad}
+        try:
+            # period T = 2pi sqrt(a^3 / mu)
+            per = 2.0 * math.pi * math.sqrt(sma ** 3 / self.gm)
+            data['per'] = per
+        except ValueError:
+            pass
+        try:
+            # eccentric anomaly E: e cos E = 1 - (r/a)
+            # sgn(vs) == sgn(sin E)
+            ecosE = 1.0 - (r / sma)
+            ean = math.acos(ecosE / ecc)
+            if vs < 0: ean += math.pi
+            data['ean'] = ean
+            # mean anomaly M = E - e sin E
+            data['man'] = ean - ecc * math.sin(ean)
+            # true anomaly j: (1 - e) tan^2 (j/2) = (1 + e) tan^2 (E/2)
+            tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
+            tra = 2 * math.atan(tjh)
+            data['tra'] = tra
+        except ValueError:
+            pass
+        return data
