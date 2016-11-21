@@ -513,29 +513,28 @@ class AstroConsole(Console):
         self.vars = {}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
-        sim_blocks = []
         self.ms = burns.ManeuverSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
-        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, False, self.ms)
+        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, True, self.ms)
         elts = gauge.UpdateSimElements(dl, scr, self.ms, 'b')
         zwin = scr.derwin(4, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms)],
                              "Start")
-        bwin = scr.derwin(8, 16, 7, 17)
+        bwin = scr.derwin(9, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
-                                    gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms)],
+                                    gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
+                                    gauge.RSTrueAnom(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms)],
                              "End")
-        sim_blocks.extend([sim, elts, z, b])
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, deltav, twr, mode, scap] +
-                                      sim_blocks +
-                                      [self.status, body, time],
+                                      [self.update, deltav, twr, mode, scap,
+                                       sim, elts, z, b,
+                                       self.status, body, time],
                                       "KONRAD: Astrogation")
         self.update_vars()
     def update_vars(self):

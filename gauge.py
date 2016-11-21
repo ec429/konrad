@@ -1142,6 +1142,7 @@ class UpdateManeuverSim(UpdateRocketSim):
         UT = self.get('UT')
         self.sim.UT = UT
         self.sim.burnUT = max(self.sim.burnUT, UT)
+        super(UpdateManeuverSim, self).draw()
 
 class UpdateSimElements(Gauge):
     # Computes orbital elements from RocketSim results
@@ -1327,8 +1328,8 @@ class RSPeriapsis(SIGauge):
     def draw(self):
         if self.sim.has_data:
             if self.key in self.sim.data:
-                apa = self.sim.data[self.key]['pea']
-                super(RSPeriapsis, self).draw(apa)
+                pea = self.sim.data[self.key]['pea']
+                super(RSPeriapsis, self).draw(pea)
                 col = 3
             else:
                 self.addstr(self.label+'-'*(self.olg_width - 1))
@@ -1337,6 +1338,32 @@ class RSPeriapsis(SIGauge):
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
+
+class RSTrueAnom(OneLineGauge):
+    param = 'tra'
+    label = 'J'
+    def __init__(self, dl, cw, key, sim):
+        super(RSTrueAnom, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+    def draw(self):
+        super(RSTrueAnom, self).draw()
+        if self.sim.has_data:
+            keys = [k for k in list(self.key) if k in self.sim.data]
+            if keys:
+                angle = math.degrees(self.sim.data[keys[0]][self.param])
+                width = self.olg_width - 3
+                prec = min(3, width - 4)
+                self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+                col = 3
+            else:
+                self.addstr(self.label+'-'*(self.olg_width - 1))
+                col = 2
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+        self.addch(self.olg_width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
 
 class RSLatitude(OneLineGauge):
     param = 'lat'
