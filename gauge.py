@@ -984,16 +984,15 @@ class RollRateGauge(AngleRateGauge):
     label = 'R.R'
     api = 'n.roll2'
 
-class Light(OneLineGauge):
-    def __init__(self, dl, cw, text, api):
-        super(Light, self).__init__(dl, cw)
+class BaseLight(OneLineGauge):
+    value = False
+    def __init__(self, dl, cw, text):
+        super(BaseLight, self).__init__(dl, cw)
         self.text = text
-        self.add_prop('val', api)
     def draw(self):
-        super(Light, self).draw()
-        raw = self.get('val')
+        super(BaseLight, self).draw()
+        raw = self.value
         if raw is None:
-            val = True
             flag = '?'
             col = 2
         else:
@@ -1002,6 +1001,14 @@ class Light(OneLineGauge):
             col = val * 3
         self.addstr(self.centext(flag + self.text))
         self.chgat(0, self.width, curses.color_pair(col))
+
+class Light(BaseLight):
+    def __init__(self, dl, cw, text, api):
+        super(Light, self).__init__(dl, cw, text)
+        self.add_prop('val', api)
+    @property
+    def value(self):
+        return self.get('val')
 
 class UpdateBooster(Gauge):
     def __init__(self, dl, cw, bstr):
