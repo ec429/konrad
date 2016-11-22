@@ -163,6 +163,7 @@ class TrajConsole(Console):
                 gauge.HeadingGauge(dl, oriwant.derwin(1, 10, 1, 12), want=self.want),
                 gauge.VLine(dl, oriwant.derwin(1, 1, 1, 22)),
                 gauge.RollGauge(dl, oriwant.derwin(1, 10, 1, 23), want=self.want),
+                gauge.VariableLabel(dl, oriwant.derwin(1, 6, 0, 27), self.want, 'fineness', centered=True),
                 ], 'Input Orientation')
             wm = scr.derwin(3, 17, 19, 35)
             wmgroup = gauge.GaugeGroup(wm, [
@@ -174,6 +175,10 @@ class TrajConsole(Console):
         if opts.mj:
             gauges += [owgroup, wmgroup]
         self.group = gauge.GaugeGroup(scr, gauges + [self.status, body, time], "KONRAD: Trajectory")
+        self.setfine(0)
+    def setfine(self, value):
+        self.fine = value
+        self.want['fineness'] = {0: 'COARSE', 1: 'NORMAL', 2: 'FINE'}.get(value, 'Error?')
     def maybe_push_mj(self):
         if opts.mj and self.want['mode'] == 'Fixed':
             cmd = 'mj.surface2[%f,%f,%f]'%(self.want['HDG'], self.want['PIT'], self.want['RLL'])
@@ -184,6 +189,15 @@ class TrajConsole(Console):
         if opts.mj:
             self.want['reqm'] = api
             self.dl.send_msg({'run':[api]})
+    def steer(self, what, base):
+        old = self.want[what]
+        sf = 10 ** -self.fine
+        delta = base * sf
+        if what == 'PIT':
+            new = min(max(old + delta, -90), 90)
+        else:
+            new = (old + delta) % 360
+        self.want[what] = new
     def input(self, key):
         if key == ord('<'):
             self.group.changeopt(gauge.AoAGauge, retro=True)
@@ -192,42 +206,24 @@ class TrajConsole(Console):
             self.group.changeopt(gauge.AoAGauge, retro=False)
             return
         # Input Orientation, for AP Fixed
-        if key == ord('d'):
-            self.want['HDG'] = (self.want['HDG'] + 10) % 360
+        steering = {'d': ('HDG', 1),
+                    'a': ('HDG', -1),
+                    's': ('PIT', 1),
+                    'w': ('PIT', -1),
+                    'e': ('RLL', 1),
+                    'q': ('RLL', -1)}
+        if chr(key) in steering:
+            what, base = steering[chr(key)]
+            self.steer(what, base * 10)
             return self.maybe_push_mj()
-        if key == ord('a'):
-            self.want['HDG'] = (self.want['HDG'] + 350) % 360
+        if chr(key).lower() in steering:
+            what, base = steering[chr(key).lower()]
+            self.steer(what, base)
             return self.maybe_push_mj()
-        if key == ord('s'):
-            self.want['PIT'] = min(self.want['PIT'] + 10, 90)
-            return self.maybe_push_mj()
-        if key == ord('w'):
-            self.want['PIT'] = max(self.want['PIT'] - 10, -90)
-            return self.maybe_push_mj()
-        if key == ord('e'):
-            self.want['RLL'] = (self.want['RLL'] + 10) % 360
-            return self.maybe_push_mj()
-        if key == ord('q'):
-            self.want['RLL'] = (self.want['RLL'] + 350) % 360
-            return self.maybe_push_mj()
-        if key == ord('D'):
-            self.want['HDG'] = (self.want['HDG'] + 1) % 360
-            return self.maybe_push_mj()
-        if key == ord('A'):
-            self.want['HDG'] = (self.want['HDG'] + 359) % 360
-            return self.maybe_push_mj()
-        if key == ord('S'):
-            self.want['PIT'] = min(self.want['PIT'] + 1, 90)
-            return self.maybe_push_mj()
-        if key == ord('W'):
-            self.want['PIT'] = max(self.want['PIT'] - 1, -90)
-            return self.maybe_push_mj()
-        if key == ord('E'):
-            self.want['RLL'] = (self.want['RLL'] + 1) % 360
-            return self.maybe_push_mj()
-        if key == ord('Q'):
-            self.want['RLL'] = (self.want['RLL'] + 359) % 360
-            return self.maybe_push_mj()
+        # Toggle fine controls
+        if key == ord('`'):
+            self.setfine((self.fine + 1) % 3)
+            return
         # Copy from measured orientation
         if key == ord('?'):
             self.want['PIT'] = self.dl.get('n.pitch2', 90)
