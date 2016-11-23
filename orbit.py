@@ -64,21 +64,33 @@ class ParentBody(object):
         except ValueError:
             pass
         try:
+            # anomalies since periapsis
             # eccentric anomaly E: e cos E = 1 - (r/a)
             # sgn(vs) == sgn(sin E)
             ecosE = 1.0 - (r / sma)
             ean = math.acos(ecosE / ecc)
             if vs < 0: ean += math.pi
-            data['ean'] = ean
+            data['eap'] = ean
             # mean anomaly M = E - e sin E
-            data['man'] = ean - ecc * math.sin(ean)
-            # true anomaly j: (1 - e) tan^2 (j/2) = (1 + e) tan^2 (E/2)
-            tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
-            tra = 2 * math.atan(tjh)
-            data['tra'] = tra
+            data['map'] = ean - ecc * math.sin(ean)
+            # true anomaly J
+            tap = tra_from_ean(ean, ecc)
+            data['tap'] = tap
         except ValueError:
             pass
         return data
+
+def ean_from_man(man, ecc, k):
+    # Iterated approximation; k is number of iterations
+    ean = man
+    for i in xrange(k):
+        ean = man + ecc * math.sin(ean)
+    return ean
+
+def tra_from_ean(ean, ecc):
+    tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
+    tra = 2 * math.atan(tjh)
+    return tra
 
 def xhat_at_tra(tra, inc, lan):
     return (math.cos(lan) * math.cos(inc) * math.cos(tra) + math.sin(lan) * math.sin(tra),

@@ -524,7 +524,7 @@ class AstroConsole(Console):
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSTrueAnom(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms)],
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'tap', 'J')],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
         a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'b', self.ms),

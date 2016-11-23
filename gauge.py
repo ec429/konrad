@@ -1232,18 +1232,49 @@ class UpdateSimElements(Gauge):
         self.keys = keys
         self.add_prop('inc', 'o.inclination')
         self.add_prop('lan', 'o.lan')
+        self.add_prop('tra', 'o.trueAnomaly')
+        self.add_prop('long', 'v.long')
     def draw(self):
         inc = self.getrad('inc')
         lan = self.getrad('lan')
+        tan = self.getrad('tra')
+        lng = self.getrad('long')
+        # longitude at t=0, in same coords as lan
+        if None in (tan, lan, inc):
+            lon = None
+        else:
+            lon = lan + math.atan(math.tan(tan) * math.cos(inc))
+        # longitude of prime meridian, in lan coords
+        if None in (lon, lng):
+            reflon = None
+        else:
+            reflon = lon - lng
+        self.sim.reflon = reflon
         if self.sim.has_data:
             for key in self.keys:
                 self.sim.compute_elements(key)
-                tra = self.sim.data[key].get('tra')
-                if tra is None:
+                if key not in self.sim.data:
                     continue
-                trap = math.pi - tra
-                if trap < 0: trap += 2.0 * math.pi
-                self.sim.data[key]['trap'] = trap
+                tap = self.sim.data[key].get('tap')
+                lng = self.sim.data[key].get('lon')
+                lat = self.sim.data[key].get('lat')
+                if tap is not None:
+                    trap = math.pi - tap
+                    if trap < 0: trap += 2.0 * math.pi
+                    self.sim.data[key]['trap'] = trap
+                if None in (lng, reflon, lat):
+                    continue
+                lng = math.radians(lng)
+                truelon = lng + reflon
+                self.sim.data[key]['rfl'] = reflon
+                self.sim.data[key]['trl'] = truelon
+                if None in (lan, inc):
+                    continue
+                dlon = truelon - lan
+                tra = math.atan(math.tan(dlon) / math.cos(inc))
+                self.sim.data[key]['tra'] = tra
+                xh = orbit.xhat_at_tra(tra, inc, lan)
+                self.sim.data[key]['xh'] = xh
 
 class UpdateTgtProximity(Gauge):
     # Computes target offset at apoapsis from RocketSim results
@@ -1257,12 +1288,14 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
         self.add_prop('tinc', 'b.o.inclination[%d]'%(tgt,))
         self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
+        self.add_prop('ttra', 'b.o.trueAnomaly[%d]'%(tgt,))
     def draw(self):
         tsma = self.get('tsma')
         tmae = self.getrad('tmae')
         tecc = self.get('tecc')
         tinc = self.getrad('tinc')
         tlan = self.getrad('tlan')
+        ttra = self.getrad('ttra')
         if tsma is None:
             tmmo = None
         else:
@@ -1270,12 +1303,14 @@ class UpdateTgtProximity(Gauge):
             tmmo = math.sqrt(self.sim.pbody.gm / tsma ** 3)
         if self.sim.has_data:
             for key in self.keys:
-                man = self.sim.data[key].get('man')
+                if key not in self.sim.data:
+                    continue
+                manp = self.sim.data[key].get('map')
                 per = self.sim.data[key].get('per')
-                if None in (man, per):
+                if None in (manp, per):
                     continue
                 # mean anomaly to (next) apoapsis
-                mta = math.pi - man
+                mta = math.pi - manp
                 # time to Ap
                 tta = per * mta / (math.pi * 2.0)
                 if tta < 0:
@@ -1287,34 +1322,24 @@ class UpdateTgtProximity(Gauge):
                 tdma = math.fmod(tta * tmmo, 2.0 * math.pi)
                 self.sim.data[key]['tdma'] = tdma
                 trap = self.sim.data[key].get('trap')
-                if tmae is None:
+                if ttra is None:
                     continue
                 time = self.sim.data[key].get('time')
                 if time is None:
                     continue
-                time += self.sim.UT
+                #time += self.sim.UT
                 # target mean anomaly at T
-                tma = math.fmod(tmae + (time + tta) * tmmo, 2.0 * math.pi)
+                tma = math.fmod(ttra + (time + tta) * tmmo, 2.0 * math.pi)
                 self.sim.data[key]['tma'] = tma
                 if tecc is None:
                     continue
                 # target eccentric anomalies
-                def ean_from_man(man, ecc, k):
-                    # Iterated approximation; k is number of iterations
-                    ean = man
-                    for i in xrange(k):
-                        ean = man + ecc * math.sin(ean)
-                    return ean
-                tm0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
-                te0 = ean_from_man(tm0, tecc, 6)
-                te1 = ean_from_man(tma, tecc, 6)
+                tm0 = math.fmod(ttra + time * tmmo, 2.0 * math.pi)
+                te0 = orbit.ean_from_man(tm0, tecc, 6)
+                te1 = orbit.ean_from_man(tma, tecc, 6)
                 # target true anomalies
-                def tra_from_ean(ean, ecc):
-                    tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
-                    tra = 2 * math.atan(tjh)
-                    return tra
-                tr0 = tra_from_ean(te0, tecc)
-                tr1 = tra_from_ean(te1, tecc)
+                tr0 = orbit.tra_from_ean(te0, tecc)
+                tr1 = orbit.tra_from_ean(te1, tecc)
                 self.sim.data[key]['tr0'] = tr0
                 self.sim.data[key]['tr1'] = tr1
                 # target true anomaly change over tta
@@ -1332,11 +1357,12 @@ class UpdateTgtProximity(Gauge):
                 # target direction vector
                 txh0 = orbit.xhat_at_tra(tr0, tinc, tlan)
                 self.sim.data[key]['txh0'] = txh0
-                # XXX we don't currently have vessel direction vector, but we'd like it!
                 xh = self.sim.data[key].get('xh')
                 if xh is None:
                     continue
                 # angle between direction vectors
+                # XXX one of xh and txh0 is wrong (or they're just not in the
+                # same co-ordinate system.  Either way, this result is bogus)
                 self.sim.data[key]['pa0'] = orbit.angle_between(txh0, xh)
 
 class RSTime(OneLineGauge):
@@ -1537,7 +1563,7 @@ class RSAngleGauge(OneLineGauge):
             if keys:
                 angle = math.degrees(self.sim.data[keys[0]][self.param])
                 width = self.olg_width - 3
-                prec = min(3, width - 4)
+                prec = min(5, width - 4)
                 self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
                 col = 3
             else:
@@ -1548,10 +1574,6 @@ class RSAngleGauge(OneLineGauge):
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
         self.addch(self.olg_width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
-
-class RSTrueAnom(RSAngleGauge):
-    param = 'tra'
-    label = 'J' # a random letter that stands in for theta
 
 class RSTimeGauge(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):
