@@ -46,6 +46,12 @@ class Gauge(object):
         if key not in self.props:
             return default
         return self.dl.get(self.props[key], default)
+    def getrad(self, key):
+        "Like get(), but convert to radians if not None"
+        v = self.get(key)
+        if v is None:
+            return v
+        return math.radians(v)
     def put(self, key, value):
         self.dl.put(key, value)
     def draw(self):
@@ -77,14 +83,14 @@ class NavBall(Gauge):
         self.center = (self.width / 2, self.height / 2)
     def draw(self):
         self.cw.clear()
-        pit = self.get('pit')
-        hdg = self.get('hdg')
-        rll = self.get('rll')
+        pit = self.getrad('pit')
+        hdg = self.getrad('hdg')
+        rll = self.getrad('rll')
         if None in (pit, hdg, rll):
             return
-        m_rll = matrix.RotationMatrix(0, math.radians(rll))
-        m_pit = matrix.RotationMatrix(1, -math.radians(pit))
-        m_hdg = matrix.RotationMatrix(2, -math.radians(hdg))
+        m_rll = matrix.RotationMatrix(0, rll)
+        m_pit = matrix.RotationMatrix(1, -pit)
+        m_hdg = matrix.RotationMatrix(2, -hdg)
         final = m_rll * m_pit * m_hdg
         self.cw.addch(self.center[1], self.center[0], '.')
         for k, v in self.cardinals.items():
@@ -821,13 +827,12 @@ class RelIncGauge(AngleGauge):
             self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
     @property
     def angle(self):
-        inc = self.get('inc')
-        lan = self.get('lan')
-        tinc = self.get('tinc')
-        tlan = self.get('tlan')
+        inc = self.getrad('inc')
+        lan = self.getrad('lan')
+        tinc = self.getrad('tinc')
+        tlan = self.getrad('tlan')
         if None in (inc, lan, tinc, tlan):
             return None
-        inc, lan, tinc, tlan = map(math.radians, (inc, lan, tinc, tlan))
         w = (math.sin(inc) * math.cos(lan), math.sin(inc) * math.sin(lan), math.cos(inc))
         z = (math.sin(tinc) * math.cos(tlan), math.sin(tinc) * math.sin(tlan), math.cos(tinc))
         dot = sum(wi*zi for wi,zi in zip(w, z))
@@ -1228,16 +1233,11 @@ class UpdateSimElements(Gauge):
         self.add_prop('inc', 'o.inclination')
         self.add_prop('lan', 'o.lan')
     def draw(self):
-        inc = self.get('inc')
-        lan = self.get('lan')
-        if inc is not None:
-            inc = math.radians(inc)
-        if lan is not None:
-            lan = math.radians(lan)
+        inc = self.getrad('inc')
+        lan = self.getrad('lan')
         if self.sim.has_data:
             for key in self.keys:
                 self.sim.compute_elements(key)
-                lon = self.sim.data[key].get('lon')
                 tra = self.sim.data[key].get('tra')
                 if tra is None:
                     continue
@@ -1259,16 +1259,10 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
     def draw(self):
         tsma = self.get('tsma')
-        tmae = self.get('tmae')
-        if tmae is not None:
-            tmae = math.radians(tmae)
+        tmae = self.getrad('tmae')
         tecc = self.get('tecc')
-        tinc = self.get('tinc')
-        if tinc is not None:
-            tinc = math.radians(tinc)
-        tlan = self.get('tlan')
-        if tlan is not None:
-            tlan = math.radians(tlan)
+        tinc = self.getrad('tinc')
+        tlan = self.getrad('tlan')
         if tsma is None:
             tmmo = None
         else:
