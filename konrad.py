@@ -511,8 +511,8 @@ class AstroConsole(Console):
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         self.ms = burns.ManeuverSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
         sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, True, self.ms)
-        elts = gauge.UpdateSimElements(dl, scr, self.ms, 'b')
-        tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, 'b', opts.target_body)
+        elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
+        tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0b', opts.target_body)
         zwin = scr.derwin(4, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms)],
@@ -538,6 +538,7 @@ class AstroConsole(Console):
         twin = scr.derwin(9, 16, 7, 49)
         t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
                                     gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
+                                    gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
                                     gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body)],
                              "Tgt")
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)

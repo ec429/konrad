@@ -79,3 +79,12 @@ class ParentBody(object):
         except ValueError:
             pass
         return data
+
+def xhat_at_tra(tra, inc, lan):
+    return (math.cos(lan) * math.cos(inc) * math.cos(tra) + math.sin(lan) * math.sin(tra),
+            math.cos(lan) * math.sin(tra) - math.sin(lan) * math.cos(inc) * math.cos(tra),
+            math.sin(inc) * math.cos(tra))
+
+def angle_between(w, z):
+    dot = sum(wi*zi for wi,zi in zip(w, z))
+    return math.acos(dot)

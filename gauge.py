@@ -831,9 +831,26 @@ class RelIncGauge(AngleGauge):
         w = (math.sin(inc) * math.cos(lan), math.sin(inc) * math.sin(lan), math.cos(inc))
         z = (math.sin(tinc) * math.cos(tlan), math.sin(tinc) * math.sin(tlan), math.cos(tinc))
         dot = sum(wi*zi for wi,zi in zip(w, z))
-        cross = w[0] * z[1] - w[0] * z[2] + w[1] * z[2] - w[1] * z[0] + w[2] * z[0] - w[2] * z[1]
-        theta = math.atan2(-cross, dot)
+        theta = math.acos(dot)
         return math.degrees(theta)
+
+class RelLanGauge(AngleGauge):
+    label = 'RL'
+    fsd = 5
+    def __init__(self, dl, cw, tgt):
+        super(RelLanGauge, self).__init__(dl, cw)
+        self.add_prop('lan', 'o.lan')
+        if tgt is None:
+            self.add_prop('lan', 'tar.o.lan')
+        else:
+            self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
+    @property
+    def angle(self):
+        lan = self.get('lan')
+        tlan = self.get('tlan')
+        if None in (lan, tlan):
+            return None
+        return tlan - lan
 
 class InclinationGauge(AngleGauge):
     label = 'Inclination'
@@ -1213,6 +1230,10 @@ class UpdateSimElements(Gauge):
     def draw(self):
         inc = self.get('inc')
         lan = self.get('lan')
+        if inc is not None:
+            inc = math.radians(inc)
+        if lan is not None:
+            lan = math.radians(lan)
         if self.sim.has_data:
             for key in self.keys:
                 self.sim.compute_elements(key)
@@ -1223,15 +1244,6 @@ class UpdateSimElements(Gauge):
                 trap = math.pi - tra
                 if trap < 0: trap += 2.0 * math.pi
                 self.sim.data[key]['trap'] = trap
-                if None in (lon, inc, lan):
-                    continue
-                inc = math.radians(inc)
-                lan = math.radians(lan)
-                dlon = lon - lan
-                current_tra = math.atan2(math.sin(dlon), math.cos(dlon) / math.cos(inc))
-                ape = current_tra - tra
-                lpe = math.atan2(math.sin(ape), math.cos(ape) * math.cos(inc))
-                self.sim.data[key]['lpe'] = lpe + lan
 
 class UpdateTgtProximity(Gauge):
     # Computes target offset at apoapsis from RocketSim results
@@ -1243,10 +1255,20 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tsma', 'b.o.sma[%d]'%(tgt,))
         self.add_prop('tecc', 'b.o.eccentricity[%d]'%(tgt,))
         self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
+        self.add_prop('tinc', 'b.o.inclination[%d]'%(tgt,))
+        self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
     def draw(self):
         tsma = self.get('tsma')
         tmae = self.get('tmae')
+        if tmae is not None:
+            tmae = math.radians(tmae)
         tecc = self.get('tecc')
+        tinc = self.get('tinc')
+        if tinc is not None:
+            tinc = math.radians(tinc)
+        tlan = self.get('tlan')
+        if tlan is not None:
+            tlan = math.radians(tlan)
         if tsma is None:
             tmmo = None
         else:
@@ -1273,8 +1295,12 @@ class UpdateTgtProximity(Gauge):
                 trap = self.sim.data[key].get('trap')
                 if tmae is None:
                     continue
+                time = self.sim.data[key].get('time')
+                if time is None:
+                    continue
+                time += self.sim.UT
                 # target mean anomaly at T
-                tma = math.fmod(tmae + (self.sim.UT + tta) * tmmo, 2.0 * math.pi)
+                tma = math.fmod(tmae + (time + tta) * tmmo, 2.0 * math.pi)
                 self.sim.data[key]['tma'] = tma
                 if tecc is None:
                     continue
@@ -1285,7 +1311,7 @@ class UpdateTgtProximity(Gauge):
                     for i in xrange(k):
                         ean = man + ecc * math.sin(ean)
                     return ean
-                tm0 = math.fmod(tmae + self.sim.UT * tmmo, 2.0 * math.pi)
+                tm0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
                 te0 = ean_from_man(tm0, tecc, 6)
                 te1 = ean_from_man(tma, tecc, 6)
                 # target true anomalies
@@ -1307,6 +1333,17 @@ class UpdateTgtProximity(Gauge):
                 trad = tsma * (1.0 - tecc * math.cos(te1))
                 talt = trad - self.sim.pbody.rad
                 self.sim.data[key]['talt'] = talt
+                if None in (tinc, tlan):
+                    continue
+                # target direction vector
+                txh0 = orbit.xhat_at_tra(tr0, tinc, tlan)
+                self.sim.data[key]['txh0'] = txh0
+                # XXX we don't currently have vessel direction vector, but we'd like it!
+                xh = self.sim.data[key].get('xh')
+                if xh is None:
+                    continue
+                # angle between direction vectors
+                self.sim.data[key]['pa0'] = orbit.angle_between(txh0, xh)
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -1522,10 +1559,6 @@ class RSTrueAnom(RSAngleGauge):
     param = 'tra'
     label = 'J' # a random letter that stands in for theta
 
-class RSLongPe(RSAngleGauge):
-    param = 'lpe'
-    label = 'w' # omega bar, really
-
 class RSTimeGauge(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):
         super(RSTimeGauge, self).__init__(dl, cw)
@@ -1574,6 +1607,12 @@ class RSTrAp(RSAngleGauge):
 class RSTgtPy(RSAngleGauge):
     param = 'tpy'
     label = 'q'
+
+class RSAngleParam(RSAngleGauge):
+    def __init__(self, dl, cw, key, sim, param, label):
+        self.param = param
+        self.label = label
+        super(RSAngleParam, self).__init__(dl, cw, key, sim)
 
 class RSTgtMA(RSAngleGauge):
     param = 'tma'
