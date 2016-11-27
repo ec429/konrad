@@ -228,7 +228,7 @@ class RocketSim3D(object):
         avec = dv * self.pvec
         # local gravity
         if None not in (self.alt, self.pbody.gm):
-            g = -self.pbody.gm / (self.alt + self.rvec.mag)**2
+            g = -self.pbody.gm / self.rvec.mag ** 2
             avec += (g * self.dt) * self.rvec.hat
         self.vvec += avec
     def compute_elements(self, key):
