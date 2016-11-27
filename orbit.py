@@ -160,9 +160,13 @@ def man_from_ean(ean, ecc):
 
 def ean_from_man(man, ecc, k):
     # Iterated approximation; k is number of iterations
-    ean = man
+    ### Uses Newton's method, from https://en.wikipedia.org/wiki/Kepler%27s_equation
+    if ecc > 0.8:
+        ean = math.pi
+    else:
+        ean = man
     for i in xrange(k):
-        ean = man + ecc * math.sin(ean)
+        ean -= (ean - ecc * math.sin(ean) - man) / (1.0 - ecc * math.cos(ean))
     return ean
 
 def ean_from_tan(tan, ecc):
@@ -176,7 +180,7 @@ def tan_from_ean(ean, ecc):
 def r(sma, ecc, ean):
     return sma * (1.0 - ecc * math.cos(ean))
 
-### eqns from from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
+### eqns from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
 
 def ovec(sma, ecc, ean):
     tan = tan_from_ean(ean, ecc)

@@ -168,10 +168,9 @@ class RocketSim3D(object):
         self.mode = mode
         self.stagecap = 0
         self.debug = debug
-    def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+    def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma):
         self.booster = booster.Booster.clone(bstr)
         self.pbody = orbit.ParentBody(brad, bgm)
-        ean = orbit.ean_from_tan(tan, ecc)
         # orbital state vector
         self.rvec, self.vvec = self.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
         self.point(pit, hdg)
