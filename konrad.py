@@ -537,6 +537,9 @@ class AstroConsole(Console):
                              "Apo")
         twin = scr.derwin(9, 16, 7, 49)
         t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
+                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 2, 1), '0', self.ms, 'tr0', 'j'),
+                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tra', 'J'),
+                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 4, 1), '0', self.ms, 'pa0', 'p'),
                                     gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
                                     gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
                                     gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body)],

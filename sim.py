@@ -151,3 +151,91 @@ class RocketSim(object):
             sv = self.data[key]
             elts = self.pbody.compute_elements(sv['alt'], sv['vs'], sv['hs'])
             self.data[key].update(elts)
+
+class RocketSim3D(object):
+    MODE_FIXED = 0
+    MODE_PROGRADE = 1
+    MODE_RETROGRADE = 2
+    @classmethod
+    def modename(cls, mode):
+        return {cls.MODE_FIXED: "Fixed", cls.MODE_PROGRADE: "Progd",
+                cls.MODE_RETROGRADE: "Retro",
+                }.get(mode, "%r?"%(mode,))
+    def __init__(self, mode=0, debug=False):
+        self.has_data = False
+        self.mode = mode
+        self.stagecap = 0
+        self.debug = debug
+    def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, man, ape, ecc, sma):
+        self.booster = booster.Booster.clone(bstr)
+        # mean motion
+        mmo = math.sqrt(bgm / sma ** 3)
+        def rvec_at_man(man):
+            ean = orbit.ean_from_man(man, ecc, 8)
+            tan = orbit.tan_from_ean(ean, ecc)
+            xhat = orbit.xhat(tan, inc, lan, ape)
+            rad = sma * (1.0 - ecc * math.cos(ean))
+            rvec = rad * xhat
+            return matrix.Vector3(rvec)
+        self.rvec = rvec_at_man(man)
+        self.vvec = rvec_at_man(man + mmo) - rvec
+        # state
+        self.pvec = matrix.Vector3((math.cos(hdg) * math.cos(pit),
+                                    math.sin(hdg) * math.cos(pit),
+                                    math.sin(pit)))
+        self.t = 0
+        self.init_rvec = self.rvec
+        self.local_ground_alt = self.ground_alt
+        self.throttle = throttle
+        self.brad = brad
+        self.bgm = bgm
+        self.pbody = orbit.ParentBody(brad, bgm)
+        self.act_mode = self.mode
+        # time step, in seconds
+        self.dt = 1.0
+    @property
+    def alt(self):
+        return self.rvec.mag - self.brad
+    @property
+    def downrange(self):
+        return (self.rvec - self.init_rvec).mag
+    @property
+    def hs(self):
+        return self.vvec.cross(self.rvec.hat).mag
+    @property
+    def vs(self):
+        return self.vvec.dot(self.rvec.hat)
+    def encode(self):
+        d = {'time': self.t, 'alt': self.alt, 'downrange': self.downrange,
+             'hs': self.hs, 'vs': self.vs,
+             'rvec': self.rvec, 'vvec': self.vvec,
+             }
+        if self.surface:
+            if self.local_ground_alt is not None:
+                d['height'] = self.alt - self.local_ground_alt
+        return d
+    def step(self):
+        self.t += self.dt
+        dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
+        if dv is None:
+            return True
+        if self.act_mode == self.MODE_FIXED:
+            pass
+        elif self.act_mode == self.MODE_PROGRADE:
+            self.pvec = self.vvec.hat
+        elif self.act_mode == self.MODE_RETROGRADE:
+            self.pvec = -1.0 * self.vvec.hat
+        else:
+            raise Exception("Unhandled mode", self.mode)
+        self.rvec += self.vvec
+        avec = dv * self.pvec
+        # local gravity
+        if None not in (self.alt, self.brad, self.bgm):
+            g = -self.bgm / (self.alt + self.brad)**2
+            avec += (g * self.dt) * self.rvec.hat
+        self.vvec += avec
+    def compute_elements(self, key):
+        if self.has_data and key in self.data:
+            sv = self.data[key]
+            elts = self.pbody.compute_3d_elements(sv['rvec'], sv['vvec'])
+            self.data[key].update(elts)
