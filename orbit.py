@@ -102,12 +102,13 @@ class ParentBody(object):
                 'pea': pea - self.rad}
         # vector to ascending node
         n = matrix.Vector3((-sam.y, sam.x, 0))
-        # mean motion n = sqrt(mu / a^3)
-        mmo = math.sqrt(self.gm / sma ** 3)
-        data['mmo'] = mmo
-        # period T = 2pi / n
-        per = 2.0 * math.pi / mmo
-        data['per'] = per
+        if sma > 0:
+            # mean motion n = sqrt(mu / a^3)
+            mmo = math.sqrt(self.gm / sma ** 3)
+            data['mmo'] = mmo
+            # period T = 2pi / n
+            per = 2.0 * math.pi / mmo
+            data['per'] = per
         # anomalies (since periapsis)
         if ecc == 0:
             tan = 0
@@ -186,9 +187,9 @@ def odot(gm, sma, ecc, ean):
     return sf * matrix.Vector3((-math.sin(ean), efac * math.cos(ean), 0))
 
 def oxform(ape, inc, lan):
-    lanx = matrix.RotationMatrix(2, -lan)
-    incx = matrix.RotationMatrix(0, -inc)
-    apex = matrix.RotationMatrix(2, -ape)
+    lanx = matrix.RotationMatrix(2, lan)
+    incx = matrix.RotationMatrix(0, inc)
+    apex = matrix.RotationMatrix(2, ape)
     return lanx * incx * apex
 
 ###
@@ -200,8 +201,8 @@ def angle_between(w, z):
 
 if __name__ == "__main__":
     # round-trip test
-    in_r = matrix.Vector3((40, 0, 20))
-    in_v = matrix.Vector3((0, 1.0, 0.01))
+    in_r = matrix.Vector3((40, 0, 30))
+    in_v = matrix.Vector3((0, 1.0, 0.1))
     in_gm = 50
     in_rad = 0
     pbody = ParentBody(in_rad, in_gm)
@@ -214,16 +215,3 @@ if __name__ == "__main__":
     out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], elts['tan'], elts['ape'], elts['inc'], elts['lan'])
     print out_r
     print out_v
-
-if 0:
-    out_r = x(elts['sma'], elts['ecc'], elts['ean'], elts['tan'], elts['inc'], elts['lan'], elts['ape'])
-    out_v = xdot(elts['sma'], elts['lan'], elts['inc'], elts['ape'], elts['mmo'], elts['ean'], elts['tan'], elts['ecc'])
-    print out_r
-    print out_v
-    tan = elts['tan']
-    print tandot(elts['mmo'], elts['sma'], elts['ecc'], elts['ean'])
-    elts['man'] += elts['mmo']
-    elts['ean'] = ean_from_man(elts['man'], elts['ecc'], 12)
-    elts['tan'] = tra_from_ean(elts['ean'], elts['ecc'])
-    print elts['tan'] - tan
-    print x(elts['sma'], elts['ecc'], elts['ean'], elts['tan'], elts['inc'], elts['lan'], elts['ape'])
