@@ -6,6 +6,8 @@ import booster
 import matrix
 import orbit
 
+class SimulationException(Exception): pass
+
 class RocketSim(object):
     MODE_FIXED = 0
     MODE_PROGRADE = 1

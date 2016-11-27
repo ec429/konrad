@@ -5,6 +5,7 @@ import math
 import matrix
 import booster
 import orbit
+from sim import SimulationException
 
 def initialise():
     register_colours()
@@ -1240,7 +1241,7 @@ class UpdateRocketSim3D(Gauge):
             self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
             self.del_prop('bgm')
             self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
-        super(UpdateRocketSim, self)._changeopt(**kwargs)
+        super(UpdateRocketSim3D, self)._changeopt(**kwargs)
     def draw(self):
         if self.use_throttle:
             throttle = self.get('throttle')
@@ -1264,10 +1265,12 @@ class UpdateRocketSim3D(Gauge):
         ape = self.getrad('ape')
         ecc = self.get('ecc')
         sma = self.get('sma')
-        if None in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
-            self.sim.data = {}
-        else:
-            self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
+        self.sim.data = {}
+        if None not in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+            try:
+                self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
+            except SimulationException:
+                pass
 
 class UpdateManeuverSim(UpdateRocketSim3D):
     def __init__(self, *args, **kwargs):

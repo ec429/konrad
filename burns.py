@@ -10,6 +10,8 @@ class ManeuverSim(sim.RocketSim3D):
     UT = 0
     burnUT = 0
     def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+        if ecc >= 1.0:
+            raise sim.SimulationException("Open orbits not supported yet")
         burnT = self.burnUT - self.UT
         ean = orbit.ean_from_tan(tan, ecc)
         man = orbit.man_from_ean(ean, ecc)
