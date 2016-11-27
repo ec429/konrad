@@ -3,6 +3,7 @@
 
 import math
 import booster
+import matrix
 import orbit
 
 class RocketSim(object):
@@ -166,36 +167,28 @@ class RocketSim3D(object):
         self.mode = mode
         self.stagecap = 0
         self.debug = debug
-    def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, man, ape, ecc, sma):
+    def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
         self.booster = booster.Booster.clone(bstr)
-        # mean motion
-        mmo = math.sqrt(bgm / sma ** 3)
-        def rvec_at_man(man):
-            ean = orbit.ean_from_man(man, ecc, 8)
-            tan = orbit.tan_from_ean(ean, ecc)
-            xhat = orbit.xhat(tan, inc, lan, ape)
-            rad = sma * (1.0 - ecc * math.cos(ean))
-            rvec = rad * xhat
-            return matrix.Vector3(rvec)
-        self.rvec = rvec_at_man(man)
-        self.vvec = rvec_at_man(man + mmo) - rvec
-        # state
-        self.pvec = matrix.Vector3((math.cos(hdg) * math.cos(pit),
-                                    math.sin(hdg) * math.cos(pit),
-                                    math.sin(pit)))
+        self.pbody = orbit.ParentBody(brad, bgm)
+        ean = orbit.ean_from_tan(tan, ecc)
+        # orbital state vector
+        self.rvec, self.vvec = self.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+        self.point(pit, hdg)
         self.t = 0
         self.init_rvec = self.rvec
-        self.local_ground_alt = self.ground_alt
         self.throttle = throttle
-        self.brad = brad
-        self.bgm = bgm
-        self.pbody = orbit.ParentBody(brad, bgm)
         self.act_mode = self.mode
         # time step, in seconds
         self.dt = 1.0
+    def point(self, pit, hdg):
+        # pointing vector in local co-ordinates
+        pvec = matrix.Vector3((math.sin(pit),
+                               math.sin(hdg) * math.cos(pit),
+                               math.cos(hdg) * math.cos(pit)))
+        self.pvec = matrix.RotationMatrix(2, self.lon) * matrix.RotationMatrix(1, -self.lat) * pvec
     @property
     def alt(self):
-        return self.rvec.mag - self.brad
+        return self.rvec.mag - self.pbody.rad
     @property
     def downrange(self):
         return (self.rvec - self.init_rvec).mag
@@ -205,14 +198,18 @@ class RocketSim3D(object):
     @property
     def vs(self):
         return self.vvec.dot(self.rvec.hat)
+    @property
+    def lon(self):
+        return math.atan2(self.rvec.hat.y, self.rvec.hat.x)
+    @property
+    def lat(self):
+        return math.asin(self.rvec.hat.z)
     def encode(self):
         d = {'time': self.t, 'alt': self.alt, 'downrange': self.downrange,
              'hs': self.hs, 'vs': self.vs,
              'rvec': self.rvec, 'vvec': self.vvec,
+             'lat': self.lat, 'lon': self.lon,
              }
-        if self.surface:
-            if self.local_ground_alt is not None:
-                d['height'] = self.alt - self.local_ground_alt
         return d
     def step(self):
         self.t += self.dt
@@ -230,8 +227,8 @@ class RocketSim3D(object):
         self.rvec += self.vvec
         avec = dv * self.pvec
         # local gravity
-        if None not in (self.alt, self.brad, self.bgm):
-            g = -self.bgm / (self.alt + self.brad)**2
+        if None not in (self.alt, self.pbody.gm):
+            g = -self.pbody.gm / (self.alt + self.rvec.mag)**2
             avec += (g * self.dt) * self.rvec.hat
         self.vvec += avec
     def compute_elements(self, key):

@@ -3,12 +3,12 @@
 
 import sim
 
-class ManeuverSim(sim.RocketSim):
+class ManeuverSim(sim.RocketSim3D):
     orbitals = True
     UT = 0
     burnUT = 0
-    def simulate(self, booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
-        self.sim_setup(booster, hs, vs, alt, 0, pit, hdg, lat, lon, brad, bgm, False)
+    def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+        self.sim_setup(booster, 0, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
         self.has_data = False
         burnT = self.burnUT - self.UT
         if burnT > 1200:
@@ -18,6 +18,7 @@ class ManeuverSim(sim.RocketSim):
                 return
         self.data = {'0': self.encode()}
         self.throttle = throttle
+        self.point(pit, hdg)
         while not ('b' in self.data or self.t > 1200):
             if self.step():
                 return

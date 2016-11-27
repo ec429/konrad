@@ -509,13 +509,16 @@ class AstroConsole(Console):
         self.vars = {}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
-        self.ms = burns.ManeuverSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
-        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, True, self.ms)
+        self.ms = burns.ManeuverSim(mode=self.mode)
+        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, self.ms)
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0b', opts.target_body)
-        zwin = scr.derwin(4, 16, 7, 1)
+        zwin = scr.derwin(6, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
-                                    gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms)],
+                                    gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'pa0', 'p'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
+                                    ],
                              "Start")
         bwin = scr.derwin(9, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
@@ -524,25 +527,24 @@ class AstroConsole(Console):
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'tap', 'J')],
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'tana', 'J')
+                                    ],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
         a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'b', self.ms),
-                                    gauge.RSTgtDeltaMA(dl, awin.derwin(1, 14, 2, 1), 'b', self.ms),
-                                    gauge.RSTrAp(dl, awin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSTgtAlt(dl, awin.derwin(1, 14, 4, 1), 'b', self.ms),
-                                    gauge.RSTgtPy(dl, awin.derwin(1, 14, 5, 1), 'b', self.ms),
-                                    gauge.RSTgtTA(dl, awin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSTgtMA(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms)],
+                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 5, 1), 'b', self.ms, 'tpy', 'q'),
+                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 6, 1), 'b', self.ms, 'pa1', '*'),
+                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i'),
+                                    ],
                              "Apo")
         twin = scr.derwin(9, 16, 7, 49)
         t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
-                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 2, 1), '0', self.ms, 'tr0', 'j'),
-                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tra', 'J'),
-                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 4, 1), '0', self.ms, 'pa0', 'p'),
+                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tan', 'J'),
                                     gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
                                     gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
-                                    gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body)],
+                                    gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
+                                    ],
                              "Tgt")
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))

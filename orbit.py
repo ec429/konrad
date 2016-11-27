@@ -99,7 +99,8 @@ class ParentBody(object):
         pea = (1 - ecc) * sma
         data = {'sma': sma, 'ecc': ecc,
                 'apa': apa - self.rad,
-                'pea': pea - self.rad}
+                'pea': pea - self.rad,
+                'sam': sam}
         # vector to ascending node
         n = matrix.Vector3((-sam.y, sam.x, 0))
         if sma > 0:
@@ -123,7 +124,7 @@ class ParentBody(object):
         data['tan'] = tan
         data['ean'] = ean
         # mean anomaly M = E - e sin E
-        data['man'] = ean - ecc * math.sin(ean)
+        data['man'] = man_from_ean(ean, ecc)
         # inclination
         inc = angle_between(sam.hat, matrix.Vector3.ez())
         data['inc'] = inc
@@ -146,14 +147,16 @@ class ParentBody(object):
                 ape = 2.0 * math.pi - ape
         data['ape'] = ape
         return data
-    def compute_3d_vector(self, sma, ecc, tan, ape, inc, lan):
-        ean = ean_from_tan(tan, ecc)
+    def compute_3d_vector(self, sma, ecc, ean, ape, inc, lan):
         o = ovec(sma, ecc, ean)
         od = odot(self.gm, sma, ecc, ean)
         xform = oxform(ape, inc, lan)
         r = xform * o
         v = xform * od
         return (r, v)
+
+def man_from_ean(ean, ecc):
+    return ean - ecc * math.sin(ean)
 
 def ean_from_man(man, ecc, k):
     # Iterated approximation; k is number of iterations
@@ -212,6 +215,7 @@ if __name__ == "__main__":
             v = math.degrees(v)
         print k, v
     print
-    out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], elts['tan'], elts['ape'], elts['inc'], elts['lan'])
+    ean = ean_from_tan(elts['tan'], elts['ecc'])
+    out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], ean, elts['ape'], elts['inc'], elts['lan'])
     print out_r
     print out_v

@@ -1214,7 +1214,53 @@ class UpdateRocketSim(Gauge):
         else:
             self.sim.simulate(self.booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
-class UpdateManeuverSim(UpdateRocketSim):
+class UpdateRocketSim3D(Gauge):
+    def __init__(self, dl, cw, body, booster, use_throttle, sim):
+        super(UpdateRocketSim3D, self).__init__(dl, cw)
+        self.booster = booster
+        # Assumes you already have an UpdateBooster keeping booster updated!
+        self.sim = sim
+        self.use_throttle = use_throttle
+        if use_throttle:
+            self.add_prop('throttle', 'f.throttle')
+        self.add_prop('pit', 'n.pitch2')
+        self.add_prop('hdg', 'n.heading2')
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(body))
+        self.add_prop('inc', 'o.inclination')
+        self.add_prop('lan', 'o.lan')
+        self.add_prop('tan', 'o.trueAnomaly')
+        self.add_prop('ape', 'o.argumentOfPeriapsis')
+        self.add_prop('ecc', 'o.eccentricity')
+        self.add_prop('sma', 'o.sma')
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
+            self.del_prop('bgm')
+            self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
+        super(UpdateRocketSim, self)._changeopt(**kwargs)
+    def draw(self):
+        if self.use_throttle:
+            throttle = self.get('throttle')
+        else:
+            throttle = 1.0
+        pit = self.getrad('pit')
+        hdg = self.getrad('hdg')
+        brad = self.get('brad')
+        bgm = self.get('bgm')
+        inc = self.getrad('inc')
+        lan = self.getrad('lan')
+        tan = self.getrad('tan')
+        ape = self.getrad('ape')
+        ecc = self.get('ecc')
+        sma = self.get('sma')
+        if None in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+            self.sim.has_data = False
+        else:
+            self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
+
+class UpdateManeuverSim(UpdateRocketSim3D):
     def __init__(self, *args):
         super(UpdateManeuverSim, self).__init__(*args)
         self.add_prop('UT', 't.universalTime')
@@ -1230,43 +1276,43 @@ class UpdateSimElements(Gauge):
         super(UpdateSimElements, self).__init__(dl, cw)
         self.sim = sim
         self.keys = keys
-        self.add_prop('inc', 'o.inclination')
-        self.add_prop('lan', 'o.lan')
-        self.add_prop('maae', 'o.maae')
-        self.add_prop('per', 'o.period')
-        self.add_prop('ape', 'o.argumentOfPeriapsis')
-        self.add_prop('UT', 't.universalTime')
     def draw(self):
-        inc = self.getrad('inc')
-        lan = self.getrad('lan')
-        maae = self.getrad('maae')
-        per = self.get('per')
-        ape = self.getrad('ape')
-        lng = self.getrad('long')
-        if per is None:
-            mmo = None
-        else:
-            # mean motion
-            mmo = math.pi * 2.0 / per
-        tap = None
         if self.sim.has_data:
             for key in self.keys:
                 self.sim.compute_elements(key)
                 if key not in self.sim.data:
                     continue
                 tan = self.sim.data[key].get('tan')
-                lng = self.sim.data[key].get('lon')
-                if tap is not None:
-                    trap = math.pi - tap
-                    if trap < 0: trap += 2.0 * math.pi
-                    self.sim.data[key]['trap'] = trap
-                if None in (lan, inc):
-                    continue
-                #dlon = truelon - lan
-                #tra = math.atan(math.tan(dlon) / math.cos(inc))
-                #self.sim.data[key]['tra'] = tra
-                #xh = orbit.xhat_at_tra(tra, inc, lan)
-                #self.sim.data[key]['xh'] = xh
+                if tan is None:
+                    tana = None
+                else:
+                    tana = math.pi - tan
+                    if tana < 0: tana += 2.0 * math.pi
+                    self.sim.data[key]['tana'] = tana
+                man = self.sim.data[key].get('man')
+                if man is None:
+                    mana = None
+                else:
+                    mana = math.pi - man
+                    if mana < 0: mana += 2.0 * math.pi
+                    self.sim.data[key]['mana'] = mana
+                mmo = self.sim.data[key].get('mmo')
+                if None in (mmo, mana) or mmo <= 0:
+                    ttap = None
+                else:
+                    ttap = mana / mmo
+                    self.sim.data[key]['ttap'] = ttap
+                inc = self.sim.data[key].get('inc')
+                lan = self.sim.data[key].get('lan')
+                ape = self.sim.data[key].get('ape')
+                ecc = self.sim.data[key].get('ecc')
+                sma = self.sim.data[key].get('sma')
+                if None in (inc, lan, ape, ecc, sma, mana):
+                    apvec = None
+                else:
+                    eana = orbit.ean_from_man(mana, ecc, 12)
+                    apvec = self.sim.pbody.compute_3d_vector(sma, ecc, eana, ape, inc, lan)[0]
+                    self.sim.data[key]['apvec'] = apvec
 
 class UpdateTgtProximity(Gauge):
     # Computes target offset at apoapsis from RocketSim results
@@ -1294,8 +1340,9 @@ class UpdateTgtProximity(Gauge):
         tper = self.get('tper')
         epoch = -31542641.784 # Grabbed from (RSS) config file, because
                               # Telemachus can't give us it
-        if tsma is None:
+        if tper is None:
             tmmo = None
+            bgm = None
         else:
             # target mean motion n = sqrt(mu / a^3)
             tmmo = math.pi * 2.0 / tper
@@ -1303,69 +1350,79 @@ class UpdateTgtProximity(Gauge):
             # math.sqrt(self.sim.pbody.gm / tsma ** 3),
             # and the latter doesn't match what KSP is doing.
             # Probably it's using g(M+m) instead.
+            # per ** 2 = gm / sma ** 3
+            # => gm = per ** 2 * sma ** 3
+            bgm = tper ** 2 * tsma ** 3
         if self.sim.has_data:
             for key in self.keys:
                 if key not in self.sim.data:
                     continue
-                manp = self.sim.data[key].get('map')
-                per = self.sim.data[key].get('per')
-                if None in (manp, per):
-                    continue
-                # mean anomaly to (next) apoapsis
-                mta = math.pi - manp
-                # time to Ap
-                tta = per * mta / (math.pi * 2.0)
-                if tta < 0:
-                    tta += 1.0
-                self.sim.data[key]['tta'] = tta
-                if tmmo is None:
-                    continue
-                # target mean anomaly change over tta
-                tdma = math.fmod(tta * tmmo, 2.0 * math.pi)
-                self.sim.data[key]['tdma'] = tdma
-                trap = self.sim.data[key].get('trap')
-                if tmae is None:
+                if None in (tmae, tmmo):
                     continue
                 time = self.sim.data[key].get('time')
                 if time is None:
                     continue
                 time += self.sim.UT - epoch
                 # target mean anomaly at T
-                tma = math.fmod(tmae + (time + tta) * tmmo, 2.0 * math.pi)
-                self.sim.data[key]['tma'] = tma
+                tma0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
+                self.sim.data[key]['tma0'] = tma0
+                # time to Ap
+                ttap = self.sim.data[key].get('ttap')
+                if ttap is None:
+                    continue
+                # target mean anomaly change over ttap
+                tdma = math.fmod(ttap * tmmo, 2.0 * math.pi)
+                self.sim.data[key]['tdma'] = tdma
+                # target mean anomaly at (vessel) Ap
+                tma1 = math.fmod(tmae + (time + ttap) * tmmo, 2.0 * math.pi)
+                self.sim.data[key]['tma1'] = tma1
                 if tecc is None:
                     continue
                 # target eccentric anomalies
-                tm0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
-                te0 = orbit.ean_from_man(tm0, tecc, 6)
-                te1 = orbit.ean_from_man(tma, tecc, 6)
+                te0 = orbit.ean_from_man(tma0, tecc, 6)
+                te1 = orbit.ean_from_man(tma1, tecc, 6)
                 # target true anomalies
-                tr0 = orbit.tra_from_ean(te0, tecc)
-                tr1 = orbit.tra_from_ean(te1, tecc)
+                tr0 = orbit.tan_from_ean(te0, tecc)
+                tr1 = orbit.tan_from_ean(te1, tecc)
                 self.sim.data[key]['tr0'] = tr0
                 self.sim.data[key]['tr1'] = tr1
                 # target true anomaly change over tta
                 tdta = math.fmod(tr1 - tr0, 2.0 * math.pi)
                 self.sim.data[key]['tdta'] = tdta
+                tana = self.sim.data[key].get('tana')
+                if tana is None:
+                    continue
                 # true phase angle; +ve is behind
-                tpy = trap - tdta
+                tpy = tana - tdta
                 self.sim.data[key]['tpy'] = tpy
-                # target altitude at T
+                # target altitude at Ap
                 trad = tsma * (1.0 - tecc * math.cos(te1))
                 talt = trad - self.sim.pbody.rad
                 self.sim.data[key]['talt'] = talt
-                if None in (tinc, tlan):
+                if None in (bgm, tsma, tape, tinc, tlan):
                     continue
-                # target direction vector
-                txh0 = orbit.xhat(tr0, tinc, tlan, tape)
-                self.sim.data[key]['txh0'] = txh0
-                xh = self.sim.data[key].get('xh')
-                if xh is None:
+                # target state vectors at T
+                tpb = orbit.ParentBody(self.sim.pbody.rad, bgm)
+                tr, tv = tpb.compute_3d_vector(tsma, tecc, te0, tape, tinc, tlan)
+                r = self.sim.data[key].get('rvec')
+                if r is None:
                     continue
                 # angle between direction vectors
-                # XXX one of xh and txh0 is wrong (or they're just not in the
-                # same co-ordinate system.  Either way, this result is bogus)
-                self.sim.data[key]['pa0'] = orbit.angle_between(txh0, xh)
+                self.sim.data[key]['pa0'] = orbit.angle_between(tr.hat, r.hat)
+                h = self.sim.data[key].get('sam')
+                if h is None:
+                    continue
+                # relative inclination
+                th = tr.cross(tv)
+                ri = orbit.angle_between(h.hat, th.hat)
+                self.sim.data[key]['ri'] = ri
+                # target state vectors at (vessel) Ap
+                txr, txv = tpb.compute_3d_vector(tsma, tecc, te1, tape, tinc, tlan)
+                apvec = self.sim.data[key].get('apvec')
+                if apvec is None:
+                    continue
+                # angle between direction vectors
+                self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -1610,38 +1667,14 @@ class RSObtPeriod(RSTimeGauge):
     label = 'D'
 
 class RSTTAp(RSTimeGauge):
-    param = 'tta'
+    param = 'ttap'
     label = 'T'
-
-class RSTgtDeltaMA(RSAngleGauge):
-    param = 'tdma'
-    label = 'm'
-
-class RSTgtDeltaTA(RSAngleGauge):
-    param = 'tdma'
-    label = 'j'
-
-class RSTrAp(RSAngleGauge):
-    param = 'trap'
-    label = 'd'
-
-class RSTgtPy(RSAngleGauge):
-    param = 'tpy'
-    label = 'q'
 
 class RSAngleParam(RSAngleGauge):
     def __init__(self, dl, cw, key, sim, param, label):
         self.param = param
         self.label = label
         super(RSAngleParam, self).__init__(dl, cw, key, sim)
-
-class RSTgtMA(RSAngleGauge):
-    param = 'tma'
-    label = 'M'
-
-class RSTgtTA(RSAngleGauge):
-    param = 'tr1'
-    label = 'N'
 
 class RSTgtAlt(SIGauge):
     unit = 'm'
