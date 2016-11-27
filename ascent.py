@@ -23,4 +23,3 @@ class AscentSim(sim.RocketSim):
                 print "time %d"%(self.t,)
                 print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
                 print "%s"%(''.join(self.data.keys()),)
-        self.has_data = True

@@ -19,7 +19,7 @@ class RocketSim(object):
     surface = False
     orbitals = False
     def __init__(self, ground_alt=None, ground_map=None, mode=0, debug=False):
-        self.has_data = False
+        self.data = {}
         self.ground_alt = ground_alt
         self.ground_map = ground_map
         self.mode = mode
@@ -59,7 +59,7 @@ class RocketSim(object):
         # time step, in seconds
         self.dt = 1.0
     def encode(self):
-        d = {'time': self.t, 'alt': self.alt, 'x': self.downrange,
+        d = {'time': self.t, 'alt': self.alt, 'downrange': self.downrange,
              'hs': self.hs, 'vs': self.vs,
              'lat': math.degrees(self.lat), 'lon': math.degrees(self.lon)}
         if self.surface:
@@ -148,10 +148,11 @@ class RocketSim(object):
         if self.hs <= 0 and self.act_mode == self.MODE_RETROGRADE:
             self.act_mode = self.MODE_VL
     def compute_elements(self, key):
-        if self.has_data and key in self.data:
+        if key in self.data:
             sv = self.data[key]
-            elts = self.pbody.compute_elements(sv['alt'], sv['vs'], sv['hs'])
-            self.data[key].update(elts)
+            if 'alt' in sv and 'vs' in sv and 'hs' in sv:
+                elts = self.pbody.compute_elements(sv['alt'], sv['vs'], sv['hs'])
+                self.data[key].update(elts)
 
 class RocketSim3D(object):
     MODE_FIXED = 0
@@ -163,7 +164,7 @@ class RocketSim3D(object):
                 cls.MODE_RETROGRADE: "Retro",
                 }.get(mode, "%r?"%(mode,))
     def __init__(self, mode=0, debug=False):
-        self.has_data = False
+        self.data = {}
         self.mode = mode
         self.stagecap = 0
         self.debug = debug
@@ -232,7 +233,8 @@ class RocketSim3D(object):
             avec += (g * self.dt) * self.rvec.hat
         self.vvec += avec
     def compute_elements(self, key):
-        if self.has_data and key in self.data:
+        if key in self.data:
             sv = self.data[key]
-            elts = self.pbody.compute_3d_elements(sv['rvec'], sv['vvec'])
-            self.data[key].update(elts)
+            if 'rvec' in sv and 'vvec' in sv:
+                elts = self.pbody.compute_3d_elements(sv['rvec'], sv['vvec'])
+                self.data[key].update(elts)

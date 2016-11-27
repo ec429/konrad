@@ -1210,7 +1210,7 @@ class UpdateRocketSim(Gauge):
         brad = self.get('brad')
         bgm = self.get('bgm')
         if None in (hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm):
-            self.sim.has_data = False
+            self.sim.data = {}
         else:
             self.sim.simulate(self.booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
@@ -1256,7 +1256,7 @@ class UpdateRocketSim3D(Gauge):
         ecc = self.get('ecc')
         sma = self.get('sma')
         if None in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
-            self.sim.has_data = False
+            self.sim.data = {}
         else:
             self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
 
@@ -1277,42 +1277,41 @@ class UpdateSimElements(Gauge):
         self.sim = sim
         self.keys = keys
     def draw(self):
-        if self.sim.has_data:
-            for key in self.keys:
-                self.sim.compute_elements(key)
-                if key not in self.sim.data:
-                    continue
-                tan = self.sim.data[key].get('tan')
-                if tan is None:
-                    tana = None
-                else:
-                    tana = math.pi - tan
-                    if tana < 0: tana += 2.0 * math.pi
-                    self.sim.data[key]['tana'] = tana
-                man = self.sim.data[key].get('man')
-                if man is None:
-                    mana = None
-                else:
-                    mana = math.pi - man
-                    if mana < 0: mana += 2.0 * math.pi
-                    self.sim.data[key]['mana'] = mana
-                mmo = self.sim.data[key].get('mmo')
-                if None in (mmo, mana) or mmo <= 0:
-                    ttap = None
-                else:
-                    ttap = mana / mmo
-                    self.sim.data[key]['ttap'] = ttap
-                inc = self.sim.data[key].get('inc')
-                lan = self.sim.data[key].get('lan')
-                ape = self.sim.data[key].get('ape')
-                ecc = self.sim.data[key].get('ecc')
-                sma = self.sim.data[key].get('sma')
-                if None in (inc, lan, ape, ecc, sma, mana):
-                    apvec = None
-                else:
-                    eana = orbit.ean_from_man(mana, ecc, 12)
-                    apvec = self.sim.pbody.compute_3d_vector(sma, ecc, eana, ape, inc, lan)[0]
-                    self.sim.data[key]['apvec'] = apvec
+        for key in self.keys:
+            self.sim.compute_elements(key)
+            if key not in self.sim.data:
+                continue
+            tan = self.sim.data[key].get('tan')
+            if tan is None:
+                tana = None
+            else:
+                tana = math.pi - tan
+                if tana < 0: tana += 2.0 * math.pi
+                self.sim.data[key]['tana'] = tana
+            man = self.sim.data[key].get('man')
+            if man is None:
+                mana = None
+            else:
+                mana = math.pi - man
+                if mana < 0: mana += 2.0 * math.pi
+                self.sim.data[key]['mana'] = mana
+            mmo = self.sim.data[key].get('mmo')
+            if None in (mmo, mana) or mmo <= 0:
+                ttap = None
+            else:
+                ttap = mana / mmo
+                self.sim.data[key]['ttap'] = ttap
+            inc = self.sim.data[key].get('inc')
+            lan = self.sim.data[key].get('lan')
+            ape = self.sim.data[key].get('ape')
+            ecc = self.sim.data[key].get('ecc')
+            sma = self.sim.data[key].get('sma')
+            if None in (inc, lan, ape, ecc, sma, mana):
+                apvec = None
+            else:
+                eana = orbit.ean_from_man(mana, ecc, 12)
+                apvec = self.sim.pbody.compute_3d_vector(sma, ecc, eana, ape, inc, lan)[0]
+                self.sim.data[key]['apvec'] = apvec
 
 class UpdateTgtProximity(Gauge):
     # Computes target offset at apoapsis from RocketSim results
@@ -1353,76 +1352,75 @@ class UpdateTgtProximity(Gauge):
             # per ** 2 = gm / sma ** 3
             # => gm = per ** 2 * sma ** 3
             bgm = tper ** 2 * tsma ** 3
-        if self.sim.has_data:
-            for key in self.keys:
-                if key not in self.sim.data:
-                    continue
-                if None in (tmae, tmmo):
-                    continue
-                time = self.sim.data[key].get('time')
-                if time is None:
-                    continue
-                time += self.sim.UT - epoch
-                # target mean anomaly at T
-                tma0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
-                self.sim.data[key]['tma0'] = tma0
-                # time to Ap
-                ttap = self.sim.data[key].get('ttap')
-                if ttap is None:
-                    continue
-                # target mean anomaly change over ttap
-                tdma = math.fmod(ttap * tmmo, 2.0 * math.pi)
-                self.sim.data[key]['tdma'] = tdma
-                # target mean anomaly at (vessel) Ap
-                tma1 = math.fmod(tmae + (time + ttap) * tmmo, 2.0 * math.pi)
-                self.sim.data[key]['tma1'] = tma1
-                if tecc is None:
-                    continue
-                # target eccentric anomalies
-                te0 = orbit.ean_from_man(tma0, tecc, 6)
-                te1 = orbit.ean_from_man(tma1, tecc, 6)
-                # target true anomalies
-                tr0 = orbit.tan_from_ean(te0, tecc)
-                tr1 = orbit.tan_from_ean(te1, tecc)
-                self.sim.data[key]['tr0'] = tr0
-                self.sim.data[key]['tr1'] = tr1
-                # target true anomaly change over tta
-                tdta = math.fmod(tr1 - tr0, 2.0 * math.pi)
-                self.sim.data[key]['tdta'] = tdta
-                tana = self.sim.data[key].get('tana')
-                if tana is None:
-                    continue
-                # true phase angle; +ve is behind
-                tpy = tana - tdta
-                self.sim.data[key]['tpy'] = tpy
-                # target altitude at Ap
-                trad = tsma * (1.0 - tecc * math.cos(te1))
-                talt = trad - self.sim.pbody.rad
-                self.sim.data[key]['talt'] = talt
-                if None in (bgm, tsma, tape, tinc, tlan):
-                    continue
-                # target state vectors at T
-                tpb = orbit.ParentBody(self.sim.pbody.rad, bgm)
-                tr, tv = tpb.compute_3d_vector(tsma, tecc, te0, tape, tinc, tlan)
-                r = self.sim.data[key].get('rvec')
-                if r is None:
-                    continue
-                # angle between direction vectors
-                self.sim.data[key]['pa0'] = orbit.angle_between(tr.hat, r.hat)
-                h = self.sim.data[key].get('sam')
-                if h is None:
-                    continue
-                # relative inclination
-                th = tr.cross(tv)
-                ri = orbit.angle_between(h.hat, th.hat)
-                self.sim.data[key]['ri'] = ri
-                # target state vectors at (vessel) Ap
-                txr, txv = tpb.compute_3d_vector(tsma, tecc, te1, tape, tinc, tlan)
-                apvec = self.sim.data[key].get('apvec')
-                if apvec is None:
-                    continue
-                # angle between direction vectors
-                self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
+        for key in self.keys:
+            if key not in self.sim.data:
+                continue
+            if None in (tmae, tmmo):
+                continue
+            time = self.sim.data[key].get('time')
+            if time is None:
+                continue
+            time += self.sim.UT - epoch
+            # target mean anomaly at T
+            tma0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
+            self.sim.data[key]['tma0'] = tma0
+            # time to Ap
+            ttap = self.sim.data[key].get('ttap')
+            if ttap is None:
+                continue
+            # target mean anomaly change over ttap
+            tdma = math.fmod(ttap * tmmo, 2.0 * math.pi)
+            self.sim.data[key]['tdma'] = tdma
+            # target mean anomaly at (vessel) Ap
+            tma1 = math.fmod(tmae + (time + ttap) * tmmo, 2.0 * math.pi)
+            self.sim.data[key]['tma1'] = tma1
+            if tecc is None:
+                continue
+            # target eccentric anomalies
+            te0 = orbit.ean_from_man(tma0, tecc, 6)
+            te1 = orbit.ean_from_man(tma1, tecc, 6)
+            # target true anomalies
+            tr0 = orbit.tan_from_ean(te0, tecc)
+            tr1 = orbit.tan_from_ean(te1, tecc)
+            self.sim.data[key]['tr0'] = tr0
+            self.sim.data[key]['tr1'] = tr1
+            # target true anomaly change over tta
+            tdta = math.fmod(tr1 - tr0, 2.0 * math.pi)
+            self.sim.data[key]['tdta'] = tdta
+            tana = self.sim.data[key].get('tana')
+            if tana is None:
+                continue
+            # true phase angle; +ve is behind
+            tpy = tana - tdta
+            self.sim.data[key]['tpy'] = tpy
+            # target altitude at Ap
+            trad = tsma * (1.0 - tecc * math.cos(te1))
+            talt = trad - self.sim.pbody.rad
+            self.sim.data[key]['talt'] = talt
+            if None in (bgm, tsma, tape, tinc, tlan):
+                continue
+            # target state vectors at T
+            tpb = orbit.ParentBody(self.sim.pbody.rad, bgm)
+            tr, tv = tpb.compute_3d_vector(tsma, tecc, te0, tape, tinc, tlan)
+            r = self.sim.data[key].get('rvec')
+            if r is None:
+                continue
+            # angle between direction vectors
+            self.sim.data[key]['pa0'] = orbit.angle_between(tr.hat, r.hat)
+            h = self.sim.data[key].get('sam')
+            if h is None:
+                continue
+            # relative inclination
+            th = tr.cross(tv)
+            ri = orbit.angle_between(h.hat, th.hat)
+            self.sim.data[key]['ri'] = ri
+            # target state vectors at (vessel) Ap
+            txr, txv = tpb.compute_3d_vector(tsma, tecc, te1, tape, tinc, tlan)
+            apvec = self.sim.data[key].get('apvec')
+            if apvec is None:
+                continue
+            # angle between direction vectors
+            self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
 
 class RSTime(OneLineGauge):
     def __init__(self, dl, cw, key, sim):
@@ -1431,35 +1429,31 @@ class RSTime(OneLineGauge):
         self.key = key
     def draw(self):
         super(RSTime, self).draw()
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                t = self.sim.data[self.key]['time']
-                self.addstr('T:%*ds'%(self.olg_width - 3, t))
-                col = 0
-                if self.key in 'hv':
-                    if 's' in self.sim.data and self.sim.data['s']['time'] < t:
-                        col = 1
-                    elif self.key == 'h' and 'v' in self.sim.data and self.sim.data['v']['time'] < t:
-                        col = 1
-                    else:
-                        col = 3
-                elif self.key == 'b':
-                    if 's' in self.sim.data and self.sim.data['s']['time'] > t:
-                        col = 1
-                    elif 'o' in self.sim.data and self.sim.data['o']['time'] > t:
-                        col = 1
-                    else:
-                        col = 3
-            else:
-                self.addstr('T'+'-'*(self.olg_width - 1))
-                col = 1
-                if self.key == 's':
-                    col = 2
-                elif self.key == 'b':
+        t = self.sim.data.get(self.key, {}).get('time')
+        if t is not None:
+            self.addstr('T:%*ds'%(self.olg_width - 3, t))
+            col = 0
+            if self.key in 'hv':
+                if 's' in self.sim.data and self.sim.data['s']['time'] < t:
+                    col = 1
+                elif self.key == 'h' and 'v' in self.sim.data and self.sim.data['v']['time'] < t:
+                    col = 1
+                else:
+                    col = 3
+            elif self.key == 'b':
+                if 's' in self.sim.data and self.sim.data['s']['time'] > t:
+                    col = 1
+                elif 'o' in self.sim.data and self.sim.data['o']['time'] > t:
+                    col = 1
+                else:
                     col = 3
         else:
             self.addstr('T'+'-'*(self.olg_width - 1))
-            col = 2
+            col = 1
+            if self.key == 's':
+                col = 2
+            elif self.key == 'b':
+                col = 3
         self.chgat(0, self.width, curses.color_pair(col))
 
 class RSAlt(SIGauge):
@@ -1470,22 +1464,20 @@ class RSAlt(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                d = self.sim.data[self.key]
-                alt = d.get('height', d['alt'])
-                super(RSAlt, self).draw(alt)
-                col = 3 if alt > 0 else 1
-                if self.key == 'b':
-                    col = 1 if alt > 10 else 0 # TODO parametrise
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 1
-                if self.key == 'b':
-                    col = 3
+        alt = None
+        if self.key in self.sim.data:
+            d = self.sim.data[self.key]
+            alt = d.get('height', d.get('alt'))
+        if alt is not None:
+            super(RSAlt, self).draw(alt)
+            col = 3 if alt > 0 else 1
+            if self.key == 'b':
+                col = 1 if alt > 10 else 0 # TODO parametrise
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
-            col = 2
+            col = 1
+            if self.key == 'b':
+                col = 3
         self.chgat(0, self.width, curses.color_pair(col))
 
 class RSDownrange(SIGauge):
@@ -1496,19 +1488,15 @@ class RSDownrange(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                x = self.sim.data[self.key]['x']
-                super(RSDownrange, self).draw(x)
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 1
-                if self.key == 's':
-                    col = 2
+        x = self.sim.data.get(self.key, {}).get('downrange')
+        if x is not None:
+            super(RSDownrange, self).draw(x)
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
-            col = 2
+            col = 1
+            if self.key == 's':
+                col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
 class RSVSpeed(SIGauge):
@@ -1519,24 +1507,20 @@ class RSVSpeed(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                vs = self.sim.data[self.key]['vs']
-                super(RSVSpeed, self).draw(vs)
-                col = 3
-                if self.key == 'o':
-                    if abs(vs) > 20: # TODO parametrise
-                        col = 1
-                elif vs < -8: # TODO parametrise
+        vs = self.sim.data.get(self.key, {}).get('vs')
+        if vs is not None:
+            super(RSVSpeed, self).draw(vs)
+            col = 3
+            if self.key == 'o':
+                if abs(vs) > 20: # TODO parametrise
                     col = 1
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
+            elif vs < -8: # TODO parametrise
                 col = 1
-                if self.key == 's':
-                    col = 2
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
-            col = 2
+            col = 1
+            if self.key == 's':
+                col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
 class RSHSpeed(SIGauge):
@@ -1547,23 +1531,19 @@ class RSHSpeed(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                hs = self.sim.data[self.key]['hs']
-                super(RSHSpeed, self).draw(hs)
-                col = 3
-                if self.key == 'o':
-                    col = 0
-                elif abs(hs) > 1: # TODO parametrise
-                    col = 1
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
+        hs = self.sim.data.get(self.key, {}).get('hs')
+        if hs is not None:
+            super(RSHSpeed, self).draw(hs)
+            col = 3
+            if self.key == 'o':
+                col = 0
+            elif abs(hs) > 1: # TODO parametrise
                 col = 1
-                if self.key == 's':
-                    col = 2
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
-            col = 2
+            col = 1
+            if self.key == 's':
+                col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
 class RSApoapsis(SIGauge):
@@ -1574,14 +1554,10 @@ class RSApoapsis(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                apa = self.sim.data[self.key]['apa']
-                super(RSApoapsis, self).draw(apa)
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 2
+        apa = self.sim.data.get(self.key, {}).get('apa')
+        if apa is not None:
+            super(RSApoapsis, self).draw(apa)
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -1595,14 +1571,10 @@ class RSPeriapsis(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            if self.key in self.sim.data:
-                pea = self.sim.data[self.key]['pea']
-                super(RSPeriapsis, self).draw(pea)
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 2
+        pea = self.sim.data.get(self.key, {}).get('pea')
+        if pea is not None:
+            super(RSPeriapsis, self).draw(pea)
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -1616,21 +1588,17 @@ class RSAngleGauge(OneLineGauge):
         self.key = key
     def draw(self):
         super(RSAngleGauge, self).draw()
-        if self.sim.has_data:
-            keys = [k for k in list(self.key)
-                    if k in self.sim.data and
-                       self.param in self.sim.data[k]]
-            if keys:
-                angle = math.degrees(self.sim.data[keys[0]][self.param])
-                if angle < 0 and not self.signed:
-                    angle += 360
-                width = self.olg_width - 3
-                prec = min(5, width - 4)
-                self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 2
+        keys = [k for k in list(self.key)
+                if k in self.sim.data and
+                   self.param in self.sim.data[k]]
+        if keys:
+            angle = math.degrees(self.sim.data[keys[0]][self.param])
+            if angle < 0 and not self.signed:
+                angle += 360
+            width = self.olg_width - 3
+            prec = min(5, width - 4)
+            self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -1644,19 +1612,15 @@ class RSTimeGauge(OneLineGauge, TimeFormatterMixin):
         self.key = key
     def draw(self):
         super(RSTimeGauge, self).draw()
-        if self.sim.has_data:
-            keys = [k for k in list(self.key)
-                    if k in self.sim.data and
-                       self.param in self.sim.data[k]]
-            if keys:
-                t = self.sim.data[keys[0]][self.param]
-                text = self.fmt_time(t, 3)
-                width = self.olg_width - 2
-                self.addstr('%s:%*s'%(self.label, width, text))
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 2
+        keys = [k for k in list(self.key)
+                if k in self.sim.data and
+                   self.param in self.sim.data[k]]
+        if keys:
+            t = self.sim.data[keys[0]][self.param]
+            text = self.fmt_time(t, 3)
+            width = self.olg_width - 2
+            self.addstr('%s:%*s'%(self.label, width, text))
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -1685,18 +1649,14 @@ class RSTgtAlt(SIGauge):
         self.sim = sim
         self.key = key
     def draw(self):
-        if self.sim.has_data:
-            keys = [k for k in list(self.key)
-                    if k in self.sim.data and
-                       self.param in self.sim.data[k]]
-            if keys:
-                d = self.sim.data[keys[0]]
-                alt = d.get(self.param)
-                super(RSTgtAlt, self).draw(alt)
-                col = 3
-            else:
-                self.addstr(self.label+'-'*(self.olg_width - 1))
-                col = 2
+        keys = [k for k in list(self.key)
+                if k in self.sim.data and
+                   self.param in self.sim.data[k]]
+        if keys:
+            d = self.sim.data[keys[0]]
+            alt = d.get(self.param)
+            super(RSTgtAlt, self).draw(alt)
+            col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
@@ -1711,18 +1671,16 @@ class RSLatitude(OneLineGauge):
         self.key = key
     def draw(self):
         super(RSLatitude, self).draw()
-        if self.sim.has_data:
-            keys = [k for k in list(self.key) if k in self.sim.data]
-            if keys:
-                angle = self.sim.data[keys[0]][self.param]
-                label = self.labels[angle < 0]
-                width = self.olg_width - 3
-                prec = min(3, width - 4)
-                self.addstr('%s:%+*.*f'%(label, width, prec, angle))
-                col = 0
-            else:
-                self.addstr('-'*self.olg_width)
-                col = 2
+        keys = [k for k in list(self.key)
+                if k in self.sim.data and
+                   self.param in self.sim.data[k]]
+        if keys:
+            angle = self.sim.data[keys[0]][self.param]
+            label = self.labels[angle < 0]
+            width = self.olg_width - 3
+            prec = min(3, width - 4)
+            self.addstr('%s:%+*.*f'%(label, width, prec, angle))
+            col = 0
         else:
             self.addstr('-'*self.olg_width)
             col = 2
