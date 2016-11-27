@@ -1215,7 +1215,7 @@ class UpdateRocketSim(Gauge):
             self.sim.simulate(self.booster, hs, vs, alt, throttle, pit, hdg, lat, lon, brad, bgm)
 
 class UpdateRocketSim3D(Gauge):
-    def __init__(self, dl, cw, body, booster, use_throttle, sim):
+    def __init__(self, dl, cw, body, booster, use_throttle, sim, want=None):
         super(UpdateRocketSim3D, self).__init__(dl, cw)
         self.booster = booster
         # Assumes you already have an UpdateBooster keeping booster updated!
@@ -1223,6 +1223,7 @@ class UpdateRocketSim3D(Gauge):
         self.use_throttle = use_throttle
         if use_throttle:
             self.add_prop('throttle', 'f.throttle')
+        self.want = want
         self.add_prop('pit', 'n.pitch2')
         self.add_prop('hdg', 'n.heading2')
         self.add_prop('brad', orbit.ParentBody.rad_api(body))
@@ -1245,8 +1246,16 @@ class UpdateRocketSim3D(Gauge):
             throttle = self.get('throttle')
         else:
             throttle = 1.0
-        pit = self.getrad('pit')
-        hdg = self.getrad('hdg')
+        if self.want is not None:
+            pit = self.want.get('PIT')
+            if pit is not None:
+                pit = math.radians(pit)
+            hdg = self.want.get('HDG')
+            if hdg is not None:
+                hdg = math.radians(hdg)
+        else:
+            pit = self.getrad('pit')
+            hdg = self.getrad('hdg')
         brad = self.get('brad')
         bgm = self.get('bgm')
         inc = self.getrad('inc')
@@ -1261,8 +1270,8 @@ class UpdateRocketSim3D(Gauge):
             self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
 
 class UpdateManeuverSim(UpdateRocketSim3D):
-    def __init__(self, *args):
-        super(UpdateManeuverSim, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(UpdateManeuverSim, self).__init__(*args, **kwargs)
         self.add_prop('UT', 't.universalTime')
     def draw(self):
         UT = self.get('UT')

@@ -506,11 +506,11 @@ class AstroConsole(Console):
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
         self.stagecap = 0
         self.mode = burns.ManeuverSim.MODE_FIXED
-        self.vars = {}
+        self.vars = {'PIT': 90, 'HDG': 90}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         self.ms = burns.ManeuverSim(mode=self.mode)
-        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, self.ms)
+        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, self.ms, want=self.vars)
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0b', opts.target_body)
         zwin = scr.derwin(6, 16, 7, 1)
@@ -546,20 +546,42 @@ class AstroConsole(Console):
                                     gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
                                     ],
                              "Tgt")
+        oriwant = scr.derwin(3, 26, 19, 1)
+        owgroup = gauge.GaugeGroup(oriwant, [
+            gauge.PitchGauge(dl, oriwant.derwin(1, 11, 1, 1), want=self.vars),
+            gauge.VLine(dl, oriwant.derwin(1, 1, 1, 12)),
+            gauge.HeadingGauge(dl, oriwant.derwin(1, 12, 1, 13), want=self.vars),
+            gauge.VariableLabel(dl, oriwant.derwin(1, 6, 0, 19), self.vars, 'fineness', centered=True),
+            ], 'Orient')
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
                                       [self.update, deltav, twr, mode, scap,
                                        sim, elts, tgt, z, b, a, t,
+                                       owgroup,
                                        self.status, body, time],
                                       "KONRAD: Astrogation")
         self.update_vars()
+        self.setfine(1)
+    def setfine(self, value):
+        self.fine = value
+        self.vars['fineness'] = {0: 'COARSE', 1: 'NORMAL', 2: 'FINE'}.get(value, 'Error?')
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
         self.vars['mode'] = 'Mode: %s'%(burns.ManeuverSim.modename(self.mode),)
         if self.ms is not None:
             self.ms.mode = self.mode
             self.ms.stagecap = self.stagecap
+    def steer(self, what, base):
+        old = self.vars[what]
+        old = math.floor(old * 100.0 + 0.5) / 100.0
+        sf = 10 ** -self.fine
+        delta = base * sf
+        if what == 'PIT':
+            new = min(max(old + delta, -90), 90)
+        else:
+            new = (old + delta) % 360
+        self.vars[what] = new
     def input(self, key):
         if key == ord('z'):
             self.dl.send_msg({'run':['f.setThrottle[1.0]']})
@@ -607,6 +629,27 @@ class AstroConsole(Console):
         if key == ord('?'):
             self.update.reset()
             return
+        # Input Orientation, for Fixed mode
+        steering = {'d': ('HDG', 1),
+                    'a': ('HDG', -1),
+                    's': ('PIT', 1),
+                    'w': ('PIT', -1)}
+        if chr(key) in steering:
+            what, base = steering[chr(key)]
+            self.steer(what, base * 10)
+            return
+        if chr(key).lower() in steering:
+            what, base = steering[chr(key).lower()]
+            self.steer(what, base)
+            return
+        # Toggle fine controls
+        if key == ord('`'):
+            self.setfine((self.fine + 1) % 3)
+            return
+        # Copy from measured orientation
+        if key == ord('P'):
+            self.vars['PIT'] = self.dl.get('n.pitch2', 90)
+            self.vars['HDG'] = self.dl.get('n.heading2', 90)
         return super(AstroConsole, self).input(key)
     @classmethod
     def connect_params(cls):
