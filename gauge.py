@@ -798,7 +798,7 @@ class AngleGauge(FractionGauge):
             self.addstr(self.centext('NO DATA'))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
-            if angle < 0 and not self.signed:
+            if angle < (-180 if self.signed else 0):
                 angle += 360
             self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
             self.colour(abs(angle), self.fsd)
