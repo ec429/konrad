@@ -110,6 +110,8 @@ class ParentBody(object):
             # period T = 2pi / n
             per = 2.0 * math.pi / mmo
             data['per'] = per
+        if ecc >= 1.0:
+            return
         # anomalies (since periapsis)
         if ecc == 0:
             tan = 0
@@ -204,6 +206,7 @@ def oxform(ape, inc, lan):
 def angle_between(w, z):
     # assumes w and z are unit vectors
     dot = sum(wi*zi for wi,zi in zip(w.data, z.data))
+    dot = min(max(dot, -1.0), 1.0)
     return math.acos(dot)
 
 if __name__ == "__main__":

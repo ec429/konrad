@@ -160,10 +160,11 @@ class RocketSim3D(object):
     MODE_FIXED = 0
     MODE_PROGRADE = 1
     MODE_RETROGRADE = 2
+    MODE_LIVE = 3
     @classmethod
     def modename(cls, mode):
         return {cls.MODE_FIXED: "Fixed", cls.MODE_PROGRADE: "Progd",
-                cls.MODE_RETROGRADE: "Retro",
+                cls.MODE_RETROGRADE: "Retro", cls.MODE_LIVE: "LiveF",
                 }.get(mode, "%r?"%(mode,))
     def __init__(self, mode=0, debug=False):
         self.data = {}
@@ -218,7 +219,7 @@ class RocketSim3D(object):
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
         if dv is None:
             return True
-        if self.act_mode == self.MODE_FIXED:
+        if self.act_mode in (self.MODE_FIXED, self.MODE_LIVE):
             pass
         elif self.act_mode == self.MODE_PROGRADE:
             self.pvec = self.vvec.hat

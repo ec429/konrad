@@ -506,7 +506,7 @@ class AstroConsole(Console):
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
         self.stagecap = 0
         self.mode = burns.ManeuverSim.MODE_FIXED
-        self.vars = {'PIT': 90, 'HDG': 90}
+        self.vars = {'PIT': 0, 'HDG': 90}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         self.ms = burns.ManeuverSim(mode=self.mode)
@@ -596,6 +596,10 @@ class AstroConsole(Console):
             self.mode = burns.ManeuverSim.MODE_FIXED
             self.update_vars()
             return
+        if key == ord('l'):
+            self.mode = burns.ManeuverSim.MODE_LIVE
+            self.update_vars()
+            return
         if key == ord('p'):
             self.mode = burns.ManeuverSim.MODE_PROGRADE
             self.update_vars()
@@ -647,7 +651,7 @@ class AstroConsole(Console):
             self.setfine((self.fine + 1) % 3)
             return
         # Copy from measured orientation
-        if key == ord('P'):
+        if key == ord('@'):
             self.vars['PIT'] = self.dl.get('n.pitch2', 90)
             self.vars['HDG'] = self.dl.get('n.heading2', 90)
         return super(AstroConsole, self).input(key)

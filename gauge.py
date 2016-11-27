@@ -1247,7 +1247,7 @@ class UpdateRocketSim3D(Gauge):
             throttle = self.get('throttle')
         else:
             throttle = 1.0
-        if self.want is not None:
+        if self.want is not None and self.sim.mode == self.sim.MODE_FIXED:
             pit = self.want.get('PIT')
             if pit is not None:
                 pit = math.radians(pit)
@@ -1290,7 +1290,10 @@ class UpdateSimElements(Gauge):
         self.keys = keys
     def draw(self):
         for key in self.keys:
-            self.sim.compute_elements(key)
+            try:
+                self.sim.compute_elements(key)
+            except SimulationException:
+                continue
             if key not in self.sim.data:
                 continue
             tan = self.sim.data[key].get('tan')
