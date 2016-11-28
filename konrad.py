@@ -212,11 +212,11 @@ class TrajConsole(Console):
                     'w': ('PIT', -1),
                     'e': ('RLL', 1),
                     'q': ('RLL', -1)}
-        if chr(key) in steering:
+        if key < 256 and chr(key) in steering:
             what, base = steering[chr(key)]
             self.steer(what, base * 10)
             return self.maybe_push_mj()
-        if chr(key).lower() in steering:
+        if key < 256 and chr(key).lower() in steering:
             what, base = steering[chr(key).lower()]
             self.steer(what, base)
             return self.maybe_push_mj()
@@ -638,11 +638,11 @@ class AstroConsole(Console):
                     'a': ('HDG', -1),
                     's': ('PIT', 1),
                     'w': ('PIT', -1)}
-        if chr(key) in steering:
+        if key < 256 and chr(key) in steering:
             what, base = steering[chr(key)]
             self.steer(what, base * 10)
             return
-        if chr(key).lower() in steering:
+        if key < 256 and chr(key).lower() in steering:
             what, base = steering[chr(key).lower()]
             self.steer(what, base)
             return
