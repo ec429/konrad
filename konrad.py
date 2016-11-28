@@ -169,11 +169,20 @@ class TrajConsole(Console):
             wmgroup = gauge.GaugeGroup(wm, [
                 gauge.MJMode(dl, wm.derwin(1, 15, 1, 1), self.want),
                 ], 'AP Mode')
+        if opts.target_body is not None:
+            target = scr.derwin(5, 15, 3, 1)
+            tgroup = gauge.GaugeGroup(target, [
+                gauge.BodyNameGauge(dl, target.derwin(1, 13, 1, 1), opts.target_body),
+                gauge.RelIncGauge(dl, target.derwin(1, 13, 2, 1), opts.target_body),
+                gauge.RelLanGauge(dl, target.derwin(1, 13, 3, 1), opts.target_body),
+                ], 'Target')
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         gauges = [loxngroup, obtgroup, mogroup, origroup, navgroup]
         if opts.mj:
             gauges += [owgroup, wmgroup]
+        if opts.target_body is not None:
+            gauges.append(tgroup)
         self.group = gauge.GaugeGroup(scr, gauges + [self.status, body, time], "KONRAD: Trajectory")
         self.setfine(0)
     def setfine(self, value):
