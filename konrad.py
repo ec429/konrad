@@ -510,6 +510,8 @@ class AstroConsole(Console):
     """Astrogation console"""
     def __init__(self, opts, scr, dl):
         super(AstroConsole, self).__init__(opts, scr, dl)
+        if opts.target_body is None:
+            raise Exception("Missing --target-body!")
         self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
@@ -699,7 +701,7 @@ def parse_opts():
     x.add_option('--target-alt', type='si', help="Target altitude above MSL (m)")
     x.add_option('--target-peri', type='si', help="Target periapsis altitude (m)")
     x.add_option('--target-apo', type='si', help="Target apoapsis altitude (m)")
-    x.add_option('-t', '--target-body', type='int', help="ID of body we want to intercept", default=10)
+    x.add_option('-t', '--target-body', type='int', help="ID of body we want to intercept")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
     x.add_option('-u', '--unmanned', action='store_true', help='Replace CapSys with Avionics')
