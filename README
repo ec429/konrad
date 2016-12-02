@@ -54,6 +54,8 @@ console it should display.  So far we have the following:
     - s/w to change Input PIT by ±10°; S/W for ±1°
     - d/a to change Input HDG by ±10°; D/A for ±1°
     - e/q to change Input RLL by ±10°; E/Q for ±1°
+    - ` (backtick) to cycle fine controls (COARSE is as above, NORMAL and then
+      FINE divide by 10 per step)
     - ? to copy current Orientation into Input Orientation
     A warning about Fixed mode: while the controls may appear to be the same
     as in-game, *they are not*!  For instance, if you are rolled 90° right,
@@ -99,6 +101,28 @@ console it should display.  So far we have the following:
     - 1-9 for 10-90% throttle
     - z for 100% throttle
     - space for staging
+    - ? to refresh stage detection
+* mnv
+    Astrogation.  Orbital transfer burns (only really useful for TLI so far).
+    See section "Astro-what?" below for more information.
+    Pass option -t <body-id> for the target body, usually 10 (Moon).
+    Requires an accurate JSON Booster file, supplied with --booster.  See the
+    section "JSON Booster" below for more information.
+    Inputs:
+    - f to select 'Fixed' mode (attitude specified with PIT/HDG boxes)
+    - l to select 'Live Fixed' mode (assume vehicle holds current attitude)
+    - p to select 'Progd' mode (assume prograde hold)
+    - PgUp/PgDn to increment/decrement Reserved Stages
+    - x to cut throttle
+    - z for 100% throttle
+    - w/a/s/d to set PIT/HDG boxes (shift for fine)
+    - ` (backtick) to cycle fine controls (COARSE is as above, NORMAL and then
+      FINE divide by 10 per step)
+    - @ to copy current orientation into PIT/HDG input boxes
+    - space for staging
+    - (/) to change start time in 1s increments
+    - [/] to change start time in 10s increments
+    - {/} to change start time in 100s increments
     - ? to refresh stage detection
 
 Global Inputs
@@ -265,3 +289,85 @@ angle for circularisation to slowly 'pull' your final orbital altitude one way
 or the other.  This can take a bit of practice and judgement (or just an
 intuitive understanding of the underlying dynamics) to get right, though.
 And remember to keep an eye on Burnout time!
+
+Astro-what?
+-----------
+OK, this is the weird one.  The Astrogation console ('mnv') assumes you start a
+burn at some fixed time (which you can put in the future), which continues at
+full throttle until burnout (excluding any reserved stages).  It then converts
+the resulting position and velocity back into Keplerian orbital elements, and
+figures out your time and position of apoapsis.  Then, it works out where the
+target body will be at that time, displaying the altitude and phase angle.  It
+also works out the change in phase angle from burn time to apoapsis, which you
+can compare to the phase angle at burn time (this may be more accurate due to
+inclination differences).
+The readouts are:
+event Start: time the burn is set to begin (change with () [] {}).
+T: time from now
+Y: vessel altitude
+p: phase angle to target (defined as angle subtended at parent-body centre)
+j: target true anomaly (this is probably not interesting)
+event End: burnout
+T: time from now
+Y: vessel altitude
+V: vessel vertical speed
+A: apoapsis altitude
+P: periapsis altitude
+D: orbital period
+J: true anomaly to apoapsis (= 180° - current true anomaly)
+event Apo: next apoapsis after burn
+T: time after End (*not* time from now!)
+Z: target altitude
+q: phase angle change relative to End
+*: phase angle to target (again, angle subtended at parent body)
+i: relative inclination (angle between orbit normal vectors)
+Tgt (not really an event): target state
+target name
+J: vessel true anomaly at Start
+Q: phase angle now (calculated a different way, by KSP itself)
+RL: relative LAN now
+RI: relative inclination now
+
+How to use this?  Let's say you've got a probe on top of a 3100m/s kick stage,
+with the whole thing in LEO connected to an upper stage that's empty except for
+RCS and some small solid motors to spin it up (the kick stage lacking avionics
+of its own).  Your aim is a lunar impactor, and you've conveniently launched
+from the Cape into a 240km-ish orbit inclined about 0.3° to the Moon.
+You put the astrog console into Fixed mode and set it to due east, and you see
+that that takes you to well over 400Mm - too high.  Also it gives you a crazy
+inclination, but we'll worry about that later.  You gradually increase PIT
+(by pressing 's' or 'S') until the apoapsis height (End A) roughly matches the
+target height at apoapsis (Apo Z).  Now you look at delta phase angle (Apo q)
+and see it's about 108° whereas phase angle now (Tgt Q) is, let's say, 260°.
+So you push the burn time (Start T) into the future with ), ] and } (steps of
+1s, 10s and 100s respectively) until the phase angle at burn (Start p) is
+roughly 108° (the delta phase angle we prepared earlier).  Now that you have
+approximately the right burn time, you can adjust the burn heading to minimise
+relative inclination (Apo i); this heading will be close to prograde at burn
+time, but probably not exactly the same.  But now your post-burn apoapsis is
+too high because you're not wasting any delta-V on a huge normal component, so
+you re-adjust pitch (W/S, possibly switching to Fine controls with `) until it
+(End A) is just right.  You don't actually want End A to equal Apo Z, because
+once you enter the Moon's SOI it will pull you outwards a bit, so you want to
+aim for a point a few Mm short (finding the right fudge factor takes practice;
+it would be nice if Konrad could do the patched conics for you but it can't -
+yet).  When you finally get it spot on, the phase angle will probably be
+slightly wrong - you want to fine-tune it to minimise the apoapsis phase angle
+(Apo *), which you do by adjusting the burn time.  This in turn slightly
+changes the prograde heading (and possibly the orbital velocity, if your
+parking orbit is quite eccentric), so now you need to tweak HDG and maybe PIT
+again.  After a few rounds of successive approximation, you should be able to
+get phase angle (Apo *) and inclination (Apo i) under 0.1°.  Read off the PIT
+and HDG values and give them to whoever's steering the vessel (e.g. Traj
+console with MJ Fixed mode).  Now patiently wait for Start T to count down.
+About four minutes before burn time (i.e. Start T = 240), have them start
+actively steering the vessel to the specified pitch and heading, then set your
+astrog console to LiveF mode (press 'l').  Now instead of using the pitch and
+heading you entered in, the simulations will run based on the vessel's current
+attitude.  As the burn time counts down towards zero, try to get a feel for how
+the parameters are varying - typically they will oscillate around the target as
+the steering oscillates around the desired attitude.  When all the numbers look
+good (i.e. Apo * and Apo i well under 1°, End A near Apo Z minus fudge factor),
+and Start T is close to zero (or has just reached zero), fire your spin-up /
+ullage motors, then light your stage, and wait for burnout.  When the tanks are
+empty, in theory you should be on a collision course with the Moon!
