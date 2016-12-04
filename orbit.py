@@ -73,9 +73,9 @@ class ParentBody(object):
             if vs < 0: ean += math.pi
             data['ean'] = ean
             # mean anomaly M = E - e sin E
-            data['man'] = ean - ecc * math.sin(ean)
+            data['man'] = man_from_ean(ean, ecc)
             # true anomaly J
-            tan = tra_from_ean(ean, ecc)
+            tan = tan_from_ean(ean, ecc)
             data['tan'] = tan
         except ValueError:
             pass

@@ -418,35 +418,39 @@ class AscentConsole(Console):
         self.stagecap = 0
         self.mode = ascent.AscentSim.MODE_FIXED
         self.vars = {}
-        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
-        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 49), self.vars, 'mode', centered=True)
+        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 64), self.vars, 'stagecap', centered=True)
         sim_blocks = []
         self.rs = [None, None]
         for i in xrange(2):
-            y = i * 6
+            y = i * 7
             use_throttle = not i
             rs = ascent.AscentSim(mode=self.mode)
             self.rs[i] = rs
             sim = gauge.UpdateRocketSim(dl, scr, opts.body, opts.booster, use_throttle, True, rs)
+            elts = gauge.UpdateSimElements(dl, scr, rs, 'ovb')
             wtext = "At 100% throttle" if i else "At current throttle"
-            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
-            owin = scr.derwin(5, 16, 8 + y, 1)
+            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 5 + y, 1), wtext, centered=True)
+            owin = scr.derwin(6, 16, 6 + y, 1)
             o = gauge.GaugeGroup(owin, [gauge.RSTime(dl, owin.derwin(1, 14, 1, 1), 'o', rs),
                                         gauge.RSAlt(dl, owin.derwin(1, 14, 2, 1), 'o', rs),
-                                        gauge.RSVSpeed(dl, owin.derwin(1, 14, 3, 1), 'o', rs)],
+                                        gauge.RSVSpeed(dl, owin.derwin(1, 14, 3, 1), 'o', rs),
+                                        gauge.RSPeriapsis(dl, owin.derwin(1, 14, 4, 1), 'o', rs)],
                                  "Orb-Vel")
-            vwin = scr.derwin(5, 16, 8 + y, 17)
+            vwin = scr.derwin(6, 16, 6 + y, 17)
             v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', rs),
                                         gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', rs),
-                                        gauge.RSHSpeed(dl, vwin.derwin(1, 14, 3, 1), 'v', rs)],
+                                        gauge.RSHSpeed(dl, vwin.derwin(1, 14, 3, 1), 'v', rs),
+                                        gauge.RSPeriapsis(dl, vwin.derwin(1, 14, 4, 1), 'v', rs)],
                                  "Vertical")
-            bwin = scr.derwin(6, 16, 7 + y, 33)
+            bwin = scr.derwin(7, 16, 5 + y, 33)
             b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', rs),
                                         gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', rs),
                                         gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', rs),
-                                        gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
+                                        gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', rs),
+                                        gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', rs)],
                                  "Burnout")
-            sim_blocks.extend([sim, wt, o, v, b])
+            sim_blocks.extend([sim, elts, wt, o, v, b])
         stages = scr.derwin(12, 30, 7, 49)
         stagesgroup = gauge.GaugeGroup(stages, [
             gauge.StagesGauge(dl, stages.derwin(10, 28, 1, 1), opts.booster),

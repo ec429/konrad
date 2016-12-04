@@ -273,6 +273,13 @@ various events.  The AscentSim recognises three events:
 * Vertical - the vertical component of velocity becomes zero.
 * Burnout - the vehicle is emptied of all propellants, excluding any reserved
   stages.
+The following variables are shown at one or more events:
+T: time after simulation start
+Y: altitude above MSL / geoid
+V: vertical speed (upwards positive)
+H: horizontal speed
+A: apoapsis
+P: periapsis
 Because the AscentSim ignores atmospheric drag, it won't be useful until the
 air thins out.  On the other hand, you won't have much freedom to steer
 anyway while in thick air, because aerodynamic forces will destroy a rocket
