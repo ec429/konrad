@@ -331,6 +331,7 @@ Z: target altitude
 q: phase angle change relative to End
 *: phase angle to target (again, angle subtended at parent body)
 i: relative inclination (angle between orbit normal vectors)
+   (if target_body not set, this will just be vessel orbital inclination)
 Tgt (not really an event): target state
 target name
 J: vessel true anomaly at Start

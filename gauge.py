@@ -1339,6 +1339,9 @@ class UpdateTgtProximity(Gauge):
         self.sim = sim
         self.keys = keys
         self.tgt = tgt
+        if tgt is not None:
+            self.set_tprops(self, tgt)
+    def set_tprops(self, tgt):
         self.add_prop('tsma', 'b.o.sma[%d]'%(tgt,))
         self.add_prop('tecc', 'b.o.eccentricity[%d]'%(tgt,))
         self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
@@ -1347,6 +1350,15 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tape', 'b.o.argumentOfPeriapsis[%d]'%(tgt,))
         self.add_prop('ttra', 'b.o.trueAnomaly[%d]'%(tgt,))
         self.add_prop('tper', 'b.o.period[%d]'%(tgt,))
+    def unset_tprops(self):
+        self.del_prop('tsma')
+        self.del_prop('tecc')
+        self.del_prop('tmae')
+        self.del_prop('tinc')
+        self.del_prop('tlan')
+        self.del_prop('tape')
+        self.del_prop('ttra')
+        self.del_prop('tper')
     def draw(self):
         tsma = self.get('tsma')
         tmae = self.get('tmae') # Apparently this one is already in radians

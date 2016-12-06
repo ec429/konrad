@@ -21,6 +21,5 @@ Other things I'd like to do at some point:
   - Srf Prograde
   - AoA Hold
 * make target_body runtime-settable, like body_id is
-* make Astrogation console work when target_body unset
 * use 3d sim for asc & retro.  Having RelInc (asc) or accurate touchdown point
   (retro) would be really helpful.

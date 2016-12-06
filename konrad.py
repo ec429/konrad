@@ -514,8 +514,6 @@ class AstroConsole(Console):
     """Astrogation console"""
     def __init__(self, opts, scr, dl):
         super(AstroConsole, self).__init__(opts, scr, dl)
-        if opts.target_body is None:
-            raise Exception("Missing --target-body!")
         self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
@@ -549,21 +547,28 @@ class AstroConsole(Console):
                                     ],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
+        if opts.target_body is None:
+            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
+        else:
+            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
         a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSTgtAlt(dl, awin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSAngleParam(dl, awin.derwin(1, 14, 5, 1), 'b', self.ms, 'tpy', 'q'),
                                     gauge.RSAngleParam(dl, awin.derwin(1, 14, 6, 1), 'b', self.ms, 'pa1', '*'),
-                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i'),
+                                    rinc,
                                     ],
                              "Apo")
         twin = scr.derwin(9, 16, 7, 49)
-        t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
-                                    gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tan', 'J'),
-                                    gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
-                                    gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
-                                    gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
-                                    ],
-                             "Tgt")
+        if opts.target_body is None:
+            t = gauge.GaugeGroup(twin, [], "No Tgt")
+        else:
+            t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
+                                        gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tan', 'J'),
+                                        gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
+                                        gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
+                                        gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
+                                        ],
+                                 "Tgt")
         oriwant = scr.derwin(3, 26, 19, 1)
         owgroup = gauge.GaugeGroup(oriwant, [
             gauge.PitchGauge(dl, oriwant.derwin(1, 11, 1, 1), want=self.vars),
