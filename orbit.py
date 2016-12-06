@@ -111,7 +111,7 @@ class ParentBody(object):
             per = 2.0 * math.pi / mmo
             data['per'] = per
         if ecc >= 1.0:
-            return
+            return data
         # anomalies (since periapsis)
         if ecc == 0:
             tan = 0
@@ -212,7 +212,7 @@ def angle_between(w, z):
 if __name__ == "__main__":
     # round-trip test
     in_r = matrix.Vector3((40, 0, 30))
-    in_v = matrix.Vector3((0, 1.0, 0.1))
+    in_v = matrix.Vector3((0, 2.0, 0.1))
     in_gm = 50
     in_rad = 0
     pbody = ParentBody(in_rad, in_gm)
