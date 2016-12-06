@@ -519,9 +519,12 @@ class AstroConsole(Console):
         self.update = gauge.UpdateBooster(dl, scr, opts.booster)
         deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
+        maxtwr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 52), opts.booster, opts.body, use_throttle=0)
+        maxtwr.label = 'MAX'
         self.stagecap = 0
         self.mode = burns.ManeuverSim.MODE_FIXED
         self.vars = {'PIT': 0, 'HDG': 90}
+        full = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 10), self.vars, 'burn', centered=True)
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         self.ms = burns.ManeuverSim(mode=self.mode)
@@ -571,7 +574,7 @@ class AstroConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, deltav, twr, mode, scap,
+                                      [self.update, twr, deltav, maxtwr, full, mode, scap,
                                        sim, elts, tgt, z, b, a, t,
                                        owgroup,
                                        self.status, body, time],
@@ -587,6 +590,12 @@ class AstroConsole(Console):
         if self.ms is not None:
             self.ms.mode = self.mode
             self.ms.stagecap = self.stagecap
+            if self.ms.burn_dur > 0:
+                self.vars['burn'] = 'Burn: Timed'
+            else:
+                self.vars['burn'] = 'Burn:  Full'
+        else:
+            self.vars['burn'] = 'Burn:  ??? '
     def steer(self, what, base):
         old = self.vars[what]
         old = math.floor(old * 100.0 + 0.5) / 100.0
@@ -619,6 +628,10 @@ class AstroConsole(Console):
             self.mode = burns.ManeuverSim.MODE_PROGRADE
             self.update_vars()
             return
+        if key == ord('r'):
+            self.mode = burns.ManeuverSim.MODE_RETROGRADE
+            self.update_vars()
+            return
         if key == ord(')'):
             self.ms.burnUT += 1
             return
@@ -636,6 +649,46 @@ class AstroConsole(Console):
             return
         if key == ord('{'):
             self.ms.burnUT -= 100
+            return
+        # Actual time until burnout, if burn_dur is unset
+        real_burn_dur = None
+        if 'time' in self.ms.data.get('0', {}) and 'time' in self.ms.data.get('b', {}):
+            real_burn_dur = self.ms.data['b']['time'] - self.ms.data['0']['time']
+        if key == ord('B'):
+            self.ms.burn_dur = -1
+            self.update_vars()
+            return
+        if key == ord(','):
+            if self.ms.burn_dur < 0:
+                if real_burn_dur is not None:
+                    self.ms.burn_dur = real_burn_dur - 1
+            else:
+                self.ms.burn_dur = max(self.ms.burn_dur - 1, 1)
+            self.update_vars()
+            return
+        if key == ord('.'):
+            if self.ms.burn_dur < 0:
+                if real_burn_dur is not None:
+                    self.ms.burn_dur = real_burn_dur
+            else:
+                self.ms.burn_dur += 1
+            self.update_vars()
+            return
+        if key == ord('<'):
+            if self.ms.burn_dur < 0:
+                if real_burn_dur is not None:
+                    self.ms.burn_dur = real_burn_dur - 10
+            else:
+                self.ms.burn_dur = max(self.ms.burn_dur - 10, 1)
+            self.update_vars()
+            return
+        if key == ord('>'):
+            if self.ms.burn_dur < 0:
+                if real_burn_dur is not None:
+                    self.ms.burn_dur = real_burn_dur
+            else:
+                self.ms.burn_dur += 10
+            self.update_vars()
             return
         if key == curses.KEY_PPAGE:
             self.stagecap += 1

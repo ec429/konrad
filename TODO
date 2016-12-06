@@ -7,6 +7,7 @@ require a few things:
 * solve for closest approach (we can't just aim for Ap like we did with lunar)
   - probably binary search
 * support for non-full-length burns (needed for TCMs)
+  - this is now done, but sub-items below aren't yet
   - maybe also burns that aren't an integer number of seconds long
   - this could be on a separate TCM console that's only used once in
     heliocentric orbit, thus avoiding dealing with patching
@@ -20,5 +21,6 @@ Other things I'd like to do at some point:
   - Srf Prograde
   - AoA Hold
 * make target_body runtime-settable, like body_id is
+* make Astrogation console work when target_body unset
 * use 3d sim for asc & retro.  Having RelInc (asc) or accurate touchdown point
   (retro) would be really helpful.

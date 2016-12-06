@@ -123,6 +123,9 @@ console it should display.  So far we have the following:
     - (/) to change start time in 1s increments
     - [/] to change start time in 10s increments
     - {/} to change start time in 100s increments
+    - ,/. to change burn duration in 1s increments
+    - </> to change burn duration in 10s increments
+    - B to unlimit burn duration (i.e. 'until burnout')
     - ? to refresh stage detection
 
 Global Inputs
@@ -334,6 +337,15 @@ J: vessel true anomaly at Start
 Q: phase angle now (calculated a different way, by KSP itself)
 RL: relative LAN now
 RI: relative inclination now
+
+Other displays: Vac.DeltaV should be obvious.  TWR is thrust-to-weight ratio at
+current throttle, measured in local g.  MAX is TWR at full throttle.
+Rsvd. Stg. is the usual 'reserved stages' (PgUp/PgDn to set).  Mode sets
+steering assumptions for the sim, and can be set with the following keys:
+f   Fixed mode: steer according to the PIT and HDG values dialled in with wasd.
+l   Live Fixed: use vessel's current pitch and heading.
+p   Prograde: follow orbital prograde vector.
+r   Retrograde: follow orbital retrograde vector.
 
 How to use this?  Let's say you've got a probe on top of a 3100m/s kick stage,
 with the whole thing in LEO connected to an upper stage that's empty except for

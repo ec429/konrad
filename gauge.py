@@ -1111,9 +1111,10 @@ class StagesGauge(Gauge, TimeFormatterMixin):
 
 class TWRGauge(OneLineGauge):
     label = 'TWR'
-    def __init__(self, dl, cw, booster, body):
+    def __init__(self, dl, cw, booster, body, use_throttle=1):
         super(TWRGauge, self).__init__(dl, cw)
         self.booster = booster
+        self.use_throttle = use_throttle
         self.add_prop('throttle', 'f.throttle')
         self.add_prop('alt', 'v.altitude')
         self.add_prop('brad', orbit.ParentBody.rad_api(body))
@@ -1127,7 +1128,10 @@ class TWRGauge(OneLineGauge):
         super(TWRGauge, self)._changeopt(**kwargs)
     def draw(self):
         super(TWRGauge, self).draw()
-        throttle = self.get('throttle')
+        if self.use_throttle:
+            throttle = self.get('throttle')
+        else:
+            throttle = 1.0
         alt = self.get('alt')
         brad = self.get('brad')
         bgm = self.get('bgm')
