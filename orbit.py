@@ -20,8 +20,9 @@ class CelestialBody(object):
     def connect_parent(self):
         if self.parent in celestial_bodies:
             self.pb = celestial_bodies[self.parent]
+            gm = self.gm + self.pb.gm
             # mean motion n = sqrt(mu / a^3)
-            self.elts['mmo'] = math.sqrt(self.pb.gm / self.elts['sma'] ** 3)
+            self.elts['mmo'] = math.sqrt(gm / self.elts['sma'] ** 3)
 
 celestial_bodies = {}
 config = cfg.get_default_config()
