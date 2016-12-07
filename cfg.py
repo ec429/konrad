@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 
 def parse(f):
     top = {}
@@ -29,7 +30,29 @@ def parse(f):
         last = line
     return(top)
 
+_config_cache = {}
+def get_config(fn):
+    if fn not in _config_cache:
+        try:
+            with open(fn, 'r') as f:
+                _config_cache[fn] = parse(f)
+        except IOError:
+            return
+    return _config_cache[fn]
+
+def get_default_config():
+    ksppath = os.environ.get('KSPPATH')
+    if ksppath is None:
+        return
+    path = os.path.join(ksppath, 'GameData', 'ModuleManager.ConfigCache')
+    return get_config(path)
+
+def fetchall(node, key):
+    res = []
+    for c in node:
+        res.extend(c.get(key, []))
+    return res
+
 if __name__ == '__main__':
     import sys, pprint
-    d = parse(sys.stdin)
-    pprint.pprint(d)
+    pprint.pprint(get_default_config())

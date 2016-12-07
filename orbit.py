@@ -3,6 +3,62 @@
 
 import math
 import matrix
+import cfg
+
+# Value of big-G used by Kopernicus
+G = 6.67408e-11
+
+class CelestialBody(object):
+    def __init__(self, name, rad, gm):
+        self.name = name
+        self.rad = rad
+        self.gm = gm
+        self.parent = None
+    def orbit(self, parent, elts):
+        self.parent = parent
+        self.elts = elts
+    def connect_parent(self):
+        if self.parent in celestial_bodies:
+            self.pb = celestial_bodies[self.parent]
+            # mean motion n = sqrt(mu / a^3)
+            self.elts['mmo'] = math.sqrt(self.pb.gm / self.elts['sma'] ** 3)
+
+celestial_bodies = {}
+config = cfg.get_default_config()
+if config is not None:
+    kop = cfg.fetchall(config['UrlConfig'], 'Kopernicus')
+    bodies = cfg.fetchall(kop, 'Body')
+    for body in bodies:
+        name = body['name']
+        if 'Orbit' in body:
+            orbit = body['Orbit']
+            assert len(orbit) == 1, orbit
+            orbit = orbit[0]
+            parent = orbit['referenceBody']
+            elts = {'sma': float(orbit['semiMajorAxis']),
+                    'ecc': float(orbit['eccentricity']),
+                    'maae': math.radians(float(orbit['meanAnomalyAtEpochD'])),
+                    'ape': math.radians(float(orbit['argumentOfPeriapsis'])),
+                    'inc': math.radians(float(orbit['inclination'])),
+                    'lan': math.radians(float(orbit.get('longitudeOfAscendingNode', 0))),
+                    }
+        else:
+            parent = None
+        props = body['Properties']
+        assert len(props) == 1, props
+        props = props[0]
+        if 'gravParameter' in props:
+            gm = float(props['gravParameter'])
+        else:
+            mass = float(props['mass'])
+            gm = mass * G
+        rad = props['radius']
+        cb = CelestialBody(name, rad, gm)
+        if parent is not None:
+            cb.orbit(parent, elts)
+        celestial_bodies[name] = cb
+for cb in celestial_bodies.values():
+    cb.connect_parent()
 
 class ParentBody(object):
     def __init__(self, rad, gm):

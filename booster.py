@@ -179,21 +179,17 @@ class Booster(object):
         d = json.loads(j)
         return cls.from_dict(d)
 
-ksppath = os.environ.get('KSPPATH')
+
 known_props = {}
-if ksppath is not None:
-    try:
-        with open(os.path.join(ksppath, 'GameData', 'ModuleManager.ConfigCache'), 'r') as f:
-            d = cfg.parse(f)
-            d = d.get('UrlConfig', {})
-            for c in d:
-                if 'RESOURCE_DEFINITION' in c:
-                    r = c['RESOURCE_DEFINITION']
-                    for rd in r:
-                        if 'name' in rd and 'density' in rd:
-                            known_props[rd['name']] = float(rd['density'])
-    except IOError:
-        pass
+config = cfg.get_default_config()
+if config is not None:
+    d = config.get('UrlConfig', {})
+    for c in d:
+        if 'RESOURCE_DEFINITION' in c:
+            r = c['RESOURCE_DEFINITION']
+            for rd in r:
+                if 'name' in rd and 'density' in rd:
+                    known_props[rd['name']] = float(rd['density'])
 
 if __name__ == '__main__':
     import sys
