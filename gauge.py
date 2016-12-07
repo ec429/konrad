@@ -794,7 +794,7 @@ class AngleGauge(FractionGauge):
         angle = self.angle
         width = self.width - len(self.label) - 2
         prec = min(3, width - 4)
-        if angle is None:
+        if angle in (None, u'NaN'):
             self.addstr(self.centext('NO DATA'))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
@@ -1315,7 +1315,8 @@ class UpdateSimElements(Gauge):
                 if mana < 0: mana += 2.0 * math.pi
                 self.sim.data[key]['mana'] = mana
             mmo = self.sim.data[key].get('mmo')
-            if None in (mmo, mana) or mmo <= 0:
+            ecc = self.sim.data[key].get('ecc')
+            if None in (mmo, mana, ecc) or mmo <= 0 or ecc >= 1.0:
                 ttap = None
             else:
                 ttap = mana / mmo
@@ -1323,13 +1324,12 @@ class UpdateSimElements(Gauge):
             inc = self.sim.data[key].get('inc')
             lan = self.sim.data[key].get('lan')
             ape = self.sim.data[key].get('ape')
-            ecc = self.sim.data[key].get('ecc')
             sma = self.sim.data[key].get('sma')
-            if None in (inc, lan, ape, ecc, sma, mana):
+            # position at apoapsis
+            if None in (inc, lan, ape, ecc, sma) or ecc >= 1.0:
                 apvec = None
             else:
-                eana = orbit.ean_from_man(mana, ecc, 12)
-                apvec = self.sim.pbody.compute_3d_vector(sma, ecc, eana, ape, inc, lan)[0]
+                apvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)[0]
                 self.sim.data[key]['apvec'] = apvec
 
 class UpdateTgtProximity(Gauge):
@@ -1340,7 +1340,7 @@ class UpdateTgtProximity(Gauge):
         self.keys = keys
         self.tgt = tgt
         if tgt is not None:
-            self.set_tprops(self, tgt)
+            self.set_tprops(tgt)
     def set_tprops(self, tgt):
         self.add_prop('tsma', 'b.o.sma[%d]'%(tgt,))
         self.add_prop('tecc', 'b.o.eccentricity[%d]'%(tgt,))
@@ -1349,7 +1349,7 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
         self.add_prop('tape', 'b.o.argumentOfPeriapsis[%d]'%(tgt,))
         self.add_prop('ttra', 'b.o.trueAnomaly[%d]'%(tgt,))
-        self.add_prop('tper', 'b.o.period[%d]'%(tgt,))
+        self.add_prop('tgm', 'b.o.gravParameter[%d]'%(tgt,))
     def unset_tprops(self):
         self.del_prop('tsma')
         self.del_prop('tecc')
@@ -1367,22 +1367,17 @@ class UpdateTgtProximity(Gauge):
         tlan = self.getrad('tlan')
         tape = self.getrad('tape')
         ttra = self.getrad('ttra')
-        tper = self.get('tper')
+        tgm = self.get('tgm')
         epoch = -31542641.784 # Grabbed from (RSS) config file, because
                               # Telemachus can't give us it
-        if tper is None:
+        if None in (tgm, tsma) or not hasattr(self.sim, 'pbody'):
+            gm = None
             tmmo = None
-            bgm = None
         else:
+            # mu = G(M+m)
+            gm = tgm + self.sim.pbody.gm
             # target mean motion n = sqrt(mu / a^3)
-            tmmo = math.pi * 2.0 / tper
-            # Apparently this gives a different answer to
-            # math.sqrt(self.sim.pbody.gm / tsma ** 3),
-            # and the latter doesn't match what KSP is doing.
-            # Probably it's using g(M+m) instead.
-            # per ** 2 = gm / sma ** 3
-            # => gm = per ** 2 * sma ** 3
-            bgm = tper ** 2 * tsma ** 3
+            tmmo = math.sqrt(gm / tsma ** 3)
         for key in self.keys:
             if key not in self.sim.data:
                 continue
@@ -1428,10 +1423,10 @@ class UpdateTgtProximity(Gauge):
             trad = tsma * (1.0 - tecc * math.cos(te1))
             talt = trad - self.sim.pbody.rad
             self.sim.data[key]['talt'] = talt
-            if None in (bgm, tsma, tape, tinc, tlan):
+            if None in (gm, tsma, tape, tinc, tlan):
                 continue
             # target state vectors at T
-            tpb = orbit.ParentBody(self.sim.pbody.rad, bgm)
+            tpb = orbit.ParentBody(self.sim.pbody.rad, gm)
             tr, tv = tpb.compute_3d_vector(tsma, tecc, te0, tape, tinc, tlan)
             r = self.sim.data[key].get('rvec')
             if r is None:
