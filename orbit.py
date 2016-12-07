@@ -110,8 +110,10 @@ class ParentBody(object):
             # period T = 2pi / n
             per = 2.0 * math.pi / mmo
             data['per'] = per
-        if ecc >= 1.0:
-            return data
+        else:
+            # hyperbolic mean motion n = sqrt(-mu / a^3)
+            mmo = math.sqrt(-self.gm / sma ** 3)
+            data['mmo'] = mmo
         # anomalies (since periapsis)
         if ecc == 0:
             tan = 0
@@ -132,7 +134,7 @@ class ParentBody(object):
         data['inc'] = inc
         # longitude of ascending node
         if n.mag == 0:
-            lan = ean
+            lan = -tan
         else:
             lan = angle_between(n.hat, matrix.Vector3.ex())
             if n.y < 0:
@@ -158,10 +160,24 @@ class ParentBody(object):
         return (r, v)
 
 def man_from_ean(ean, ecc):
+    if ecc > 1.0:
+        return ecc * math.sinh(ean) - ean
+    if ecc == 1.0:
+        # XXX This is probably bogus.  But parabolae never happen anyway...
+        return ean
     return ean - ecc * math.sin(ean)
 
 def ean_from_man(man, ecc, k):
     # Iterated approximation; k is number of iterations
+    if ecc > 1.0:
+        ### Uses Newton's method on hyperbolic eqn, from http://control.asu.edu/Classes/MAE462/462Lecture05.pdf
+        ean = man
+        for i in xrange(k):
+            ean += (man - ecc * math.sinh(ean) + ean) / (ecc * math.cosh(ean) - 1.0)
+        return ean
+    if ecc == 1.0:
+        # XXX This is probably bogus.  But parabolae never happen anyway...
+        return man
     ### Uses Newton's method, from https://en.wikipedia.org/wiki/Kepler%27s_equation
     if ecc > 0.8:
         ean = math.pi
@@ -172,14 +188,28 @@ def ean_from_man(man, ecc, k):
     return ean
 
 def ean_from_tan(tan, ecc):
+    if ecc > 1.0:
+        teh = math.tan(tan / 2.0) / math.sqrt((1.0 + ecc) / (ecc - 1.0))
+        return 2 * math.atanh(teh)
+    if ecc == 1.0:
+        # XXX This is probably bogus.  But parabolae never happen anyway...
+        return tan
     teh = math.tan(tan / 2.0) / math.sqrt((1.0 + ecc) / (1.0 - ecc))
     return 2 * math.atan(teh)
 
 def tan_from_ean(ean, ecc):
+    if ecc > 1.0:
+        tjh = math.sqrt((1.0 + ecc) / (ecc - 1.0)) * math.tanh(ean / 2.0)
+        return 2 * math.atan(tjh)
+    if ecc == 1.0:
+        # XXX This is probably bogus.  But parabolae never happen anyway...
+        return ean
     tjh = math.sqrt((1.0 + ecc) / (1.0 - ecc)) * math.tan(ean / 2.0)
     return 2 * math.atan(tjh)
 
 def r(sma, ecc, ean):
+    if ecc > 1.0:
+        return sma * (1.0 - ecc * math.cosh(ean))
     return sma * (1.0 - ecc * math.cos(ean))
 
 ### eqns from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
@@ -191,6 +221,10 @@ def ovec(sma, ecc, ean):
 
 def odot(gm, sma, ecc, ean):
     rad = r(sma, ecc, ean)
+    if ecc > 1.0:
+        sf = math.sqrt(-gm * sma) / rad
+        efac = math.sqrt(ecc ** 2 - 1.0)
+        return sf * matrix.Vector3((-math.sinh(ean), efac * math.cosh(ean), 0))
     sf = math.sqrt(gm * sma) / rad
     efac = math.sqrt(1.0 - ecc ** 2)
     return sf * matrix.Vector3((-math.sin(ean), efac * math.cos(ean), 0))
@@ -211,18 +245,29 @@ def angle_between(w, z):
 
 if __name__ == "__main__":
     # round-trip test
-    in_r = matrix.Vector3((40, 0, 30))
-    in_v = matrix.Vector3((0, 2.0, 0.1))
+    in_r = matrix.Vector3((1, 2, 3))
+    in_v = matrix.Vector3((4, 5, 6))
     in_gm = 50
     in_rad = 0
+    in_dt = 1e-5
     pbody = ParentBody(in_rad, in_gm)
     elts = pbody.compute_3d_elements(in_r, in_v)
+    ecc = elts['ecc']
     for k,v in elts.iteritems():
-        if 'an' in k or k in 'mmo, inc, ape':
+        if ecc < 1.0 and ('an' in k or k in ('inc', 'ape', 'mmo')):
             v = math.degrees(v)
         print k, v
     print
     ean = ean_from_tan(elts['tan'], elts['ecc'])
+    out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], ean, elts['ape'], elts['inc'], elts['lan'])
+    print out_r
+    print out_v
+    print
+    print "Stepping dT =", in_dt
+    man = man_from_ean(elts['ean'], elts['ecc'])
+    man += elts['mmo'] * in_dt
+    elts['man'] = man
+    ean = ean_from_man(man, elts['ecc'], 12)
     out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], ean, elts['ape'], elts['inc'], elts['lan'])
     print out_r
     print out_v

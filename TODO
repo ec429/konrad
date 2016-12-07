@@ -1,6 +1,5 @@
 Next major target is to support interplanetary astrogation.  For that we will
 require a few things:
-* orbit conversions to handle hyperbolic orbits
 * patching conics on SOI exit
   - find SOI exit by working backwards from altitude to eccentric anomaly
   - convert to cartesian, add old-parent's vectors, convert back to keplerian
