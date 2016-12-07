@@ -86,6 +86,11 @@ class ParentBody(object):
         # specific orbital energy, epsilon = v.v / 2 - mu / |r|
         soe = vvec.dot(vvec) / 2.0 - self.gm / rvec.mag
         # a = -mu / 2epsilon
+        if soe == 0:
+            # It's parabolic, we may as well give up now
+            # XXX this isn't exactly great, but the odds of hitting a perfectly
+            # parabolic orbit in practice are negligible, so let's punt
+            return {}
         sma = -self.gm / (2.0 * soe)
         # specific angular momentum
         # h = r x v
@@ -245,8 +250,8 @@ def angle_between(w, z):
 
 if __name__ == "__main__":
     # round-trip test
-    in_r = matrix.Vector3((1, 2, 3))
-    in_v = matrix.Vector3((4, 5, 6))
+    in_r = matrix.Vector3((50, 0, 0))
+    in_v = matrix.Vector3((1.0, 2.0, 0.1))
     in_gm = 50
     in_rad = 0
     in_dt = 1e-5
