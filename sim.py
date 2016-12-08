@@ -227,7 +227,7 @@ class RocketSim3D(object):
             self.pvec = -1.0 * self.vvec.hat
         else:
             raise Exception("Unhandled mode", self.mode)
-        self.rvec += self.vvec
+        self.rvec += self.dt * self.vvec
         avec = dv * self.pvec
         # local gravity
         if None not in (self.alt, self.pbody.gm):

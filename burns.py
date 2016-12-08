@@ -20,6 +20,7 @@ class ManeuverSim(sim.RocketSim3D):
         self.sim_setup(booster, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma)
         self.t = burnT
         self.data = {'0': self.encode()}
+        self.dt = 0.2 # Use shorter time step for higher accuracy
         while not ('b' in self.data or self.t > 1200 + burnT):
             if self.step():
                 return

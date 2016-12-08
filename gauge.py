@@ -1457,7 +1457,10 @@ class RSTime(OneLineGauge):
         super(RSTime, self).draw()
         t = self.sim.data.get(self.key, {}).get('time')
         if t is not None:
-            self.addstr('T:%*ds'%(self.olg_width - 3, t))
+            if self.sim.dt < 1.0 and self.olg_width > 6:
+                self.addstr('T:%*.1fs'%(self.olg_width - 3, t))
+            else:
+                self.addstr('T:%*ds'%(self.olg_width - 3, t))
             col = 0
             if self.key in 'hv':
                 if 's' in self.sim.data and self.sim.data['s']['time'] < t:
