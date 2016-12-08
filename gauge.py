@@ -725,15 +725,19 @@ class GeeGauge(OneLineGauge):
             self.warn = False
 
 class PercentageGauge(FractionGauge):
-    def draw(self, n, d, s):
+    def draw(self, n, d, s, zna=False):
         super(PercentageGauge, self).draw()
         if d is None or d < 0 or n is None:
-            if self.width < 7:
-                text = "N/A"
+            if zna: # "Zero is N/A"
+                if self.width < 7:
+                    text = "N/A"
+                else:
+                    text = "N/A: " + s
+                self.addstr(self.centext(text))
+                self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
             else:
-                text = "N/A: " + s
-            self.addstr(self.centext(text))
-            self.chgat(0, self.width, curses.color_pair(0)|curses.A_BOLD)
+                self.addstr(self.centext("NO DATA"))
+                self.chgat(0, self.width, curses.color_pair(2))
             return
         percent = n * 100.0 / d if d > 0 else 0
         if self.width < 4:
@@ -757,7 +761,7 @@ class FuelGauge(PercentageGauge):
     def draw(self):
         current = self.get('current')
         full = self.get('max')
-        super(FuelGauge, self).draw(current, full, self.resource)
+        super(FuelGauge, self).draw(current, full, self.resource, zna=True)
         if None in (current, full):
             return
         if current < 0.01 and full > 0:
@@ -773,6 +777,8 @@ class ThrottleGauge(PercentageGauge):
         self.add_prop('throttle', "f.throttle")
     def draw(self):
         throttle = self.get('throttle')
+        if throttle == 2:
+            throttle = None
         super(ThrottleGauge, self).draw(throttle, 1.0, "Throttle")
 
 class AngleGauge(FractionGauge):
@@ -1031,7 +1037,10 @@ class Light(BaseLight):
         self.add_prop('val', api)
     @property
     def value(self):
-        return self.get('val')
+        v = self.get('val')
+        if v == 2:
+            return None
+        return v
 
 class UpdateBooster(Gauge):
     def __init__(self, dl, cw, bstr):
@@ -1130,6 +1139,8 @@ class TWRGauge(OneLineGauge):
         super(TWRGauge, self).draw()
         if self.use_throttle:
             throttle = self.get('throttle')
+            if throttle == 2:
+                throttle = None
         else:
             throttle = 1.0
         alt = self.get('alt')
