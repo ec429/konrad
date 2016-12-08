@@ -525,6 +525,7 @@ class AstroConsole(Console):
         full = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 10), self.vars, 'burn', centered=True)
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 15, 4, 55))
         self.ms = burns.ManeuverSim(mode=self.mode)
         sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, self.ms, want=self.vars)
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
@@ -579,7 +580,7 @@ class AstroConsole(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, twr, deltav, maxtwr, full, mode, scap,
+                                      [self.update, twr, deltav, maxtwr, full, mode, scap, throttle,
                                        sim, elts, tgt, z, b, a, t,
                                        owgroup,
                                        self.status, body, time],
