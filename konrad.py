@@ -758,6 +758,7 @@ def parse_opts():
     x = optparse.OptionParser(usage='%prog consname', option_class=Option)
     x.add_option('--server', type='string', help='Hostname or IP address of Telemachus server', default=downlink.DEFAULT_HOST)
     x.add_option('--port', type='int', help='Port number of Telemachus server', default=downlink.DEFAULT_PORT)
+    x.add_option('--refresh-rate', type='float', help='Refresh interval in ms')
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
     x.add_option('-b', '--body', type='int', help="ID of body to assume we're at", default=1)
     x.add_option('--target-alt', type='si', help="Target altitude above MSL (m)")
@@ -837,6 +838,8 @@ if __name__ == '__main__':
     else:
         connect_opts = {'host': opts.server, 'port': opts.port, 'logf': logf}
         connect_opts.update(console.connect_params())
+        if opts.refresh_rate:
+            connect_opts['rate'] = opts.refresh_rate
         dl = downlink.connect_default(**connect_opts)
     vessel = None
     dl.subscribe('v.name')
