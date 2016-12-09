@@ -14,6 +14,7 @@ class CelestialBody(object):
         self.rad = rad
         self.gm = gm
         self.parent = None
+        self.pb = None
     def orbit(self, parent, elts):
         self.parent = parent
         self.elts = elts
@@ -23,14 +24,24 @@ class CelestialBody(object):
             gm = self.gm + self.pb.gm
             # mean motion n = sqrt(mu / a^3)
             self.elts['mmo'] = math.sqrt(gm / self.elts['sma'] ** 3)
+    @property
+    def parent_body(self):
+        if self.pb is None:
+            return None
+        gm = self.gm + self.pb.gm
+        return ParentBody(self.pb.rad, gm)
 
 celestial_bodies = {}
+epoch = None
 config = cfg.get_default_config()
 if config is not None:
     kop = cfg.fetchall(config['UrlConfig'], 'Kopernicus')
-    bodies = cfg.fetchall(kop, 'Body')
+    assert len(kop) == 1, kop
+    kop = kop[0]
+    epoch = float(kop['Epoch'])
+    bodies = kop['Body']
     for body in bodies:
-        name = body['name']
+        name = body.get('cbNameLater', body['name'])
         if 'Orbit' in body:
             orbit = body['Orbit']
             assert len(orbit) == 1, orbit
@@ -53,7 +64,7 @@ if config is not None:
         else:
             mass = float(props['mass'])
             gm = mass * G
-        rad = props['radius']
+        rad = float(props['radius'])
         cb = CelestialBody(name, rad, gm)
         if parent is not None:
             cb.orbit(parent, elts)
@@ -273,6 +284,16 @@ def r(sma, ecc, ean):
     if ecc > 1.0:
         return sma * (1.0 - ecc * math.cosh(ean))
     return sma * (1.0 - ecc * math.cos(ean))
+
+def ean_from_r(sma, ecc, r):
+    """Find eccentric anomaly at radius.  For finding SOI exit"""
+    if ecc > 1.0:
+        ecoshE = 1.0 - r / sma
+        # returns positive branch, i.e. after Pe, which is what we want
+        return math.acosh(ecoshE / ecc)
+    ecosE = 1.0 - r / sma
+    # returns positive branch, i.e. before Ap, which is what we want
+    return math.acos(ecosE / ecc)
 
 ### eqns from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
 

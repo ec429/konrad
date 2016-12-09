@@ -1343,6 +1343,81 @@ class UpdateSimElements(Gauge):
                 apvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)[0]
                 self.sim.data[key]['apvec'] = apvec
 
+class UpdateSoiExit(Gauge):
+    # Patches conics out of current SOI (if on escape trajectory)
+    def __init__(self, dl, cw, body, sim, key):
+        super(UpdateSoiExit, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+        self.body = body
+        self.add_prop('soi', 'b.soi[%d]'%(body,))
+        self.add_prop('pbn', 'v.body')
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('soi')
+            self.add_prop('soi', 'b.soi[%d]'%(kwargs['body'],))
+        super(UpdateSoiExit, self)._changeopt(**kwargs)
+    def draw(self):
+        soi = self.get('soi')
+        if soi is None:
+            return
+        pbn = self.get('pbn')
+        pb_cb = orbit.celestial_bodies.get(str(pbn))
+        if self.key not in self.sim.data:
+            return
+        ecc = self.sim.data[self.key].get('ecc')
+        sma = self.sim.data[self.key].get('sma')
+        if None in (ecc, sma):
+            return
+        apa = (1 + ecc) * sma # real apa, not (apa - rad)
+        if apa > 0 and apa < soi:
+            return
+        self.sim.data['x'] = {}
+        eax = orbit.ean_from_r(sma, ecc, soi)
+        self.sim.data['x']['ean'] = eax
+        manx = orbit.man_from_ean(eax, ecc)
+        time = self.sim.data[self.key].get('time')
+        if time is None:
+            utime = None
+        else:
+            utime = time + self.sim.UT - orbit.epoch
+        ma0 = self.sim.data[self.key].get('man')
+        mmo = self.sim.data[self.key].get('mmo')
+        xtime = None
+        xut = None
+        if None not in (ma0, mmo) and mmo > 0:
+            ttx = (manx - ma0) / mmo
+            self.sim.data[self.key]['ttx'] = ttx
+            if time is not None:
+                xtime = time + ttx
+                self.sim.data['x']['time'] = xtime
+            if utime is not None:
+                xut = utime + ttx
+                self.sim.data['x']['ut'] = xut
+        ape = self.sim.data[self.key].get('ape')
+        inc = self.sim.data[self.key].get('inc')
+        lan = self.sim.data[self.key].get('lan')
+        if None in (ape, inc, lan):
+            return
+        xx, xv = self.sim.pbody.compute_3d_vector(sma, ecc, eax, ape, inc, lan)
+        self.sim.data['x']['x'] = xx
+        self.sim.data['x']['v'] = xv
+        if None in (xut, pb_cb):
+            return
+        pelts = dict(pb_cb.elts)
+        pmax = pelts['maae'] + pelts['mmo'] * xut
+        peax = orbit.ean_from_man(pmax, pelts['ecc'], 16)
+        if pb_cb.parent is None:
+            return
+        ppb = pb_cb.parent_body
+        px, pv = ppb.compute_3d_vector(pelts['sma'], pelts['ecc'], peax, pelts['ape'], pelts['inc'], pelts['lan'])
+        xpx = px + xx
+        xpv = pv + xv
+        self.sim.data['x']['px'] = xpx
+        self.sim.data['x']['pv'] = xpv
+        xelts = ppb.compute_3d_elements(xpx, xpv)
+        self.sim.data['x'].update(xelts)
+
 class UpdateTgtProximity(Gauge):
     # Computes target offset at apoapsis from RocketSim results
     def __init__(self, dl, cw, sim, keys, tgt):
@@ -1379,8 +1454,6 @@ class UpdateTgtProximity(Gauge):
         tape = self.getrad('tape')
         ttra = self.getrad('ttra')
         tgm = self.get('tgm')
-        epoch = -31542641.784 # Grabbed from (RSS) config file, because
-                              # Telemachus can't give us it
         if None in (tgm, tsma) or not hasattr(self.sim, 'pbody'):
             gm = None
             tmmo = None
@@ -1397,7 +1470,7 @@ class UpdateTgtProximity(Gauge):
             time = self.sim.data[key].get('time')
             if time is None:
                 continue
-            time += self.sim.UT - epoch
+            time += self.sim.UT - orbit.epoch
             # target mean anomaly at T
             tma0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
             self.sim.data[key]['tma0'] = tma0
@@ -1459,7 +1532,7 @@ class UpdateTgtProximity(Gauge):
             # angle between direction vectors
             self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
 
-class RSTime(OneLineGauge):
+class RSTime(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):
         super(RSTime, self).__init__(dl, cw)
         self.sim = sim
@@ -1468,7 +1541,11 @@ class RSTime(OneLineGauge):
         super(RSTime, self).draw()
         t = self.sim.data.get(self.key, {}).get('time')
         if t is not None:
-            if self.sim.dt < 1.0 and self.olg_width > 6:
+            if t > 7200:
+                text = self.fmt_time(t, 3)
+                width = self.olg_width - 2
+                self.addstr('T:%*s'%(width, text))
+            elif self.sim.dt < 1.0 and self.olg_width > 6:
                 self.addstr('T:%*.1fs'%(self.olg_width - 3, t))
             else:
                 self.addstr('T:%*ds'%(self.olg_width - 3, t))

@@ -1,8 +1,5 @@
 Next major target is to support interplanetary astrogation.  For that we will
 require a few things:
-* patching conics on SOI exit
-  - find SOI exit by working backwards from altitude to eccentric anomaly
-  - convert to cartesian, add old-parent's vectors, convert back to keplerian
 * solve for closest approach (we can't just aim for Ap like we did with lunar)
   - probably binary search
 * support for non-full-length burns (needed for TCMs)
