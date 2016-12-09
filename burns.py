@@ -16,7 +16,7 @@ class ManeuverSim(sim.RocketSim3D):
         man = orbit.man_from_ean(ean, ecc)
         mmo = math.sqrt(bgm / abs(sma) ** 3)
         man += mmo * burnT
-        ean = orbit.ean_from_man(man, ecc, 12)
+        ean = orbit.ean_from_man(man, ecc, 24)
         self.sim_setup(booster, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma)
         self.t = burnT
         self.data = {'0': self.encode()}
