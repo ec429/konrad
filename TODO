@@ -1,7 +1,5 @@
 Next major target is to support interplanetary astrogation.  For that we will
 require a few things:
-* solve for closest approach (we can't just aim for Ap like we did with lunar)
-  - probably binary search
 * support for non-full-length burns (needed for TCMs)
   - this is now done, but sub-items below aren't yet
   - maybe also burns that aren't an integer number of seconds long

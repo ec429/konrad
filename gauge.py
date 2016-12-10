@@ -1309,46 +1309,27 @@ class UpdateSimElements(Gauge):
                 self.sim.compute_elements(key)
             except SimulationException:
                 continue
-            if key not in self.sim.data:
-                continue
-            tan = self.sim.data[key].get('tan')
-            if tan is None:
-                tana = None
-            else:
-                tana = math.pi - tan
-                if tana < 0: tana += 2.0 * math.pi
-                self.sim.data[key]['tana'] = tana
-            man = self.sim.data[key].get('man')
-            if man is None:
-                mana = None
-            else:
-                mana = math.pi - man
-                if mana < 0: mana += 2.0 * math.pi
-                self.sim.data[key]['mana'] = mana
-            mmo = self.sim.data[key].get('mmo')
-            ecc = self.sim.data[key].get('ecc')
-            if None in (mmo, mana, ecc) or mmo <= 0 or ecc >= 1.0:
-                ttap = None
-            else:
-                ttap = mana / mmo
-                self.sim.data[key]['ttap'] = ttap
-            inc = self.sim.data[key].get('inc')
-            lan = self.sim.data[key].get('lan')
-            ape = self.sim.data[key].get('ape')
-            sma = self.sim.data[key].get('sma')
-            # position at apoapsis
-            if None in (inc, lan, ape, ecc, sma) or ecc >= 1.0:
-                apvec = None
-            else:
-                apvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)[0]
-                self.sim.data[key]['apvec'] = apvec
 
-class UpdateSoiExit(Gauge):
-    # Patches conics out of current SOI (if on escape trajectory)
-    def __init__(self, dl, cw, body, sim, key):
-        super(UpdateSoiExit, self).__init__(dl, cw)
+class UpdateEventXform(Gauge):
+    # Abstract class for orbital extensions of RocketSim[3D] results
+    def __init__(self, dl, cw, sim, frm, to):
+        super(UpdateEventXform, self).__init__(dl, cw)
         self.sim = sim
-        self.key = key
+        self.frm = frm
+        self.to = to
+    def sim_get(self, key):
+        froms = [k for k in self.frm if k in self.sim.data]
+        if not froms:
+            return None
+        return self.sim.data[froms[0]].get(key)
+    @property
+    def sim_set(self):
+        return self.sim.data[self.to]
+
+class UpdateSoiExit(UpdateEventXform):
+    # Patches conics out of current SOI (if on escape trajectory)
+    def __init__(self, dl, cw, body, sim, frm, to):
+        super(UpdateSoiExit, self).__init__(dl, cw, sim, frm, to)
         self.body = body
         self.add_prop('soi', 'b.soi[%d]'%(body,))
         self.add_prop('pbn', 'v.body')
@@ -1358,50 +1339,50 @@ class UpdateSoiExit(Gauge):
             self.add_prop('soi', 'b.soi[%d]'%(kwargs['body'],))
         super(UpdateSoiExit, self)._changeopt(**kwargs)
     def draw(self):
+        if self.frm not in self.sim.data:
+            return
         soi = self.get('soi')
         if soi is None:
             return
         pbn = self.get('pbn')
         pb_cb = orbit.celestial_bodies.get(str(pbn))
-        if self.key not in self.sim.data:
-            return
-        ecc = self.sim.data[self.key].get('ecc')
-        sma = self.sim.data[self.key].get('sma')
+        ecc = self.sim_get('ecc')
+        sma = self.sim_get('sma')
         if None in (ecc, sma):
             return
         apa = (1 + ecc) * sma # real apa, not (apa - rad)
         if apa > 0 and apa < soi:
             return
-        self.sim.data['x'] = {}
+        self.sim.data[self.to] = {}
         eax = orbit.ean_from_r(sma, ecc, soi)
-        self.sim.data['x']['ean'] = eax
+        self.sim_set['ean'] = eax
         manx = orbit.man_from_ean(eax, ecc)
-        time = self.sim.data[self.key].get('time')
+        time = self.sim_get('time')
         if time is None:
             utime = None
         else:
             utime = time + self.sim.UT - orbit.epoch
-        ma0 = self.sim.data[self.key].get('man')
-        mmo = self.sim.data[self.key].get('mmo')
+        ma0 = self.sim_get('man')
+        mmo = self.sim_get('mmo')
         xtime = None
         xut = None
         if None not in (ma0, mmo) and mmo > 0:
             ttx = (manx - ma0) / mmo
-            self.sim.data[self.key]['ttx'] = ttx
+            self.sim_set['ttx'] = ttx
             if time is not None:
                 xtime = time + ttx
-                self.sim.data['x']['time'] = xtime
+                self.sim_set['time'] = xtime
             if utime is not None:
                 xut = utime + ttx
-                self.sim.data['x']['ut'] = xut
-        ape = self.sim.data[self.key].get('ape')
-        inc = self.sim.data[self.key].get('inc')
-        lan = self.sim.data[self.key].get('lan')
+                self.sim_set['ut'] = xut
+        ape = self.sim_get('ape')
+        inc = self.sim_get('inc')
+        lan = self.sim_get('lan')
         if None in (ape, inc, lan):
             return
         xx, xv = self.sim.pbody.compute_3d_vector(sma, ecc, eax, ape, inc, lan)
-        self.sim.data['x']['x'] = xx
-        self.sim.data['x']['v'] = xv
+        self.sim_set['x'] = xx
+        self.sim_set['v'] = xv
         if None in (xut, pb_cb):
             return
         pelts = dict(pb_cb.elts)
@@ -1413,13 +1394,54 @@ class UpdateSoiExit(Gauge):
         px, pv = ppb.compute_3d_vector(pelts['sma'], pelts['ecc'], peax, pelts['ape'], pelts['inc'], pelts['lan'])
         xpx = px + xx
         xpv = pv + xv
-        self.sim.data['x']['px'] = xpx
-        self.sim.data['x']['pv'] = xpv
+        self.sim_set['px'] = xpx
+        self.sim_set['pv'] = xpv
         xelts = ppb.compute_3d_elements(xpx, xpv)
-        self.sim.data['x'].update(xelts)
+        self.sim_set.update(xelts)
+
+class UpdateApoApsis(UpdateEventXform):
+    # Determines parameters of apoapsis
+    def draw(self):
+        if self.frm not in self.sim.data:
+            return
+        self.sim.data[self.to] = {}
+        tan = self.sim_get('tan')
+        if tan is None:
+            tana = None
+        else:
+            tana = math.pi - tan
+            if tana < 0: tana += 2.0 * math.pi
+            self.sim_set['dtan'] = tana
+        man = self.sim_get('man')
+        if man is None:
+            mana = None
+        else:
+            mana = math.pi - man
+            if mana < 0: mana += 2.0 * math.pi
+            self.sim_set['mana'] = mana
+        mmo = self.sim_get('mmo')
+        ecc = self.sim_get('ecc')
+        if None in (mmo, mana, ecc) or mmo <= 0 or ecc >= 1.0:
+            ttap = None
+        else:
+            ttap = mana / mmo
+            self.sim_set['ttap'] = ttap
+            time = self.sim_get('time')
+            if time is not None:
+                self.sim_set['time'] = time + ttap
+        inc = self.sim_get('inc')
+        lan = self.sim_get('lan')
+        ape = self.sim_get('ape')
+        sma = self.sim_get('sma')
+        # position at apoapsis
+        if None in (inc, lan, ape, ecc, sma) or ecc >= 1.0:
+            return
+        rvec, vvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)[0]
+        self.sim_set['rvec'] = rvec
+        self.sim_set['vvec'] = vvec
 
 class UpdateTgtProximity(Gauge):
-    # Computes target offset at apoapsis from RocketSim results
+    # Computes target offset from RocketSim results
     def __init__(self, dl, cw, sim, keys, tgt):
         super(UpdateTgtProximity, self).__init__(dl, cw)
         self.sim = sim
@@ -1434,7 +1456,6 @@ class UpdateTgtProximity(Gauge):
         self.add_prop('tinc', 'b.o.inclination[%d]'%(tgt,))
         self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
         self.add_prop('tape', 'b.o.argumentOfPeriapsis[%d]'%(tgt,))
-        self.add_prop('ttra', 'b.o.trueAnomaly[%d]'%(tgt,))
         self.add_prop('tgm', 'b.o.gravParameter[%d]'%(tgt,))
     def unset_tprops(self):
         self.del_prop('tsma')
@@ -1443,8 +1464,7 @@ class UpdateTgtProximity(Gauge):
         self.del_prop('tinc')
         self.del_prop('tlan')
         self.del_prop('tape')
-        self.del_prop('ttra')
-        self.del_prop('tper')
+        self.del_prop('tgm')
     def draw(self):
         tsma = self.get('tsma')
         tmae = self.get('tmae') # Apparently this one is already in radians
@@ -1452,7 +1472,6 @@ class UpdateTgtProximity(Gauge):
         tinc = self.getrad('tinc')
         tlan = self.getrad('tlan')
         tape = self.getrad('tape')
-        ttra = self.getrad('ttra')
         tgm = self.get('tgm')
         if None in (tgm, tsma) or not hasattr(self.sim, 'pbody'):
             gm = None
@@ -1470,19 +1489,16 @@ class UpdateTgtProximity(Gauge):
             time = self.sim.data[key].get('time')
             if time is None:
                 continue
-            time += self.sim.UT - orbit.epoch
-            # target mean anomaly at T
-            tma0 = math.fmod(tmae + time * tmmo, 2.0 * math.pi)
+            ut0 = self.sim.UT - orbit.epoch
+            ut1 = time + ut0
+            # target mean anomaly at time 0
+            tma0 = math.fmod(tmae + ut0 * tmmo, 2.0 * math.pi)
             self.sim.data[key]['tma0'] = tma0
-            # time to Ap
-            ttap = self.sim.data[key].get('ttap')
-            if ttap is None:
-                continue
-            # target mean anomaly change over ttap
-            tdma = math.fmod(ttap * tmmo, 2.0 * math.pi)
+            # target mean anomaly change over time
+            tdma = math.fmod(time * tmmo, 2.0 * math.pi)
             self.sim.data[key]['tdma'] = tdma
-            # target mean anomaly at (vessel) Ap
-            tma1 = math.fmod(tmae + (time + ttap) * tmmo, 2.0 * math.pi)
+            # target mean anomaly at T
+            tma1 = math.fmod(tmae + ut1 * tmmo, 2.0 * math.pi)
             self.sim.data[key]['tma1'] = tma1
             if tecc is None:
                 continue
@@ -1494,16 +1510,15 @@ class UpdateTgtProximity(Gauge):
             tr1 = orbit.tan_from_ean(te1, tecc)
             self.sim.data[key]['tr0'] = tr0
             self.sim.data[key]['tr1'] = tr1
-            # target true anomaly change over tta
+            # target true anomaly change over time
             tdta = math.fmod(tr1 - tr0, 2.0 * math.pi)
             self.sim.data[key]['tdta'] = tdta
-            tana = self.sim.data[key].get('tana')
-            if tana is None:
-                continue
-            # true phase angle; +ve is behind
-            tpy = tana - tdta
-            self.sim.data[key]['tpy'] = tpy
-            # target altitude at Ap
+            dtan = self.sim.data[key].get('dtan')
+            if dtan is not None:
+                # true transfer phase angle; +ve is behind
+                tpy = dtan - tdta
+                self.sim.data[key]['tpy'] = tpy
+            # target altitude at T
             trad = tsma * (1.0 - tecc * math.cos(te1))
             talt = trad - self.sim.pbody.rad
             self.sim.data[key]['talt'] = talt
@@ -1526,11 +1541,160 @@ class UpdateTgtProximity(Gauge):
             self.sim.data[key]['ri'] = ri
             # target state vectors at (vessel) Ap
             txr, txv = tpb.compute_3d_vector(tsma, tecc, te1, tape, tinc, tlan)
-            apvec = self.sim.data[key].get('apvec')
+            apvec = self.sim.data[key].get('rvec')
             if apvec is None:
                 continue
             # angle between direction vectors
             self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
+
+class UpdateTgtRI(Gauge):
+    def __init__(self, dl, cw, sim, keys, tgt):
+        super(UpdateTgtRI, self).__init__(dl, cw)
+        self.sim = sim
+        self.keys = keys
+        self.tgt = tgt
+        if tgt is not None:
+            self.set_tprops(tgt)
+    def set_tprops(self, tgt):
+        self.add_prop('tname', 'b.name[%d]'%(tgt,))
+    def unset_tprops(self):
+        self.del_prop('tname')
+    def draw(self):
+        tname = self.get('tname')
+        tcb = orbit.celestial_bodies.get(tname)
+        if tcb is None:
+            return
+        # we will assume that you and the target have the same parent body as
+        # of the source event.  If not, then you should have patched out with
+        # an UpdateSoiExit, shouldn't you?
+        pcb = tcb.parent_body
+        if pcb is None:
+            return
+        ut0 = self.sim.UT - orbit.epoch
+        for key in self.keys:
+            if key not in self.sim.data:
+                continue
+            time = self.sim.data[key].get('time')
+            if time is None:
+                continue
+            ut1 = time + ut0
+            sam = self.sim.data[key].get('sam')
+            tsam = tcb.samhat
+            if None in (sam, tsam):
+                continue
+            ri = orbit.angle_between(sam.hat, tsam)
+            self.keys['ri'] = ri
+
+class UpdateTgtCloseApproach(UpdateEventXform):
+    # Finds close(st?) approach to target
+    COARSE_STEPS = 24
+    FINE_ITERS = 16
+    def __init__(self, dl, cw, sim, tgt, frm, to):
+        super(UpdateTgtCloseApproach, self).__init__(dl, cw, sim, frm, to)
+        self.tgt = tgt
+        if tgt is not None:
+            self.set_tprops(tgt)
+    def set_tprops(self, tgt):
+        self.add_prop('tname', 'b.name[%d]'%(tgt,))
+    def unset_tprops(self):
+        self.del_prop('tname')
+    def draw(self):
+        if self.frm not in self.sim.data:
+            return
+        tname = self.get('tname')
+        tcb = orbit.celestial_bodies.get(tname)
+        if tcb is None:
+            return
+        # we will assume that you and the target have the same parent body as
+        # of the source event.  If not, then you should have patched out with
+        # an UpdateSoiExit, shouldn't you?
+        pcb = tcb.parent_body
+        if pcb is None:
+            return
+        self.sim.data[self.to] = {}
+        ut0 = self.sim.UT - orbit.epoch
+        time = self.sim_get('time')
+        if time is None:
+            return
+        ut1 = time + ut0
+        mmo = self.sim_get('mmo')
+        tmmo = pcb.elts['mmo']
+        if None in (mmo, tmmo):
+            return
+        # Synodic mean motion
+        symmo = abs(tmmo - mmo)
+        # Synodic period
+        syper = 2.0 * math.pi / symmo
+        self.sim_set['syper'] = syper
+        man0 = self.sim_get('man')
+        sma = self.sim_get('sma')
+        ecc = self.sim_get('ecc')
+        ape = self.sim_get('ape')
+        inc = self.sim_get('inc')
+        lan = self.sim_get('lan')
+        if None in (man0, sma, ecc, ape, inc, lan):
+            return
+        mind = None
+        argmind = None
+        # Let's find the rough region first
+        # We're not interested in anything more than 1 syper out
+        for i in xrange(self.COARSE_STEPS):
+            it = i * syper / float(COARSE_STEPS)
+            t = time + it
+            ut = ut1 + it
+            man = man0 + t * mmo
+            ean = orbit.ean_from_man(man, ecc, 16)
+            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            tman = tmae + ut * tmmo
+            tean = orbit.ean_from_man(tman, tecc, 16)
+            tr, tv = tcb.vectors_at_ut(ut)
+            d = (tr - r).mag
+            if mind is None or d < mind:
+                mind = d
+                argmind = it
+        if argmind is None:
+            return
+        dt = argmind
+        self.sim_set['rough'] = dt
+        # Now we Newton it in
+        last_step_size = None
+        for i in xrange(self.FINE_ITERS):
+            t = time + dt
+            ut = ut1 + dt
+            man = man0 + t * mmo
+            ean = orbit.ean_from_man(man, ecc, 16)
+            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            tman = tmae + ut * tmmo
+            tean = orbit.ean_from_man(tman, tecc, 16)
+            tr, tv = tcb.vectors_at_ut(ut)
+            dr = tr - r
+            dv = tv - v
+            # Solve closest approach of x = dr + w dv to 0
+            # at that point, x . dv = 0
+            # but x . dv = (dr + w dv) . dv = dr . dv + w dv . dv
+            drdv = dr.dot(dv)
+            dvdv = dv.dot(dv)
+            if dvdv == 0:
+                # we're at rest relative to the target.  Let's give up :'(
+                return
+            w = -drdv / dvdv
+            if last_step_size is not None and w > last_step_size:
+                # our step size just got bigger, we're probably diverging
+                # this is another of those 'give up' situations, isn't it?
+                return
+            last_step_size = w
+            dt += w
+            if w < 1.0:
+                # We got within a second.  That's probably good enough
+                break
+        self.set_sim['lss'] = last_step_size
+        self.set_sim['time'] = t
+        self.set_sim['rvec'] = r
+        self.set_sim['vvec'] = v
+        self.set_sim['trvec'] = tr
+        self.set_sim['tvvec'] = tv
+        self.set_sim['drvec'] = dr
+        self.set_sim['dvvec'] = dv
 
 class RSTime(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):
@@ -1773,6 +1937,26 @@ class RSTgtAlt(SIGauge):
             d = self.sim.data[keys[0]]
             alt = d.get(self.param)
             super(RSTgtAlt, self).draw(alt)
+            col = 3
+        else:
+            self.addstr(self.label+'-'*(self.olg_width - 1))
+            col = 2
+        self.chgat(0, self.width, curses.color_pair(col))
+
+class RSSIParam(SIGauge):
+    def __init__(self, dl, cw, key, sim, param, label, unit):
+        super(RSSIParam, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+        self.param = param
+        self.label = label
+        self.unit = unit
+    def draw(self):
+        value = self.sim.data.get(self.key, {}).get(self.param)
+        if value is not None:
+            if isinstance(value, matrix.Vector3):
+                value = value.mag
+            super(RSSIParam, self).draw(value)
             col = 3
         else:
             self.addstr(self.label+'-'*(self.olg_width - 1))

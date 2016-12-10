@@ -21,6 +21,7 @@ class CelestialBody(object):
     def connect_parent(self):
         if self.parent in celestial_bodies:
             self.pb = celestial_bodies[self.parent]
+            # mu = G(M+m)
             gm = self.gm + self.pb.gm
             # mean motion n = sqrt(mu / a^3)
             self.elts['mmo'] = math.sqrt(gm / self.elts['sma'] ** 3)
@@ -30,6 +31,25 @@ class CelestialBody(object):
             return None
         gm = self.gm + self.pb.gm
         return ParentBody(self.pb.rad, gm)
+    def vectors_at_ut(self, ut):
+        """Returns (x,v) relative to parent body, at given time since epoch"""
+        if not self.parent:
+            return None
+        man = self.elts['maae'] + ut * self.elts['mmo']
+        ean = ean_from_man(man, self.elts['ecc'], 16)
+        return self.parent_body.compute_3d_vector(self.elts['sma'],
+                                                  self.elts['ecc'],
+                                                  ean,
+                                                  self.elts['ape'],
+                                                  self.elts['inc'],
+                                                  self.elts['lan'])
+    @property
+    def samhat(self):
+        """Returns orbit normal vector"""
+        if not self.parent:
+            return None
+        xform = oxform(self.elts['ape'], self.elts['inc'], self.elts['lan'])
+        return xform * matrix.Vector3.ez()
 
 celestial_bodies = {}
 epoch = None

@@ -629,7 +629,7 @@ class BaseAstroConsole(Console):
                 if real_burn_dur is not None:
                     self.ms.burn_dur = real_burn_dur - 1
             else:
-                self.ms.burn_dur = max(self.ms.burn_dur - 1, 1)
+                self.ms.burn_dur = max(self.ms.burn_dur - 1, 0)
             self.update_vars()
             return
         if key == ord('.'):
@@ -645,7 +645,7 @@ class BaseAstroConsole(Console):
                 if real_burn_dur is not None:
                     self.ms.burn_dur = real_burn_dur - 10
             else:
-                self.ms.burn_dur = max(self.ms.burn_dur - 10, 1)
+                self.ms.burn_dur = max(self.ms.burn_dur - 10, 0)
             self.update_vars()
             return
         if key == ord('>'):
@@ -697,7 +697,8 @@ class AstroConsole(BaseAstroConsole):
     title = 'Astrogation'
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
-        tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0b', opts.target_body)
+        apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
+        tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         zwin = scr.derwin(6, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
@@ -712,18 +713,18 @@ class AstroConsole(BaseAstroConsole):
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'tana', 'J')
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'a', self.ms, 'dtan', 'J')
                                     ],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
         if opts.target_body is None:
             rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
         else:
-            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
-        a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'b', self.ms),
-                                    gauge.RSTgtAlt(dl, awin.derwin(1, 14, 4, 1), 'b', self.ms),
-                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 5, 1), 'b', self.ms, 'tpy', 'q'),
-                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 6, 1), 'b', self.ms, 'pa1', '*'),
+            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'a', self.ms, 'ri', 'i')
+        a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'a', self.ms),
+                                    gauge.RSTgtAlt(dl, awin.derwin(1, 14, 4, 1), 'a', self.ms),
+                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 5, 1), 'a', self.ms, 'tpy', 'q'),
+                                    gauge.RSAngleParam(dl, awin.derwin(1, 14, 6, 1), 'a', self.ms, 'pa1', '*'),
                                     rinc,
                                     ],
                              "Apo")
@@ -738,18 +739,16 @@ class AstroConsole(BaseAstroConsole):
                                         gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
                                         ],
                                  "Tgt")
-        return [elts, tgt, z, b, a, t]
+        return [elts, apo, tgt, z, b, a, t]
 
 class ExitConsole(BaseAstroConsole):
     title = 'Escape Astrogation'
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
-        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b')
-        zwin = scr.derwin(6, 16, 7, 1)
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
+        zwin = scr.derwin(4, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
-                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'pa0', 'p'),
-                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
                                     ],
                              "Start")
         bwin = scr.derwin(9, 16, 7, 17)
@@ -778,7 +777,58 @@ class ExitConsole(BaseAstroConsole):
                              "SOI Exit")
         return [elts, exit, z, b, x]
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole}
+class ApproachConsole(BaseAstroConsole):
+    title = 'Close-Approach Astrogation'
+    def outputs(self, opts, scr, dl):
+        elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
+        appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, opts.target_body, 'xb', 'e')
+        ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'bxe', opts.target_body)
+        zwin = scr.derwin(4, 16, 7, 1)
+        z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
+                                    gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
+                                    ],
+                             "Start")
+        bwin = scr.derwin(9, 16, 7, 17)
+        if opts.target_body is None:
+            rinc = gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
+        else:
+            rinc = gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
+        b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
+                                    gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
+                                    gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
+                                    gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
+                                    gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
+                                    gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
+                                    rinc,
+                                    ],
+                             "End")
+        xwin = scr.derwin(9, 16, 7, 33)
+        if opts.target_body is None:
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 7, 1), 'x', self.ms, 'inc', 'i')
+        else:
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 7, 1), 'x', self.ms, 'ri', 'i')
+        x = gauge.GaugeGroup(xwin, [gauge.RSTime(dl, xwin.derwin(1, 14, 1, 1), 'x', self.ms),
+                                    gauge.RSApoapsis(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
+                                    gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms),
+                                    gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 6, 1), 'x', self.ms),
+                                    rinc,
+                                    ],
+                             "SOI Exit")
+        ewin = scr.derwin(9, 16, 7, 49)
+        if opts.target_body is None:
+            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 7, 1), 'e', self.ms, 'inc', 'i')
+        else:
+            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 7, 1), 'e', self.ms, 'ri', 'i')
+        e = gauge.GaugeGroup(ewin, [gauge.RSTime(dl, ewin.derwin(1, 14, 1, 1), 'e', self.ms),
+                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 4, 1), 'e', self.ms, 'drvec', 'd', 'm'),
+                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'dvvec', 'v', 'm/s'),
+                                    rinc,
+                                    ],
+                             "Approach")
+        return [elts, exit, appr, ris, z, b, x, e]
+
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole}
 
 def parse_si(option, opt, value):
     prefixes = {'k': 3, 'M': 6, 'G': 9}
