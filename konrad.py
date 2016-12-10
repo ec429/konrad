@@ -556,7 +556,9 @@ class BaseAstroConsole(Console):
         if self.ms is not None:
             self.ms.mode = self.mode
             self.ms.stagecap = self.stagecap
-            if self.ms.burn_dur > 0:
+            if self.ms.burn_end >= 0:
+                self.vars['burn'] = 'Burn: TLock'
+            elif self.ms.burn_dur >= 0:
                 self.vars['burn'] = 'Burn: Timed'
             else:
                 self.vars['burn'] = 'Burn:  Full'
@@ -572,6 +574,19 @@ class BaseAstroConsole(Console):
         else:
             new = (old + delta) % 360
         self.vars[what] = new
+    def dbt(self, base):
+        sf = 5 ** -self.fine
+        if self.ms.burn_end >= 0:
+            self.ms.burn_end += base * sf
+        else:
+            if self.ms.burn_dur < 0:
+                if self.real_burn_dur is None:
+                    return
+                self.ms.burn_dur = self.real_burn_dur
+                if base > 0:
+                    return
+            self.ms.burn_dur = max(self.ms.burn_dur + base * sf, 0)
+        self.update_vars()
     def input(self, key):
         if key == ord('z'):
             self.dl.send_msg({'run':['f.setThrottle[1.0]']})
@@ -617,44 +632,40 @@ class BaseAstroConsole(Console):
             self.ms.burnUT -= 100
             return
         # Actual time until burnout, if burn_dur is unset
-        real_burn_dur = None
+        self.real_burn_dur = None
         if 'time' in self.ms.data.get('0', {}) and 'time' in self.ms.data.get('b', {}):
-            real_burn_dur = self.ms.data['b']['time'] - self.ms.data['0']['time']
+            self.real_burn_dur = self.ms.data['b']['time'] - self.ms.data['0']['time']
+        if key == ord('0'):
+            if self.ms.burn_end < 0:
+                self.ms.burn_dur = 0
+            else:
+                self.ms.burn_end = self.ms.burnUT
+            self.update_vars()
+            return
         if key == ord('B'):
+            self.ms.burn_end = -1
             self.ms.burn_dur = -1
             self.update_vars()
             return
-        if key == ord(','):
-            if self.ms.burn_dur < 0:
-                if real_burn_dur is not None:
-                    self.ms.burn_dur = real_burn_dur - 1
-            else:
-                self.ms.burn_dur = max(self.ms.burn_dur - 1, 0)
+        if key == ord('N'):
+            if self.ms.burn_end >= 0:
+                self.ms.burn_dur = self.ms.burn_end - self.ms.burnUT
+                self.ms.burn_end = -1
+            elif self.ms.burn_dur >= 0:
+                self.ms.burn_end = self.ms.burnUT + self.ms.burn_dur
             self.update_vars()
+            return
+        if key == ord(','):
+            self.dbt(-5.0)
             return
         if key == ord('.'):
-            if self.ms.burn_dur < 0:
-                if real_burn_dur is not None:
-                    self.ms.burn_dur = real_burn_dur
-            else:
-                self.ms.burn_dur += 1
-            self.update_vars()
+            self.dbt(5.0)
             return
         if key == ord('<'):
-            if self.ms.burn_dur < 0:
-                if real_burn_dur is not None:
-                    self.ms.burn_dur = real_burn_dur - 10
-            else:
-                self.ms.burn_dur = max(self.ms.burn_dur - 10, 0)
-            self.update_vars()
+            self.dbt(-50.0)
             return
         if key == ord('>'):
-            if self.ms.burn_dur < 0:
-                if real_burn_dur is not None:
-                    self.ms.burn_dur = real_burn_dur
-            else:
-                self.ms.burn_dur += 10
-            self.update_vars()
+            self.dbt(50.0)
             return
         if key == curses.KEY_PPAGE:
             self.stagecap += 1
@@ -699,6 +710,7 @@ class AstroConsole(BaseAstroConsole):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
         apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
+        ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
         zwin = scr.derwin(6, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
@@ -720,7 +732,7 @@ class AstroConsole(BaseAstroConsole):
         if opts.target_body is None:
             rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
         else:
-            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'a', self.ms, 'ri', 'i')
+            rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
         a = gauge.GaugeGroup(awin, [gauge.RSTTAp(dl, awin.derwin(1, 14, 1, 1), 'a', self.ms),
                                     gauge.RSTgtAlt(dl, awin.derwin(1, 14, 4, 1), 'a', self.ms),
                                     gauge.RSAngleParam(dl, awin.derwin(1, 14, 5, 1), 'a', self.ms, 'tpy', 'q'),
@@ -739,7 +751,7 @@ class AstroConsole(BaseAstroConsole):
                                         gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
                                         ],
                                  "Tgt")
-        return [elts, apo, tgt, z, b, a, t]
+        return [elts, apo, tgt, ris, z, b, a, t]
 
 class ExitConsole(BaseAstroConsole):
     title = 'Escape Astrogation'
@@ -831,15 +843,13 @@ class ApproachConsole(BaseAstroConsole):
                              "Approach")
         swin = scr.derwin(10, 16, 7, 63)
         s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', self.ms),
-                                    gauge.RSAlt(dl, swin.derwin(1, 14, 2, 1), 's', self.ms),
-                                    gauge.RSVSpeed(dl, swin.derwin(1, 14, 3, 1), 's', self.ms),
+                                    gauge.RSSIParam(dl, swin.derwin(1, 14, 2, 1), 's', self.ms, 'edrvec', 'Re', 'm'),
                                     gauge.RSApoapsis(dl, swin.derwin(1, 14, 4, 1), 's', self.ms),
                                     gauge.RSPeriapsis(dl, swin.derwin(1, 14, 5, 1), 's', self.ms),
-                                    gauge.RSObtPeriod(dl, swin.derwin(1, 14, 6, 1), 's', self.ms),
                                     gauge.RSAngleParam(dl, swin.derwin(1, 14, 7, 1), 's', self.ms, 'inc', 'i'),
                                     gauge.RSTimeParam(dl, swin.derwin(1, 14, 8, 1), 's', self.ms, 'lss', 'w'),
                                     ],
-                             "End")
+                             "SOI Entry")
         return [elts, exit, appr, ris, entry, z, b, x, e, s]
 
 consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole}

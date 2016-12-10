@@ -1293,6 +1293,9 @@ class UpdateManeuverSim(UpdateRocketSim3D):
         self.add_prop('UT', 't.universalTime')
     def draw(self):
         UT = self.get('UT')
+        if UT is None:
+            self.sim.data = {}
+            return
         self.sim.UT = UT
         self.sim.burnUT = max(self.sim.burnUT, UT)
         super(UpdateManeuverSim, self).draw()
@@ -1317,6 +1320,9 @@ class UpdateEventXform(Gauge):
         self.sim = sim
         self.frm = frm
         self.to = to
+    @property
+    def nokeys(self):
+        return not any(k in self.sim.data for k in self.frm)
     def sim_get(self, key):
         froms = [k for k in self.frm if k in self.sim.data]
         if not froms:
@@ -1339,7 +1345,7 @@ class UpdateSoiExit(UpdateEventXform):
             self.add_prop('soi', 'b.soi[%d]'%(kwargs['body'],))
         super(UpdateSoiExit, self)._changeopt(**kwargs)
     def draw(self):
-        if self.frm not in self.sim.data:
+        if self.nokeys:
             return
         soi = self.get('soi')
         if soi is None:
@@ -1402,7 +1408,7 @@ class UpdateSoiExit(UpdateEventXform):
 class UpdateApoApsis(UpdateEventXform):
     # Determines parameters of apoapsis
     def draw(self):
-        if self.frm not in self.sim.data:
+        if self.nokeys:
             return
         self.sim.data[self.to] = {}
         tan = self.sim_get('tan')
@@ -1436,9 +1442,14 @@ class UpdateApoApsis(UpdateEventXform):
         # position at apoapsis
         if None in (inc, lan, ape, ecc, sma) or ecc >= 1.0:
             return
-        rvec, vvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)[0]
+        rvec, vvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)
         self.sim_set['rvec'] = rvec
         self.sim_set['vvec'] = vvec
+        # copy orbital parameters
+        self.sim_set['man'] = math.pi
+        self.sim_set['ean'] = math.pi
+        for k in ['sma', 'ecc', 'ape', 'inc', 'lan', 'mmo', 'sam']:
+            self.sim_set[k] = self.sim_get(k)
 
 class UpdateTgtProximity(Gauge):
     # Computes target offset from RocketSim results
@@ -1481,10 +1492,10 @@ class UpdateTgtProximity(Gauge):
             gm = tgm + self.sim.pbody.gm
             # target mean motion n = sqrt(mu / a^3)
             tmmo = math.sqrt(gm / tsma ** 3)
+        if None in (tmae, tmmo):
+            return
         for key in self.keys:
             if key not in self.sim.data:
-                continue
-            if None in (tmae, tmmo):
                 continue
             time = self.sim.data[key].get('time')
             if time is None:
@@ -1533,12 +1544,11 @@ class UpdateTgtProximity(Gauge):
             # angle between direction vectors
             self.sim.data[key]['pa0'] = orbit.angle_between(tr.hat, r.hat)
             h = self.sim.data[key].get('sam')
-            if h is None:
-                continue
-            # relative inclination
-            th = tr.cross(tv)
-            ri = orbit.angle_between(h.hat, th.hat)
-            self.sim.data[key]['ri'] = ri
+            if h is not None:
+                # relative inclination
+                th = tr.cross(tv)
+                ri = orbit.angle_between(h.hat, th.hat)
+                self.sim.data[key]['ri'] = ri
             # target state vectors at (vessel) Ap
             txr, txv = tpb.compute_3d_vector(tsma, tecc, te1, tape, tinc, tlan)
             apvec = self.sim.data[key].get('rvec')
@@ -1583,7 +1593,7 @@ class UpdateTgtRI(Gauge):
             if None in (sam, tsam):
                 continue
             ri = orbit.angle_between(sam.hat, tsam)
-            self.keys['ri'] = ri
+            self.sim.data[key]['ri'] = ri
 
 class UpdateTgtCloseApproach(UpdateEventXform):
     # Finds close(st?) approach to target
@@ -1599,7 +1609,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
     def unset_tprops(self):
         self.del_prop('tname')
     def draw(self):
-        if self.frm not in self.sim.data:
+        if self.nokeys:
             return
         tname = self.get('tname')
         tcb = orbit.celestial_bodies.get(tname)
@@ -1618,7 +1628,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             return
         ut1 = time + ut0
         mmo = self.sim_get('mmo')
-        tmmo = pcb.elts['mmo']
+        tmmo = tcb.elts['mmo']
         if None in (mmo, tmmo):
             return
         # Synodic mean motion
@@ -1639,10 +1649,10 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         # Let's find the rough region first
         # We're not interested in anything more than 1 syper out
         for i in xrange(self.COARSE_STEPS):
-            it = i * syper / float(COARSE_STEPS)
+            it = i * syper / float(self.COARSE_STEPS)
             t = time + it
             ut = ut1 + it
-            man = man0 + t * mmo
+            man = man0 + it * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
             r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
@@ -1653,13 +1663,13 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         if argmind is None:
             return
         dt = argmind
-        self.sim_set['rough'] = dt
+        self.sim_set['rough'] = time + dt
         # Now we Newton it in
         last_step_size = None
         for i in xrange(self.FINE_ITERS):
             t = time + dt
             ut = ut1 + dt
-            man = man0 + t * mmo
+            man = man0 + dt * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
             r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
@@ -1674,11 +1684,11 @@ class UpdateTgtCloseApproach(UpdateEventXform):
                 # we're at rest relative to the target.  Let's give up :'(
                 return
             w = -drdv / dvdv
-            if last_step_size is not None and w > last_step_size:
+            if last_step_size is not None and abs(w) > last_step_size:
                 # our step size just got bigger, we're probably diverging
                 # this is another of those 'give up' situations, isn't it?
                 return
-            last_step_size = w
+            last_step_size = abs(w)
             dt += w
             if w < 1.0:
                 # We got within a second.  That's probably good enough
@@ -1701,10 +1711,13 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         ecb = orbit.celestial_bodies.get('Earth', orbit.celestial_bodies.get('Kerbin'))
         if ecb is None:
             return
-        er, _ = ecb.vectors_at_ut(ut)
-        self.sim_set['ervec'] = er
-        edr = r - er
-        self.sim_set['edrvec'] = edr
+        if ecb.name == tcb.parent:
+            self.sim_set['edrvec'] = r
+        else:
+            er, _ = ecb.vectors_at_ut(ut)
+            self.sim_set['ervec'] = er
+            edr = r - er
+            self.sim_set['edrvec'] = edr
 
 class UpdateSoiEntry(UpdateEventXform):
     """Patches into target SOI.  Input event should be close approach"""
@@ -1721,7 +1734,7 @@ class UpdateSoiEntry(UpdateEventXform):
         self.del_prop('tname')
         self.del_prop('tsoi')
     def draw(self):
-        if self.frm not in self.sim.data:
+        if self.nokeys:
             return
         tname = self.get('tname')
         tcb = orbit.celestial_bodies.get(tname)
@@ -1760,12 +1773,12 @@ class UpdateSoiEntry(UpdateEventXform):
         for i in xrange(self.FINE_ITERS):
             t = time + dt
             ut = ut1 + dt
-            man = man0 + t * mmo
+            man = man0 + dt * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
             r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
-            dr = tr - r
-            dv = tv - v
+            dr = r - tr
+            dv = v - tv
             # x = dr + w dv, we want |x| = soi, decreasing (hence lower branch)
             # x . x = dr.dr + 2w dr.dv + w^2 dv.dv
             # so dv.dv w^2 + 2dr.dv w + (dr.dr - soi^2) = 0
@@ -1780,13 +1793,13 @@ class UpdateSoiEntry(UpdateEventXform):
                 return
             # we want the negative root, i.e. entry rather than exit
             w = (-b - math.sqrt(d)) / (a * 2.0)
-            if last_step_size is not None and w > last_step_size:
+            if last_step_size is not None and abs(w) > last_step_size:
                 # our step size just got bigger, we're probably diverging
                 # this is another of those 'give up' situations, isn't it?
                 return
-            last_step_size = w
+            last_step_size = abs(w)
             dt += w
-            if w < 1.0:
+            if abs(w) < 1.0:
                 # We got within a second.  That's probably good enough
                 break
         self.sim.data[self.to] = {}
@@ -1796,10 +1809,22 @@ class UpdateSoiEntry(UpdateEventXform):
         self.sim_set['vvec'] = v
         self.sim_set['trvec'] = tr
         self.sim_set['tvvec'] = tv
-        self.sim_set['drvec'] = -dr
-        self.sim_set['dvvec'] = -dv
-        elts = tcb.compute_3d_elements(-dr, -dv)
+        self.sim_set['drvec'] = dr
+        self.sim_set['dvvec'] = dv
+        tpb = orbit.ParentBody(tcb.rad, tcb.gm)
+        elts = tpb.compute_3d_elements(dr, dv)
         self.sim_set.update(elts)
+        # find distance to Earth (for comms range)
+        ecb = orbit.celestial_bodies.get('Earth', orbit.celestial_bodies.get('Kerbin'))
+        if ecb is None:
+            return
+        if ecb.name == tcb.parent:
+            self.sim_set['edrvec'] = r
+        else:
+            er, _ = ecb.vectors_at_ut(ut)
+            self.sim_set['ervec'] = er
+            edr = r - er
+            self.sim_set['edrvec'] = edr
 
 class RSTime(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):

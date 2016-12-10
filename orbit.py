@@ -6,7 +6,10 @@ import matrix
 import cfg
 
 # Value of big-G used by Kopernicus
-G = 6.67408e-11
+# XXX Warning! this is for KSP 1.1.3; in 1.2.x, G = 6.67408e-11
+G = 6.674e-11
+
+renames = {}
 
 class CelestialBody(object):
     def __init__(self, name, rad, gm):
@@ -19,6 +22,8 @@ class CelestialBody(object):
         self.parent = parent
         self.elts = elts
     def connect_parent(self):
+        if self.parent in renames:
+            self.parent = renames[self.parent]
         if self.parent in celestial_bodies:
             self.pb = celestial_bodies[self.parent]
             # mu = G(M+m)
@@ -61,7 +66,11 @@ if config is not None:
     epoch = float(kop['Epoch'])
     bodies = kop['Body']
     for body in bodies:
-        name = body.get('cbNameLater', body['name'])
+        name = body['name']
+        rename = body.get('cbNameLater')
+        if rename is not None:
+            renames[name] = rename
+            name = rename
         if 'Orbit' in body:
             orbit = body['Orbit']
             assert len(orbit) == 1, orbit
