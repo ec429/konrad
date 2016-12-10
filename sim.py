@@ -183,6 +183,8 @@ class RocketSim3D(object):
         self.act_mode = self.mode
         # time step, in seconds
         self.dt = 1.0
+        # Total expended delta-V
+        self.total_dv = 0
     def point(self, pit, hdg):
         # pointing vector in local co-ordinates
         pvec = matrix.Vector3((math.sin(pit),
@@ -212,6 +214,7 @@ class RocketSim3D(object):
              'hs': self.hs, 'vs': self.vs,
              'rvec': self.rvec, 'vvec': self.vvec,
              'lat': self.lat, 'lon': self.lon,
+             'dV': self.total_dv
              }
         return d
     def step(self):
@@ -219,6 +222,7 @@ class RocketSim3D(object):
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
         if dv is None:
             return True
+        self.total_dv += dv
         if self.act_mode in (self.MODE_FIXED, self.MODE_LIVE):
             pass
         elif self.act_mode == self.MODE_PROGRADE:

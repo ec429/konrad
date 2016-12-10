@@ -718,14 +718,15 @@ class AstroConsole(BaseAstroConsole):
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
                                     ],
                              "Start")
-        bwin = scr.derwin(9, 16, 7, 17)
+        bwin = scr.derwin(10, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'a', self.ms, 'dtan', 'J')
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'a', self.ms, 'dtan', 'J'),
+                                    gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
@@ -763,14 +764,15 @@ class ExitConsole(BaseAstroConsole):
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
                                     ],
                              "Start")
-        bwin = scr.derwin(9, 16, 7, 17)
+        bwin = scr.derwin(10, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i'),
+                                    gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
         xwin = scr.derwin(9, 16, 7, 33)
@@ -802,7 +804,7 @@ class ApproachConsole(BaseAstroConsole):
                                     gauge.RSAlt(dl, zwin.derwin(1, 12, 2, 1), '0', self.ms),
                                     ],
                              "Start")
-        bwin = scr.derwin(9, 16, 7, 15)
+        bwin = scr.derwin(10, 16, 7, 15)
         if opts.target_body is None:
             rinc = gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
         else:
@@ -814,6 +816,7 @@ class ApproachConsole(BaseAstroConsole):
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
                                     rinc,
+                                    gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
         xwin = scr.derwin(9, 16, 7, 31)
