@@ -711,11 +711,13 @@ class AstroConsole(BaseAstroConsole):
         apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
-        zwin = scr.derwin(6, 16, 7, 1)
+        zwin = scr.derwin(8, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'pa0', 'p'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
+                                    gauge.RSTimeParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.ms, 'apt', 'ApT'),
+                                    gauge.RSTimeParam(dl, zwin.derwin(1, 14, 6, 1), '0', self.ms, 'pet', 'PeT'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
@@ -746,7 +748,6 @@ class AstroConsole(BaseAstroConsole):
             t = gauge.GaugeGroup(twin, [], "No Tgt")
         else:
             t = gauge.GaugeGroup(twin, [gauge.BodyNameGauge(dl, twin.derwin(1, 14, 1, 1), opts.target_body),
-                                        gauge.RSAngleParam(dl, twin.derwin(1, 14, 3, 1), '0', self.ms, 'tan', 'J'),
                                         gauge.PhaseAngleGauge(dl, twin.derwin(1, 14, 5, 1), opts.target_body),
                                         gauge.RelLanGauge(dl, twin.derwin(1, 14, 6, 1), opts.target_body),
                                         gauge.RelIncGauge(dl, twin.derwin(1, 14, 7, 1), opts.target_body),
@@ -759,9 +760,11 @@ class ExitConsole(BaseAstroConsole):
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
         exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
-        zwin = scr.derwin(4, 16, 7, 1)
+        zwin = scr.derwin(6, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
+                                    gauge.RSTimeParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'apt', 'ApT'),
+                                    gauge.RSTimeParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'pet', 'PeT'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
@@ -775,17 +778,15 @@ class ExitConsole(BaseAstroConsole):
                                     gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
-        xwin = scr.derwin(9, 16, 7, 33)
-        #if opts.target_body is None:
-        rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 7, 1), 'x', self.ms, 'inc', 'i')
-        #else:
-        #    rinc = gauge.RSAngleParam(dl, awin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
+        xwin = scr.derwin(7, 16, 7, 33)
+        if opts.target_body is None:
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'inc', 'i')
+        else:
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'ri', 'i')
         x = gauge.GaugeGroup(xwin, [gauge.RSTime(dl, xwin.derwin(1, 14, 1, 1), 'x', self.ms),
-                                    #gauge.RS(dl, xwin.derwin(1, 14, 2, 1), 'x', self.ms),
-                                    #gauge.RS(dl, xwin.derwin(1, 14, 3, 1), 'x', self.ms),
-                                    gauge.RSApoapsis(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
-                                    gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms),
-                                    gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 6, 1), 'x', self.ms),
+                                    gauge.RSApoapsis(dl, xwin.derwin(1, 14, 2, 1), 'x', self.ms),
+                                    gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 3, 1), 'x', self.ms),
+                                    gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
                                     rinc,
                                     ],
                              "SOI Exit")
@@ -819,43 +820,58 @@ class ApproachConsole(BaseAstroConsole):
                                     gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
-        xwin = scr.derwin(9, 16, 7, 31)
+        xwin = scr.derwin(7, 16, 7, 31)
         if opts.target_body is None:
-            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 7, 1), 'x', self.ms, 'inc', 'i')
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'inc', 'i')
         else:
-            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 7, 1), 'x', self.ms, 'ri', 'i')
+            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'ri', 'i')
         x = gauge.GaugeGroup(xwin, [gauge.RSTime(dl, xwin.derwin(1, 14, 1, 1), 'x', self.ms),
-                                    gauge.RSApoapsis(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
-                                    gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms),
-                                    gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 6, 1), 'x', self.ms),
+                                    gauge.RSApoapsis(dl, xwin.derwin(1, 14, 2, 1), 'x', self.ms),
+                                    gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 3, 1), 'x', self.ms),
+                                    gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
                                     rinc,
                                     ],
                              "SOI Exit")
-        ewin = scr.derwin(10, 16, 7, 47)
+        ewin = scr.derwin(8, 16, 7, 47)
         if opts.target_body is None:
-            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 7, 1), 'e', self.ms, 'inc', 'i')
+            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'inc', 'i')
         else:
-            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 7, 1), 'e', self.ms, 'ri', 'i')
+            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'ri', 'i')
         e = gauge.GaugeGroup(ewin, [gauge.RSTime(dl, ewin.derwin(1, 14, 1, 1), 'e', self.ms),
                                     gauge.RSSIParam(dl, ewin.derwin(1, 14, 2, 1), 'e', self.ms, 'edrvec', 'Re', 'm'),
-                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 4, 1), 'e', self.ms, 'drvec', 'd', 'm'),
-                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'dvvec', 'v', 'm/s'),
+                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 3, 1), 'e', self.ms, 'drvec', 'd', 'm'),
+                                    gauge.RSSIParam(dl, ewin.derwin(1, 14, 4, 1), 'e', self.ms, 'dvvec', 'v', 'm/s'),
                                     rinc,
-                                    gauge.RSTimeParam(dl, ewin.derwin(1, 14, 8, 1), 'e', self.ms, 'lss', 'w'),
+                                    gauge.RSTimeParam(dl, ewin.derwin(1, 14, 6, 1), 'e', self.ms, 'lss', 'w'),
                                     ],
                              "Approach")
-        swin = scr.derwin(10, 16, 7, 63)
+        swin = scr.derwin(8, 16, 7, 63)
         s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', self.ms),
                                     gauge.RSSIParam(dl, swin.derwin(1, 14, 2, 1), 's', self.ms, 'edrvec', 'Re', 'm'),
-                                    gauge.RSApoapsis(dl, swin.derwin(1, 14, 4, 1), 's', self.ms),
-                                    gauge.RSPeriapsis(dl, swin.derwin(1, 14, 5, 1), 's', self.ms),
-                                    gauge.RSAngleParam(dl, swin.derwin(1, 14, 7, 1), 's', self.ms, 'inc', 'i'),
-                                    gauge.RSTimeParam(dl, swin.derwin(1, 14, 8, 1), 's', self.ms, 'lss', 'w'),
+                                    gauge.RSApoapsis(dl, swin.derwin(1, 14, 3, 1), 's', self.ms),
+                                    gauge.RSPeriapsis(dl, swin.derwin(1, 14, 4, 1), 's', self.ms),
+                                    gauge.RSAngleParam(dl, swin.derwin(1, 14, 5, 1), 's', self.ms, 'inc', 'i'),
+                                    gauge.RSTimeParam(dl, swin.derwin(1, 14, 6, 1), 's', self.ms, 'lss', 'w'),
                                     ],
                              "SOI Entry")
         return [elts, exit, appr, ris, entry, z, b, x, e, s]
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole}
+class FlyByConsole(ApproachConsole):
+    title = 'Fly-By Astrogation'
+    def outputs(self, opts, scr, dl):
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 's', 'y', tgt=opts.target_body)
+        ywin = scr.derwin(8, 16, 14, 31)
+        y = gauge.GaugeGroup(ywin, [gauge.RSTime(dl, ywin.derwin(1, 14, 1, 1), 'y', self.ms),
+                                    gauge.RSApoapsis(dl, ywin.derwin(1, 14, 2, 1), 'y', self.ms),
+                                    gauge.RSPeriapsis(dl, ywin.derwin(1, 14, 3, 1), 'y', self.ms),
+                                    gauge.RSObtPeriod(dl, ywin.derwin(1, 14, 4, 1), 'y', self.ms),
+                                    gauge.RSAngleParam(dl, ywin.derwin(1, 14, 5, 1), 'y', self.ms, 'inc', 'i'),
+                                    gauge.RSTimeParam(dl, ywin.derwin(1, 14, 6, 1), 'y', self.ms, 'pet', 'PeT'),
+                                    ],
+                             "tSOI Exit")
+        return super(FlyByConsole, self).outputs(opts, scr, dl) + [exit, y]
+
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole, 'fba': FlyByConsole}
 
 def parse_si(option, opt, value):
     prefixes = {'k': 3, 'M': 6, 'G': 9}

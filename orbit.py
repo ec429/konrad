@@ -252,6 +252,25 @@ class ParentBody(object):
             if evec.z < 0:
                 ape = 2.0 * math.pi - ape
         data['ape'] = ape
+        # time to apsides
+        if mmo > 0:
+            if ecc < 1.0:
+                man = math.fmod(data['man'] + 2.0 * math.pi, 2.0 * math.pi)
+                # time to periapsis
+                mtp = 2.0 * math.pi - man
+                ttp = mtp / mmo
+                data['pet'] = ttp
+                # time to apoapsis
+                mta = math.pi - man
+                if mta < 0:
+                    mta += 2.0 * math.pi
+                tta = mta / mmo
+                data['apt'] = tta
+            else:
+                # time to periapsis
+                mtp = -data['man']
+                ttp = mtp / mmo
+                data['pet'] = ttp
         return data
     def compute_3d_vector(self, sma, ecc, ean, ape, inc, lan):
         o = ovec(sma, ecc, ean)

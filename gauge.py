@@ -213,7 +213,7 @@ class TimeFormatterMixin(object):
     @classmethod
     def fmt_time(cls, t, elts):
         """Return time formatted with at most elts elements"""
-        d,h,m,s = cls.mktime(t)
+        d,h,m,s = cls.mktime(abs(t))
         parts = [(d, 'd'), (h, 'h'), (m, ':'), (s, None)]
         while len(parts) > elts and not parts[0][0]:
             parts = parts[1:]
@@ -223,6 +223,8 @@ class TimeFormatterMixin(object):
             ret += '%02d'%(p[0],)
             if i + 1 < elts and p[1] is not None:
                 ret += p[1]
+        if t < 0:
+            ret = '-' + ret
         return ret
 
 class TimeGauge(OneLineGauge, TimeFormatterMixin):
@@ -1334,13 +1336,18 @@ class UpdateEventXform(Gauge):
 
 class UpdateSoiExit(UpdateEventXform):
     # Patches conics out of current SOI (if on escape trajectory)
-    def __init__(self, dl, cw, body, sim, frm, to):
+    def __init__(self, dl, cw, body, sim, frm, to, tgt=None):
         super(UpdateSoiExit, self).__init__(dl, cw, sim, frm, to)
         self.body = body
-        self.add_prop('soi', 'b.soi[%d]'%(body,))
-        self.add_prop('pbn', 'v.body')
+        self.tgt = tgt
+        if tgt is None:
+            self.add_prop('soi', 'b.soi[%d]'%(body,))
+            self.add_prop('pbn', 'v.body')
+        else:
+            self.add_prop('soi', 'b.soi[%d]'%(tgt,))
+            self.add_prop('pbn', 'b.name[%d]'%(tgt,))
     def _changeopt(self, **kwargs):
-        if 'body' in kwargs:
+        if 'body' in kwargs and self.tgt is None:
             self.del_prop('soi')
             self.add_prop('soi', 'b.soi[%d]'%(kwargs['body'],))
         super(UpdateSoiExit, self)._changeopt(**kwargs)
@@ -1597,7 +1604,7 @@ class UpdateTgtRI(Gauge):
 
 class UpdateTgtCloseApproach(UpdateEventXform):
     # Finds close(st?) approach to target
-    COARSE_STEPS = 24
+    COARSE_STEPS = 80
     FINE_ITERS = 16
     def __init__(self, dl, cw, sim, tgt, frm, to):
         super(UpdateTgtCloseApproach, self).__init__(dl, cw, sim, frm, to)
@@ -2026,14 +2033,14 @@ class RSTimeGauge(OneLineGauge, TimeFormatterMixin):
         keys = [k for k in list(self.key)
                 if k in self.sim.data and
                    self.param in self.sim.data[k]]
+        width = self.olg_width - len(self.label)
         if keys:
             t = self.sim.data[keys[0]][self.param]
             text = self.fmt_time(t, 3)
-            width = self.olg_width - 2
-            self.addstr('%s:%*s'%(self.label, width, text))
+            self.addstr('%s:%*s'%(self.label, width - 1, text))
             col = 3
         else:
-            self.addstr(self.label+'-'*(self.olg_width - 1))
+            self.addstr(self.label + '-' * width)
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
 
