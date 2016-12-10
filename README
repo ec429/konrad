@@ -112,6 +112,7 @@ console it should display.  So far we have the following:
     - f to select 'Fixed' mode (attitude specified with PIT/HDG boxes)
     - l to select 'Live Fixed' mode (assume vehicle holds current attitude)
     - p to select 'Progd' mode (assume prograde hold)
+    - r to select 'Retro' mode (assume retrograde hold)
     - PgUp/PgDn to increment/decrement Reserved Stages
     - x to cut throttle
     - z for 100% throttle
@@ -123,10 +124,16 @@ console it should display.  So far we have the following:
     - (/) to change start time in 1s increments
     - [/] to change start time in 10s increments
     - {/} to change start time in 100s increments
-    - ,/. to change burn duration in 1s increments
-    - </> to change burn duration in 10s increments
+    - ,/. to change burn duration in 1s increments (NORMAL; others scale 5x)
+    - </> to change burn duration in 10s increments (NORMAL; others scale 5x)
+    - 0 to set burn duration to zero
     - B to unlimit burn duration (i.e. 'until burnout')
+    - N to fix burn end (i.e. start counting down once Start is passed)
     - ? to refresh stage detection
+* esc, clo, fba
+    Escape, Close-Approach and Fly-By Astrogation (respectively).
+    Same inputs as mnv, but different displayed info.
+    See section "More Astrogation" below for more information.
 
 Global Inputs
 -------------
@@ -395,3 +402,34 @@ good (i.e. Apo * and Apo i well under 1°, End A near Apo Z minus fudge factor),
 and Start T is close to zero (or has just reached zero), fire your spin-up /
 ullage motors, then light your stage, and wait for burnout.  When the tanks are
 empty, in theory you should be on a collision course with the Moon!
+
+More Astrogation
+----------------
+These three astrogation consoles are capable of finding closest approaches and
+patching conics, and can thus be used to make much more accurate transfer burns
+than the 'mnv' console.  In general they start with the same burn-sim as 'mnv',
+but then look for various events on the resulting trajectory; these are usually
+displayed left-to-right.  The consoles are:
+* esc: Escape Astrogation.  Shows SOI Exit.
+* clo: Close-Approach Astrogation.  Adds Approach and SOI Entry
+* fba: Fly-By Astrogation.  Adds tSOI Exit.
+The events are:
+* SOI Exit: this is when you leave the current SOI (typically Earth), and are
+  patched into a new one (typically Sun).  Apoapsis, Periapsis and Period (D)
+  are displayed, as is either Relative or Absolute Inclination (depending on
+  whether a target was specified).  If your orbit does not escape, this event
+  will be skipped and the next one will use the unpatched orbit.
+* Approach: this is the closest approach to the target found within one synodic
+  period (that is, the time it takes for you to have done one more orbit than
+  the target or vice versa).  Distance d and relative velocity v are displayed,
+  as are distance from Earth ('Re', useful for knowing whether you'll have
+  comms when you arrive) and the last step size of the iterative search ('w', a
+  rough indication of how accurate the calculations are.  Normally this should
+  read zero; if not, you may find TCMs are needed later).
+* SOI Entry: if you get close enough to the target to enter its SOI, you will
+  be patched in.  Apoapsis, Periapsis and Inclination (i) are displayed, as are
+  Earth distance (Re) and last step size (w) as above.
+* tSOI Exit: patches you back out of the target's SOI into orbit around its
+  primary.  Apoapsis, Periapsis, Period (D) and Inclination (i) are all
+  displayed, as is Time to Periapsis (PeT).  The output for this event is
+  squeezed in underneath SOI Exit, because we ran out of horizontal space.
