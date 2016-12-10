@@ -1645,8 +1645,6 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             man = man0 + t * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
             r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
-            tman = tmae + ut * tmmo
-            tean = orbit.ean_from_man(tman, tecc, 16)
             tr, tv = tcb.vectors_at_ut(ut)
             d = (tr - r).mag
             if mind is None or d < mind:
@@ -1664,8 +1662,6 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             man = man0 + t * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
             r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
-            tman = tmae + ut * tmmo
-            tean = orbit.ean_from_man(tman, tecc, 16)
             tr, tv = tcb.vectors_at_ut(ut)
             dr = tr - r
             dv = tv - v
@@ -1687,14 +1683,123 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             if w < 1.0:
                 # We got within a second.  That's probably good enough
                 break
-        self.set_sim['lss'] = last_step_size
-        self.set_sim['time'] = t
-        self.set_sim['rvec'] = r
-        self.set_sim['vvec'] = v
-        self.set_sim['trvec'] = tr
-        self.set_sim['tvvec'] = tv
-        self.set_sim['drvec'] = dr
-        self.set_sim['dvvec'] = dv
+        self.sim_set['lss'] = last_step_size
+        self.sim_set['time'] = t
+        # copy orbital parameters
+        self.sim_set['man'] = man
+        self.sim_set['ean'] = ean
+        for k in ['sma', 'ecc', 'ape', 'inc', 'lan', 'mmo']:
+            self.sim_set[k] = self.sim_get(k)
+        # vectors
+        self.sim_set['rvec'] = r
+        self.sim_set['vvec'] = v
+        self.sim_set['trvec'] = tr
+        self.sim_set['tvvec'] = tv
+        self.sim_set['drvec'] = dr
+        self.sim_set['dvvec'] = dv
+        # find distance to Earth (for comms range)
+        ecb = orbit.celestial_bodies.get('Earth', orbit.celestial_bodies.get('Kerbin'))
+        if ecb is None:
+            return
+        er, _ = ecb.vectors_at_ut(ut)
+        self.sim_set['ervec'] = er
+        edr = r - er
+        self.sim_set['edrvec'] = edr
+
+class UpdateSoiEntry(UpdateEventXform):
+    """Patches into target SOI.  Input event should be close approach"""
+    FINE_ITERS = 16
+    def __init__(self, dl, cw, sim, tgt, frm, to):
+        super(UpdateSoiEntry, self).__init__(dl, cw, sim, frm, to)
+        self.tgt = tgt
+        if tgt is not None:
+            self.set_tprops(tgt)
+    def set_tprops(self, tgt):
+        self.add_prop('tname', 'b.name[%d]'%(tgt,))
+        self.add_prop('tsoi', 'b.soi[%d]'%(tgt,))
+    def unset_tprops(self):
+        self.del_prop('tname')
+        self.del_prop('tsoi')
+    def draw(self):
+        if self.frm not in self.sim.data:
+            return
+        tname = self.get('tname')
+        tcb = orbit.celestial_bodies.get(tname)
+        if tcb is None:
+            return
+        # we will assume that you and the target have the same parent body as
+        # of the source event.  If not, then you should have patched out with
+        # an UpdateSoiExit, shouldn't you?
+        pcb = tcb.parent_body
+        if pcb is None:
+            return
+        ut0 = self.sim.UT - orbit.epoch
+        time = self.sim_get('time')
+        if time is None:
+            return
+        ut1 = ut0 + time
+        soi = self.get('tsoi')
+        dr = self.sim_get('drvec')
+        dv = self.sim_get('dvvec')
+        if None in (soi, dr, dv):
+            return
+        if soi <= dr.mag:
+            # We're going to miss the SOI entirely
+            return
+        man0 = self.sim_get('man')
+        sma = self.sim_get('sma')
+        ecc = self.sim_get('ecc')
+        ape = self.sim_get('ape')
+        inc = self.sim_get('inc')
+        lan = self.sim_get('lan')
+        mmo = self.sim_get('mmo')
+        if None in (man0, sma, ecc, ape, inc, lan, mmo):
+            return
+        last_step_size = None
+        dt = 0
+        for i in xrange(self.FINE_ITERS):
+            t = time + dt
+            ut = ut1 + dt
+            man = man0 + t * mmo
+            ean = orbit.ean_from_man(man, ecc, 16)
+            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            tr, tv = tcb.vectors_at_ut(ut)
+            dr = tr - r
+            dv = tv - v
+            # x = dr + w dv, we want |x| = soi, decreasing (hence lower branch)
+            # x . x = dr.dr + 2w dr.dv + w^2 dv.dv
+            # so dv.dv w^2 + 2dr.dv w + (dr.dr - soi^2) = 0
+            a = dv.dot(dv)
+            b = dr.dot(dv) * 2.0
+            c = dr.dot(dr) - soi ** 2
+            # solve quadratic
+            d = b ** 2 - 4.0 * a * c
+            if d < 0:
+                # apparently our current linearisation misses the SOI
+                # let's just give up, we were probably right on the edge anyway
+                return
+            # we want the negative root, i.e. entry rather than exit
+            w = (-b - math.sqrt(d)) / (a * 2.0)
+            if last_step_size is not None and w > last_step_size:
+                # our step size just got bigger, we're probably diverging
+                # this is another of those 'give up' situations, isn't it?
+                return
+            last_step_size = w
+            dt += w
+            if w < 1.0:
+                # We got within a second.  That's probably good enough
+                break
+        self.sim.data[self.to] = {}
+        self.sim_set['lss'] = last_step_size
+        self.sim_set['time'] = t
+        self.sim_set['rvec'] = r
+        self.sim_set['vvec'] = v
+        self.sim_set['trvec'] = tr
+        self.sim_set['tvvec'] = tv
+        self.sim_set['drvec'] = -dr
+        self.sim_set['dvvec'] = -dv
+        elts = tcb.compute_3d_elements(-dr, -dv)
+        self.sim_set.update(elts)
 
 class RSTime(OneLineGauge, TimeFormatterMixin):
     def __init__(self, dl, cw, key, sim):
@@ -1914,6 +2019,12 @@ class RSObtPeriod(RSTimeGauge):
 class RSTTAp(RSTimeGauge):
     param = 'ttap'
     label = 'T'
+
+class RSTimeParam(RSTimeGauge):
+    def __init__(self, dl, cw, key, sim, param, label):
+        self.param = param
+        self.label = label
+        super(RSTimeParam, self).__init__(dl, cw, key, sim)
 
 class RSAngleParam(RSAngleGauge):
     def __init__(self, dl, cw, key, sim, param, label):
