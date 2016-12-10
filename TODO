@@ -1,16 +1,5 @@
-Next major target is to support interplanetary astrogation.  For that we will
-require a few things:
-* support for non-full-length burns (needed for TCMs)
-  - this is now done, but sub-items below aren't yet
-  - maybe also burns that aren't an integer number of seconds long
-  - this could be on a separate TCM console that's only used once in
-    heliocentric orbit, thus avoiding dealing with patching
-  - but we then might want to be able to patch into the target SOI, and find our
-    subsequent periapsis
+Things I'd like to do at some point:
 * support RCS translation, for really fine TCMs
-
-
-Other things I'd like to do at some point:
 * add new mj_modes that live-update values for Fixed
   - Srf Prograde
   - AoA Hold
