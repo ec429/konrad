@@ -1605,7 +1605,7 @@ class UpdateTgtRI(Gauge):
 class UpdateTgtCloseApproach(UpdateEventXform):
     # Finds close(st?) approach to target
     COARSE_STEPS = 80
-    FINE_ITERS = 16
+    FINE_ITERS = 24
     def __init__(self, dl, cw, sim, tgt, frm, to):
         super(UpdateTgtCloseApproach, self).__init__(dl, cw, sim, frm, to)
         self.tgt = tgt
@@ -1678,7 +1678,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             ut = ut1 + dt
             man = man0 + dt * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
-            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            r, v = pcb.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
             dr = tr - r
             dv = tv - v
@@ -1697,7 +1697,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
                 return
             last_step_size = abs(w)
             dt += w
-            if w < 1.0:
+            if abs(w) < 1.0:
                 # We got within a second.  That's probably good enough
                 break
         self.sim_set['lss'] = last_step_size
@@ -1782,7 +1782,7 @@ class UpdateSoiEntry(UpdateEventXform):
             ut = ut1 + dt
             man = man0 + dt * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
-            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            r, v = pcb.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
             dr = r - tr
             dv = v - tv
