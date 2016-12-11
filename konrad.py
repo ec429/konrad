@@ -850,13 +850,15 @@ class AstroConsole(BaseAstroConsole):
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
         zwin = scr.derwin(9, 16, 7, 1)
+        lat = gauge.RSAngleParam(dl, zwin.derwin(1, 14, 7, 1), '0', self.ms, 'lat', 'lat')
+        lat.signed = True
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'pa0', 'p'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.ms, 'apt', 'ApT'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 6, 1), '0', self.ms, 'pet', 'PeT'),
-                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 7, 1), '0', self.ms, 'lat', 'lat'),
+                                    lat,
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
