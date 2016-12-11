@@ -1044,6 +1044,52 @@ class Light(BaseLight):
             return None
         return v
 
+class ObtHeadingGauge(AngleGauge):
+    label = 'ObtHeading'
+    def __init__(self, dl, cw, body):
+        super(ObtHeadingGauge, self).__init__(dl, cw)
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(body))
+        self.add_prop('inc', 'o.inclination')
+        self.add_prop('lan', 'o.lan')
+        self.add_prop('tan', 'o.trueAnomaly')
+        self.add_prop('ape', 'o.argumentOfPeriapsis')
+        self.add_prop('ecc', 'o.eccentricity')
+        self.add_prop('sma', 'o.sma')
+    def _changeopt(self, **kwargs):
+        if 'body' in kwargs:
+            self.del_prop('brad')
+            self.add_prop('brad', orbit.ParentBody.rad_api(kwargs['body']))
+            self.del_prop('bgm')
+            self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
+        super(ObtHeadingGauge, self)._changeopt(**kwargs)
+    @property
+    def angle(self):
+        brad = self.get('brad')
+        bgm = self.get('bgm')
+        inc = self.getrad('inc')
+        lan = self.getrad('lan')
+        tan = self.getrad('tan')
+        ape = self.getrad('ape')
+        ecc = self.get('ecc')
+        sma = self.get('sma')
+        if None in (brad, bgm, inc, lan, tan, ape, ecc, sma):
+            return None
+        # 3D position & velocity
+        pb = orbit.ParentBody(brad, bgm)
+        ean = orbit.ean_from_tan(tan, ecc)
+        r, v = pb.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+        # compute lat & long
+        rhat = r.hat
+        vhat = v.hat
+        lon = math.atan2(rhat.y, rhat.x)
+        lat = math.asin(rhat.z)
+        # conversion to local co-ordinates
+        iM = matrix.RotationMatrix(1, lat) * matrix.RotationMatrix(2, -lon)
+        lv = iM * vhat
+        oh = math.atan2(lv.y, lv.z)
+        return math.degrees(oh)
+
 class UpdateBooster(Gauge):
     def __init__(self, dl, cw, bstr):
         super(UpdateBooster, self).__init__(dl, cw)

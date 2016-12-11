@@ -111,7 +111,7 @@ class TrajConsole(Console):
     def __init__(self, opts, scr, dl):
         super(TrajConsole, self).__init__(opts, scr, dl)
         self.want = {'PIT': 90, 'HDG': 90, 'RLL': 0, 'mode': 'Off'}
-        loxn = scr.derwin(6, 27, 8, 52)
+        loxn = scr.derwin(6, 27, 7, 52)
         loxngroup = gauge.GaugeGroup(loxn, [
             gauge.LongitudeGauge(dl, loxn.derwin(1, 12, 1, 1)),
             gauge.LatitudeGauge(dl, loxn.derwin(1, 12, 1, 14)),
@@ -120,7 +120,7 @@ class TrajConsole(Console):
             gauge.LandingPointGauge(dl, loxn.derwin(1, 12, 3, 14)),
             gauge.TerrainAltitudeGauge(dl, loxn.derwin(1, 25, 4, 1)),
             ], 'Location')
-        obt = scr.derwin(8, 27, 14, 52)
+        obt = scr.derwin(9, 27, 13, 52)
         obtgroup = gauge.GaugeGroup(obt, [
             gauge.AltitudeGauge(dl, obt.derwin(1, 25, 1, 1), opts.body, target=opts.target_alt),
             gauge.PeriapsisGauge(dl, obt.derwin(1, 25, 2, 1), opts.body, target=opts.target_peri or opts.target_alt),
@@ -128,6 +128,7 @@ class TrajConsole(Console):
             gauge.ObtVelocityGauge(dl, obt.derwin(1, 25, 4, 1), opts.body, target_alt=opts.target_alt, target_apo=opts.target_apo, target_peri=opts.target_peri),
             gauge.ObtPeriodGauge(dl, obt.derwin(1, 25, 5, 1)),
             gauge.InclinationGauge(dl, obt.derwin(1, 25, 6, 1)),
+            gauge.ObtHeadingGauge(dl, obt.derwin(1, 25, 7, 1), opts.body),
             ], 'Orbital')
         shift = 3 if opts.mj else 0
         motion = scr.derwin(5, 34, 13 - shift, 1)
