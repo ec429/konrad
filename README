@@ -342,6 +342,7 @@ j: target true anomaly (this is probably not interesting)
 ApT: time to next apoapsis
 PeT: time to next periapsis
 lat: latitude
+hdg: heading of prograde vector
 event End: burnout
 T: time from now
 Y: vessel altitude

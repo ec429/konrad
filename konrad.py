@@ -529,11 +529,12 @@ class AscentConsole3D(Console):
         sim = gauge.UpdateRocketSim3D(dl, scr, opts.body, opts.booster, False, self.rs)
         elts = gauge.UpdateSimElements(dl, scr, self.rs, '0ovb')
         ris = gauge.UpdateTgtRI(dl, scr, self.rs, '0ovb', opts.target_body)
-        zwin = scr.derwin(6, 16, 15, 1)
+        zwin = scr.derwin(7, 16, 15, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSAngleParam(dl, zwin.derwin(1, 14, 1, 1), '0', self.rs, 'inc', 'i'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 2, 1), '0', self.rs, 'ri', 'ri'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.rs, 'lan', 'L'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.rs, 'lon', 'lon'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.rs, 'oh', 'hdg'),
                                     ],
                              "Now")
         owin = scr.derwin(10, 16, 5, 1)
@@ -850,7 +851,7 @@ class AstroConsole(BaseAstroConsole):
         apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
-        zwin = scr.derwin(9, 16, 7, 1)
+        zwin = scr.derwin(10, 16, 7, 1)
         lat = gauge.RSAngleParam(dl, zwin.derwin(1, 14, 7, 1), '0', self.ms, 'lat', 'lat')
         lat.signed = True
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
@@ -860,6 +861,7 @@ class AstroConsole(BaseAstroConsole):
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.ms, 'apt', 'ApT'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 6, 1), '0', self.ms, 'pet', 'PeT'),
                                     lat,
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 8, 1), '0', self.ms, 'oh', 'hdg'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
@@ -902,11 +904,12 @@ class ExitConsole(BaseAstroConsole):
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
         exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
-        zwin = scr.derwin(6, 16, 7, 1)
+        zwin = scr.derwin(7, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'apt', 'ApT'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'pet', 'PeT'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.ms, 'oh', 'hdg'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
@@ -942,9 +945,10 @@ class ApproachConsole(BaseAstroConsole):
         appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, opts.target_body, 'xb', 'e')
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'bxe', opts.target_body)
         entry = gauge.UpdateSoiEntry(dl, scr, self.ms, opts.target_body, 'e', 's')
-        zwin = scr.derwin(4, 14, 7, 1)
+        zwin = scr.derwin(5, 14, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 12, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 12, 2, 1), '0', self.ms),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 12, 3, 1), '0', self.ms, 'oh', 'hdg'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 15)
