@@ -1359,6 +1359,7 @@ class UpdateSoiExit(UpdateEventXform):
             return
         pbn = self.get('pbn')
         pb_cb = orbit.celestial_bodies.get(str(pbn))
+        pb = orbit.ParentBody(pb_cb.rad, pb_cb.gm)
         ecc = self.sim_get('ecc')
         sma = self.sim_get('sma')
         if None in (ecc, sma):
@@ -1393,7 +1394,7 @@ class UpdateSoiExit(UpdateEventXform):
         lan = self.sim_get('lan')
         if None in (ape, inc, lan):
             return
-        xx, xv = self.sim.pbody.compute_3d_vector(sma, ecc, eax, ape, inc, lan)
+        xx, xv = pb.compute_3d_vector(sma, ecc, eax, ape, inc, lan)
         self.sim_set['x'] = xx
         self.sim_set['v'] = xv
         if None in (xut, pb_cb):
@@ -1661,7 +1662,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             ut = ut1 + it
             man = man0 + it * mmo
             ean = orbit.ean_from_man(man, ecc, 16)
-            r, v = self.sim.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
+            r, v = pcb.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
             tr, tv = tcb.vectors_at_ut(ut)
             d = (tr - r).mag
             if mind is None or d < mind:
