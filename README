@@ -124,6 +124,7 @@ console it should display.  So far we have the following:
     - (/) to change start time in 1s increments
     - [/] to change start time in 10s increments
     - {/} to change start time in 100s increments
+    - # (toggle) to scale the above three by 1000x
     - ,/. to change burn duration in 1s increments (NORMAL; others scale 5x)
     - </> to change burn duration in 10s increments (NORMAL; others scale 5x)
     - 0 to set burn duration to zero

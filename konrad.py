@@ -545,6 +545,7 @@ class BaseAstroConsole(Console):
                                       "KONRAD: %s"%(self.title,))
         self.update_vars()
         self.setfine(1)
+        self.thou = False
     def outputs(self, opts, scr, dl):
         return []
     def setfine(self, value):
@@ -613,23 +614,28 @@ class BaseAstroConsole(Console):
             self.mode = burns.ManeuverSim.MODE_RETROGRADE
             self.update_vars()
             return
+        if key == ord('#'):
+            self.thou = not self.thou
+            self.update_vars()
+            return
+        thou = 1000 if self.thou else 1
         if key == ord(')'):
-            self.ms.burnUT += 1
+            self.ms.burnUT += thou
             return
         if key == ord('('):
-            self.ms.burnUT -= 1
+            self.ms.burnUT -= thou
             return
         if key == ord(']'):
-            self.ms.burnUT += 10
+            self.ms.burnUT += 10 * thou
             return
         if key == ord('['):
-            self.ms.burnUT -= 10
+            self.ms.burnUT -= 10 * thou
             return
         if key == ord('}'):
-            self.ms.burnUT += 100
+            self.ms.burnUT += 100 * thou
             return
         if key == ord('{'):
-            self.ms.burnUT -= 100
+            self.ms.burnUT -= 100 * thou
             return
         # Actual time until burnout, if burn_dur is unset
         self.real_burn_dur = None
