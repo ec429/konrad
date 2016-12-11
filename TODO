@@ -4,5 +4,4 @@ Things I'd like to do at some point:
   - Srf Prograde
   - AoA Hold
 * make target_body runtime-settable, like body_id is
-* use 3d sim for asc & retro.  Having RelInc (asc) or accurate touchdown point
-  (retro) would be really helpful.
+* use 3d sim for retro, giving accurate touchdown point.

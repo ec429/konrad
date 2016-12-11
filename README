@@ -94,7 +94,7 @@ console it should display.  So far we have the following:
     Requires an accurate JSON Booster file, supplied with --booster.  See the
     section "JSON Booster" below for more information.
     Inputs:
-    - f to select 'Fixed' mode (assume vehicle holds current pitch)
+    - f to select 'Fixed' mode (assume vehicle holds current attitude)
     - p to select 'Progd' mode (assume prograde hold)
     - PgUp/PgDn to increment/decrement Reserved Stages
     - x to cut throttle
@@ -102,6 +102,10 @@ console it should display.  So far we have the following:
     - z for 100% throttle
     - space for staging
     - ? to refresh stage detection
+* a3d
+    Ascent Guidance 3D.  Like asc, but works in 3 dimensions, so can handle
+    off-prograde headings, compute inclination or relative inclination, etc.
+    Same inputs as asc, but different displayed info.
 * mnv
     Astrogation.  Orbital transfer burns (only really useful for TLI so far).
     See section "Astro-what?" below for more information.
@@ -307,6 +311,16 @@ angle for circularisation to slowly 'pull' your final orbital altitude one way
 or the other.  This can take a bit of practice and judgement (or just an
 intuitive understanding of the underlying dynamics) to get right, though.
 And remember to keep an eye on Burnout time!
+
+The Ascent Guidance 3D console (a3d) uses the same (3D) simulation engine as
+the astrogation consoles (see below), enabling it to also output the following
+variables at each event:
+i: inclination
+ri: relative inclination (to target specified with -t <body-id>
+L: longitude of ascending node
+There is also a fourth event, 'Now', which displays the current state; as well
+as the above, it also displays the longitude in reference co-ordinates (which
+is not the same thing as the geographic longitude!) as 'lon'.
 
 Astro-what?
 -----------

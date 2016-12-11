@@ -510,6 +510,122 @@ class AscentConsole(Console):
     def connect_params(cls):
         return {'rate': 500} # update twice per second
 
+class AscentConsole3D(Console):
+    """The other Ascent Guidance console"""
+    def __init__(self, opts, scr, dl):
+        super(AscentConsole3D, self).__init__(opts, scr, dl)
+        self.update = gauge.UpdateBooster(dl, scr, opts.booster)
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
+        twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
+        self.stagecap = 0
+        self.mode = ascent.AscentSim.MODE_FIXED
+        self.vars = {}
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 49), self.vars, 'mode', centered=True)
+        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 64), self.vars, 'stagecap', centered=True)
+        self.rs = None
+        self.rs = ascent.AscentSim3D(mode=self.mode)
+        sim = gauge.UpdateRocketSim3D(dl, scr, opts.body, opts.booster, False, self.rs)
+        elts = gauge.UpdateSimElements(dl, scr, self.rs, '0ovb')
+        ris = gauge.UpdateTgtRI(dl, scr, self.rs, '0ovb', opts.target_body)
+        zwin = scr.derwin(6, 16, 15, 1)
+        z = gauge.GaugeGroup(zwin, [gauge.RSAngleParam(dl, zwin.derwin(1, 14, 1, 1), '0', self.rs, 'inc', 'i'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 2, 1), '0', self.rs, 'ri', 'ri'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.rs, 'lan', 'L'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.rs, 'lon', 'lon'),
+                                    ],
+                             "Now")
+        owin = scr.derwin(10, 16, 5, 1)
+        o = gauge.GaugeGroup(owin, [gauge.RSTime(dl, owin.derwin(1, 14, 1, 1), 'o', self.rs),
+                                    gauge.RSAlt(dl, owin.derwin(1, 14, 2, 1), 'o', self.rs),
+                                    gauge.RSVSpeed(dl, owin.derwin(1, 14, 3, 1), 'o', self.rs),
+                                    gauge.RSApoapsis(dl, owin.derwin(1, 14, 4, 1), 'o', self.rs),
+                                    gauge.RSPeriapsis(dl, owin.derwin(1, 14, 5, 1), 'o', self.rs),
+                                    gauge.RSAngleParam(dl, owin.derwin(1, 14, 6, 1), 'o', self.rs, 'inc', 'i'),
+                                    gauge.RSAngleParam(dl, owin.derwin(1, 14, 7, 1), 'o', self.rs, 'ri', 'ri'),
+                                    gauge.RSAngleParam(dl, owin.derwin(1, 14, 8, 1), 'o', self.rs, 'lan', 'L'),
+                                    ],
+                             "Orb-Vel")
+        vwin = scr.derwin(10, 16, 5, 17)
+        v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', self.rs),
+                                    gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', self.rs),
+                                    gauge.RSHSpeed(dl, vwin.derwin(1, 14, 3, 1), 'v', self.rs),
+                                    gauge.RSApoapsis(dl, vwin.derwin(1, 14, 4, 1), 'v', self.rs),
+                                    gauge.RSPeriapsis(dl, vwin.derwin(1, 14, 5, 1), 'v', self.rs),
+                                    gauge.RSAngleParam(dl, vwin.derwin(1, 14, 6, 1), 'v', self.rs, 'inc', 'i'),
+                                    gauge.RSAngleParam(dl, vwin.derwin(1, 14, 7, 1), 'v', self.rs, 'ri', 'ri'),
+                                    gauge.RSAngleParam(dl, vwin.derwin(1, 14, 8, 1), 'v', self.rs, 'lan', 'L'),
+                                    ],
+                             "Vertical")
+        bwin = scr.derwin(10, 16, 5, 33)
+        b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.rs),
+                                    gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.rs),
+                                    gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.rs),
+                                    gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.rs),
+                                    gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.rs),
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 6, 1), 'b', self.rs, 'inc', 'i'),
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.rs, 'ri', 'ri'),
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.rs, 'lan', 'L'),
+                                    ],
+                             "Burnout")
+        stages = scr.derwin(12, 30, 7, 49)
+        stagesgroup = gauge.GaugeGroup(stages, [
+            gauge.StagesGauge(dl, stages.derwin(10, 28, 1, 1), opts.booster),
+            ], 'Stages')
+        ttap = gauge.TimeToApGauge(dl, scr.derwin(3, 16, 19, 24))
+        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, ttap, vs,
+                                       sim, elts, ris, z, o, v, b,
+                                       self.status, body, time],
+                                      "KONRAD: Ascent3D")
+        self.update_vars()
+    def update_vars(self):
+        self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
+        self.vars['mode'] = 'Mode: %s'%(ascent.AscentSim.modename(self.mode),)
+        if self.rs is not None:
+            self.rs.mode = self.mode
+            self.rs.stagecap = self.stagecap
+    def input(self, key):
+        if key >= ord('1') and key <= ord('9'):
+            i = int(chr(key))
+            self.dl.send_msg({'run':['f.setThrottle[%f]'%(i/10.0,)]})
+            return
+        if key == ord('z'):
+            self.dl.send_msg({'run':['f.setThrottle[1.0]']})
+            return
+        if key == ord('x'):
+            self.dl.send_msg({'run':['f.setThrottle[0.0]']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        if key == ord('f'):
+            self.mode = ascent.AscentSim.MODE_FIXED
+            self.update_vars()
+            return
+        if key == ord('p'):
+            self.mode = ascent.AscentSim.MODE_PROGRADE
+            self.update_vars()
+            return
+        if key == curses.KEY_PPAGE:
+            self.stagecap += 1
+            self.update_vars()
+            return
+        if key == curses.KEY_NPAGE:
+            self.stagecap = max(self.stagecap - 1, 0)
+            self.update_vars()
+            return
+        if key == ord('?'):
+            self.update.reset()
+            return
+        return super(AscentConsole3D, self).input(key)
+    @classmethod
+    def connect_params(cls):
+        return {'rate': 500} # update twice per second
+
 class BaseAstroConsole(Console):
     """Input handling for astrogation consoles"""
     title = "BaseAstro"
@@ -877,7 +993,10 @@ class FlyByConsole(ApproachConsole):
                              "tSOI Exit")
         return super(FlyByConsole, self).outputs(opts, scr, dl) + [exit, y]
 
-consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole, 'retro': RetroConsole, 'asc': AscentConsole, 'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole, 'fba': FlyByConsole}
+consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole,
+            'retro': RetroConsole, 'asc': AscentConsole, 'a3d': AscentConsole3D,
+            'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole,
+            'fba': FlyByConsole}
 
 def parse_si(option, opt, value):
     prefixes = {'k': 3, 'M': 6, 'G': 9}
