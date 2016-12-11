@@ -39,6 +39,3 @@ class ManeuverSim(sim.RocketSim3D):
                 print "time %d"%(self.t,)
                 print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
                 print "%s"%(''.join(self.data.keys()),)
-
-# notes:
-# burnsim should offer 'start' and 'rotating' frames for 'fixed' mode, and also have 'prograde' mode

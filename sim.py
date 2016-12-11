@@ -161,10 +161,13 @@ class RocketSim3D(object):
     MODE_PROGRADE = 1
     MODE_RETROGRADE = 2
     MODE_LIVE = 3
+    MODE_INERTIAL = 4
+    MODE_LIVE_INERTIAL = 5
     @classmethod
     def modename(cls, mode):
         return {cls.MODE_FIXED: "Fixed", cls.MODE_PROGRADE: "Progd",
                 cls.MODE_RETROGRADE: "Retro", cls.MODE_LIVE: "LiveF",
+                cls.MODE_INERTIAL: "Inert", cls.MODE_LIVE_INERTIAL: "LiveI",
                 }.get(mode, "%r?"%(mode,))
     def __init__(self, mode=0, debug=False):
         self.data = {}
@@ -174,6 +177,8 @@ class RocketSim3D(object):
     def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma):
         self.booster = booster.Booster.clone(bstr)
         self.pbody = orbit.ParentBody(brad, bgm)
+        self.pit = pit
+        self.hdg = hdg
         # orbital state vector
         self.rvec, self.vvec = self.pbody.compute_3d_vector(sma, ecc, ean, ape, inc, lan)
         self.point(pit, hdg)
@@ -223,8 +228,10 @@ class RocketSim3D(object):
         if dv is None:
             return True
         self.total_dv += dv
-        if self.act_mode in (self.MODE_FIXED, self.MODE_LIVE):
+        if self.act_mode in (self.MODE_INERTIAL, self.MODE_LIVE_INERTIAL):
             pass
+        elif self.act_mode in (self.MODE_FIXED, self.MODE_LIVE):
+            self.point(self.pit, self.hdg)
         elif self.act_mode == self.MODE_PROGRADE:
             self.pvec = self.vvec.hat
         elif self.act_mode == self.MODE_RETROGRADE:

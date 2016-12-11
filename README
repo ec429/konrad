@@ -339,6 +339,9 @@ T: time from now
 Y: vessel altitude
 p: phase angle to target (defined as angle subtended at parent-body centre)
 j: target true anomaly (this is probably not interesting)
+ApT: time to next apoapsis
+PeT: time to next periapsis
+lat: latitude
 event End: burnout
 T: time from now
 Y: vessel altitude
@@ -366,13 +369,16 @@ current throttle, measured in local g.  MAX is TWR at full throttle.
 Rsvd. Stg. is the usual 'reserved stages' (PgUp/PgDn to set).  Mode sets
 steering assumptions for the sim, and can be set with the following keys:
 f   Fixed mode: steer according to the PIT and HDG values dialled in with wasd.
+i   Inertial mode: start at the PIT and HDG values, but don't actively steer
+    after start (so orbital motion will transform them).
 l   Live Fixed: use vessel's current pitch and heading.
+k   Live Inertial: start as Live Fixed but, like Inertial, don't steer.
 p   Prograde: follow orbital prograde vector.
 r   Retrograde: follow orbital retrograde vector.
 'Burn' indicates whether the burn lasts until propellant depletion ('Full') or
 is a specified duration ('Timed').  The latter will generally be less accurate
 as it relies on the user cutting the throttle at just the right moment, while
-the displays only have a 1s resolution (and there is a bit of telemetry lag).
+the displays only have a 0.2s resolution (and there is a bit of telemetry lag).
 
 How to use this?  Let's say you've got a probe on top of a 3100m/s kick stage,
 with the whole thing in LEO connected to an upper stage that's empty except for

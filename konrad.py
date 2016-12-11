@@ -584,7 +584,7 @@ class AscentConsole3D(Console):
         self.update_vars()
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
-        self.vars['mode'] = 'Mode: %s'%(ascent.AscentSim.modename(self.mode),)
+        self.vars['mode'] = 'Mode: %s'%(self.rs.modename(self.mode),)
         if self.rs is not None:
             self.rs.mode = self.mode
             self.rs.stagecap = self.stagecap
@@ -603,11 +603,19 @@ class AscentConsole3D(Console):
             self.dl.send_msg({'run':['f.stage']})
             return
         if key == ord('f'):
-            self.mode = ascent.AscentSim.MODE_FIXED
+            self.mode = self.rs.MODE_FIXED
             self.update_vars()
             return
         if key == ord('p'):
-            self.mode = ascent.AscentSim.MODE_PROGRADE
+            self.mode = self.rs.MODE_PROGRADE
+            self.update_vars()
+            return
+        if key == ord('l'):
+            self.mode = self.rs.MODE_LIVE
+            self.update_vars()
+            return
+        if key == ord('i'):
+            self.mode = self.rs.MODE_INERTIAL
             self.update_vars()
             return
         if key == curses.KEY_PPAGE:
@@ -669,7 +677,7 @@ class BaseAstroConsole(Console):
         self.vars['fineness'] = {0: 'COARSE', 1: 'NORMAL', 2: 'FINE'}.get(value, 'Error?')
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
-        self.vars['mode'] = 'Mode: %s'%(burns.ManeuverSim.modename(self.mode),)
+        self.vars['mode'] = 'Mode: %s'%(self.ms.modename(self.mode),)
         if self.ms is not None:
             self.ms.mode = self.mode
             self.ms.stagecap = self.stagecap
@@ -715,19 +723,27 @@ class BaseAstroConsole(Console):
             self.dl.send_msg({'run':['f.stage']})
             return
         if key == ord('f'):
-            self.mode = burns.ManeuverSim.MODE_FIXED
+            self.mode = self.ms.MODE_FIXED
             self.update_vars()
             return
         if key == ord('l'):
-            self.mode = burns.ManeuverSim.MODE_LIVE
+            self.mode = self.ms.MODE_LIVE
             self.update_vars()
             return
         if key == ord('p'):
-            self.mode = burns.ManeuverSim.MODE_PROGRADE
+            self.mode = self.ms.MODE_PROGRADE
             self.update_vars()
             return
         if key == ord('r'):
-            self.mode = burns.ManeuverSim.MODE_RETROGRADE
+            self.mode = self.ms.MODE_RETROGRADE
+            self.update_vars()
+            return
+        if key == ord('i'):
+            self.mode = self.ms.MODE_INERTIAL
+            self.update_vars()
+            return
+        if key == ord('k'):
+            self.mode = self.ms.MODE_LIVE_INERTIAL
             self.update_vars()
             return
         if key == ord('#'):
@@ -833,13 +849,14 @@ class AstroConsole(BaseAstroConsole):
         apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
-        zwin = scr.derwin(8, 16, 7, 1)
+        zwin = scr.derwin(9, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.ms, 'pa0', 'p'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.ms, 'tr0', 'j'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.ms, 'apt', 'ApT'),
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 6, 1), '0', self.ms, 'pet', 'PeT'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 7, 1), '0', self.ms, 'lat', 'lat'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 17)
