@@ -257,6 +257,6 @@ class RocketSim3D(object):
             if None not in (vvec, lat, lon):
                 # compute obtHeading
                 iM = matrix.RotationMatrix(1, lat) * matrix.RotationMatrix(2, -lon)
-                lv = iM * self.vvec.hat
+                lv = iM * vvec.hat
                 oh = math.atan2(lv.y, lv.z)
                 sv['oh'] = oh
