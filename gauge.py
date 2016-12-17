@@ -1298,6 +1298,7 @@ class UpdateRocketSim3D(Gauge):
         self.add_prop('ape', 'o.argumentOfPeriapsis')
         self.add_prop('ecc', 'o.eccentricity')
         self.add_prop('sma', 'o.sma')
+        self.add_prop('UT', 't.universalTime')
     def _changeopt(self, **kwargs):
         if 'body' in kwargs:
             self.del_prop('brad')
@@ -1306,6 +1307,11 @@ class UpdateRocketSim3D(Gauge):
             self.add_prop('bgm', orbit.ParentBody.gm_api(kwargs['body']))
         super(UpdateRocketSim3D, self)._changeopt(**kwargs)
     def draw(self):
+        self.sim.data = {}
+        UT = self.get('UT')
+        if UT is None:
+            return
+        self.sim.UT = UT
         if self.use_throttle:
             throttle = self.get('throttle')
         else:
@@ -1328,7 +1334,6 @@ class UpdateRocketSim3D(Gauge):
         ape = self.getrad('ape')
         ecc = self.get('ecc')
         sma = self.get('sma')
-        self.sim.data = {}
         if None not in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
             try:
                 self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
@@ -1338,13 +1343,8 @@ class UpdateRocketSim3D(Gauge):
 class UpdateManeuverSim(UpdateRocketSim3D):
     def __init__(self, *args, **kwargs):
         super(UpdateManeuverSim, self).__init__(*args, **kwargs)
-        self.add_prop('UT', 't.universalTime')
     def draw(self):
         UT = self.get('UT')
-        if UT is None:
-            self.sim.data = {}
-            return
-        self.sim.UT = UT
         self.sim.burnUT = max(self.sim.burnUT, UT)
         super(UpdateManeuverSim, self).draw()
 
