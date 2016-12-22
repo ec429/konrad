@@ -851,7 +851,7 @@ class AstroConsole(BaseAstroConsole):
         apo = gauge.UpdateApoApsis(dl, scr, self.ms, 'b', 'a')
         tgt = gauge.UpdateTgtProximity(dl, scr, self.ms, '0a', opts.target_body)
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'b', opts.target_body)
-        zwin = scr.derwin(10, 16, 7, 1)
+        zwin = scr.derwin(11, 16, 7, 1)
         lat = gauge.RSAngleParam(dl, zwin.derwin(1, 14, 7, 1), '0', self.ms, 'lat', 'lat')
         lat.signed = True
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
@@ -862,9 +862,10 @@ class AstroConsole(BaseAstroConsole):
                                     gauge.RSTimeParam(dl, zwin.derwin(1, 14, 6, 1), '0', self.ms, 'pet', 'PeT'),
                                     lat,
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 8, 1), '0', self.ms, 'oh', 'hdg'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 9, 1), '0', self.ms, 'lan', 'L'),
                                     ],
                              "Start")
-        bwin = scr.derwin(10, 16, 7, 17)
+        bwin = scr.derwin(11, 16, 7, 17)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
@@ -873,6 +874,7 @@ class AstroConsole(BaseAstroConsole):
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
                                     gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'a', self.ms, 'dtan', 'J'),
                                     gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 9, 1), 'b', self.ms, 'lan', 'L'),
                                     ],
                              "End")
         awin = scr.derwin(9, 16, 7, 33)
@@ -991,13 +993,14 @@ class ApproachConsole(BaseAstroConsole):
                                     gauge.RSTimeParam(dl, ewin.derwin(1, 14, 6, 1), 'e', self.ms, 'lss', 'w'),
                                     ],
                              "Approach")
-        swin = scr.derwin(8, 16, 7, 63)
+        swin = scr.derwin(9, 16, 7, 63)
         s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', self.ms),
                                     gauge.RSSIParam(dl, swin.derwin(1, 14, 2, 1), 's', self.ms, 'edrvec', 'Re', 'm'),
                                     gauge.RSApoapsis(dl, swin.derwin(1, 14, 3, 1), 's', self.ms),
                                     gauge.RSPeriapsis(dl, swin.derwin(1, 14, 4, 1), 's', self.ms),
                                     gauge.RSAngleParam(dl, swin.derwin(1, 14, 5, 1), 's', self.ms, 'inc', 'i'),
-                                    gauge.RSTimeParam(dl, swin.derwin(1, 14, 6, 1), 's', self.ms, 'lss', 'w'),
+                                    gauge.RSAngleParam(dl, swin.derwin(1, 14, 6, 1), 's', self.ms, 'lan', 'L'),
+                                    gauge.RSTimeParam(dl, swin.derwin(1, 14, 7, 1), 's', self.ms, 'lss', 'w'),
                                     ],
                              "SOI Entry")
         return [elts, exit, appr, ris, entry, z, b, x, e, s]
