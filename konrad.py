@@ -1096,6 +1096,8 @@ def parse_opts():
     opts.consumable = consumable
     if not opts.propellant:
         opts.propellant = ["LiquidFuel", "Oxidizer", "SolidFuel", "MonoPropellant"]
+    elif opts.propellant == ["-"]:
+        opts.propellant = []
     if len(opts.propellant) > 11:
         x.error("Too many propellants!  Max is 11")
     if len(opts.consumable) > 11:
