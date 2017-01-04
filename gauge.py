@@ -1694,11 +1694,9 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         tmmo = tcb.elts['mmo']
         if None in (mmo, tmmo):
             return
-        # Synodic mean motion
-        symmo = abs(tmmo - mmo)
-        # Synodic period
-        syper = 2.0 * math.pi / symmo
-        self.sim_set['syper'] = syper
+        per = 2.0 * math.pi / mmo
+        tper = 2.0 * math.pi / tmmo
+        search = max(per, tper) # search for 1 orbit of the slower body
         man0 = self.sim_get('man')
         sma = self.sim_get('sma')
         ecc = self.sim_get('ecc')
@@ -1710,9 +1708,8 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         mind = None
         argmind = None
         # Let's find the rough region first
-        # We're not interested in anything more than 1 syper out
         for i in xrange(self.COARSE_STEPS):
-            it = i * syper / float(self.COARSE_STEPS)
+            it = i * search / float(self.COARSE_STEPS)
             t = time + it
             ut = ut1 + it
             man = man0 + it * mmo
