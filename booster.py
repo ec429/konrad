@@ -71,6 +71,7 @@ class Stage(object):
         return self.dry + self.prop_mass
     @property
     def deltaV(self):
+        if self.thrust == 0: return 0 # dead weight
         mr = self.wet / float(self.dry)
         lmr = math.log(mr)
         return self.veff * lmr
