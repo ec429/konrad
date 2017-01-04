@@ -19,6 +19,9 @@ class Propellant(object):
     @property
     def mass(self):
         return self.filled * self.density
+    @property
+    def full_mass(self):
+        return self.volume * self.density
     def __str__(self):
         return self.name if self.mainEngine else '(%s)'%(self.name,)
     @classmethod
@@ -39,6 +42,11 @@ class Stage(object):
         self.minThrottle = minThrottle # Minimum throttle, in %
         self._dry = dry # stage dry mass, in tons
         self._load = None
+        self.mfrac = {}
+        full_m = sum(p.full_mass for p in self.props if p.mainEngine)
+        for p in self.props:
+            if not p.mainEngine: continue
+            self.mfrac[p.name] = p.full_mass / full_m
     @classmethod
     def clone(cls, other): # does not clone link to payload!
         return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust, other.minThrottle)
@@ -62,7 +70,7 @@ class Stage(object):
     @property
     def is_empty(self):
         if self.thrust == 0: return True # Always stage straight past this, it's dead weight
-        return not any(p.mass for p in self.props if p.mainEngine)
+        return any(p.mass <= 0 for p in self.props if p.mainEngine)
     @property
     def prop_mass(self):
         return sum(p.mass for p in self.props if p.mainEngine)
@@ -72,7 +80,11 @@ class Stage(object):
     @property
     def deltaV(self):
         if self.thrust == 0: return 0 # dead weight
-        mr = self.wet / float(self.dry)
+        bt = self.burn_time(1.0)
+        mdot = self.thrust / self.veff # tons/s
+        residue = sum((p.filled - mdot * self.mfrac[p.name] * bt / p.density) * p.density
+                      for p in self.props if p.mainEngine)
+        mr = self.wet / (residue + float(self.dry))
         lmr = math.log(mr)
         return self.veff * lmr
     def this_prop(self, propname):
@@ -100,9 +112,9 @@ class Stage(object):
         throttle = self.convert_throttle(throttle)
         if throttle is None: return None
         mdot = self.thrust * throttle / self.veff # tons/s
-        mtot = self.prop_mass
         if mdot <= 0: return None
-        return mtot / mdot
+        return min(p.filled * p.density / (mdot * self.mfrac[p.name])
+                   for p in self.props if p.mainEngine)
     def convert_throttle(self, throttle):
         if throttle is None: return None
         if throttle == 0: return 0
@@ -113,23 +125,22 @@ class Stage(object):
         if self.thrust == 0: return 0
         throttle = self.convert_throttle(throttle)
         if throttle is None: return None
-        twr0 = self.twr * throttle
         dm = self.thrust * throttle * dt / self.veff # kN * s / (m / s) = kN * s^2 / m = tons
         mtot = self.prop_mass
         if mtot <= 0:
             return 0
-        if dm > mtot: # will empty stage this timestep
-            dv = self.deltaV
-            for p in self.props:
-                if not p.mainEngine: continue
-                p.filled = 0
-            return dv
+        max_dm = dm
         for p in self.props:
             if not p.mainEngine: continue
-            mfrac = p.mass / mtot
-            p.filled -= dm * mfrac / p.density
-        twr1 = self.twr * throttle
-        return (twr0 + twr1) * dt / 2.0 # very approximate integration, hope the curvature isn't too great!
+            need = dm * self.mfrac[p.name] / p.density
+            if need > p.filled and need > 0:
+                max_dm = min(max_dm, dm * p.filled / need)
+        for p in self.props:
+            if not p.mainEngine: continue
+            p.filled -= max_dm * self.mfrac[p.name] / p.density
+        mr = (mtot + self.dry) / self.wet
+        lmr = math.log(mr)
+        return self.veff * lmr
     @classmethod
     def from_dict(cls, d):
         return cls([Propellant.from_dict(p) for p in d['props']], d['isp'], d['dry'], d.get('thrust'), d.get('minThrottle', 100.0))
