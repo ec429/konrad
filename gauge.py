@@ -1382,16 +1382,19 @@ class UpdateEventXform(Gauge):
 
 class UpdateSoiExit(UpdateEventXform):
     # Patches conics out of current SOI (if on escape trajectory)
-    def __init__(self, dl, cw, body, sim, frm, to, tgt=None):
+    def __init__(self, dl, cw, body, sim, frm, to, bfrm=None, tgt=None):
         super(UpdateSoiExit, self).__init__(dl, cw, sim, frm, to)
         self.body = body
+        self.bfrm = bfrm
         self.tgt = tgt
-        if tgt is None:
+        if bfrm is None:
             self.add_prop('soi', 'b.soi[%d]'%(body,))
             self.add_prop('pbn', 'v.body')
         else:
-            self.add_prop('soi', 'b.soi[%d]'%(tgt,))
-            self.add_prop('pbn', 'b.name[%d]'%(tgt,))
+            self.add_prop('soi', 'b.soi[%d]'%(bfrm,))
+            self.add_prop('pbn', 'b.name[%d]'%(bfrm,))
+        if tgt is not None:
+            self.add_prop('tbn', 'b.name[%d]'%(tgt,))
     def _changeopt(self, **kwargs):
         if 'body' in kwargs and self.tgt is None:
             self.del_prop('soi')
@@ -1406,6 +1409,12 @@ class UpdateSoiExit(UpdateEventXform):
         pbn = self.get('pbn')
         pb_cb = orbit.celestial_bodies.get(str(pbn))
         pb = orbit.ParentBody(pb_cb.rad, pb_cb.gm)
+        tbn = self.get('tbn')
+        if tbn is not None:
+            tb_cb = orbit.celestial_bodies.get(str(tbn))
+            if tb_cb.parent == pbn:
+                # No need to patch, target is in pre-patch SOI
+                return
         ecc = self.sim_get('ecc')
         sma = self.sim_get('sma')
         if None in (ecc, sma):

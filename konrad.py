@@ -905,7 +905,7 @@ class ExitConsole(BaseAstroConsole):
     title = 'Escape Astrogation'
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
-        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x', tgt=opts.target_body)
         zwin = scr.derwin(7, 16, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 14, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 14, 2, 1), '0', self.ms),
@@ -943,7 +943,7 @@ class ApproachConsole(BaseAstroConsole):
     title = 'Close-Approach Astrogation'
     def outputs(self, opts, scr, dl):
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
-        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x')
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 'b', 'x', tgt=opts.target_body)
         appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, opts.target_body, 'xb', 'e')
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'bxe', opts.target_body)
         entry = gauge.UpdateSoiEntry(dl, scr, self.ms, opts.target_body, 'e', 's')
@@ -1008,7 +1008,7 @@ class ApproachConsole(BaseAstroConsole):
 class FlyByConsole(ApproachConsole):
     title = 'Fly-By Astrogation'
     def outputs(self, opts, scr, dl):
-        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 's', 'y', tgt=opts.target_body)
+        exit = gauge.UpdateSoiExit(dl, scr, opts.body, self.ms, 's', 'y', bfrm=opts.target_body)
         ywin = scr.derwin(8, 16, 14, 31)
         y = gauge.GaugeGroup(ywin, [gauge.RSTime(dl, ywin.derwin(1, 14, 1, 1), 'y', self.ms),
                                     gauge.RSApoapsis(dl, ywin.derwin(1, 14, 2, 1), 'y', self.ms),
