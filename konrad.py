@@ -574,13 +574,18 @@ class AscentConsole3D(Console):
         stagesgroup = gauge.GaugeGroup(stages, [
             gauge.StagesGauge(dl, stages.derwin(10, 28, 1, 1), opts.booster),
             ], 'Stages')
+        if opts.target_body is not None:
+            tgt = [gauge.BodyNameGauge(dl, scr.derwin(3, 16, 16, 33), opts.target_body, label='Tgt:')]
+        else:
+            tgt = []
         ttap = gauge.TimeToApGauge(dl, scr.derwin(3, 16, 19, 24))
         vs = gauge.VSpeedGauge(dl, scr.derwin(3, 32, 19, 40))
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, ttap, vs,
-                                       sim, elts, ris, z, o, v, b,
+                                      [self.update, deltav, throttle, twr, mode, scap, stagesgroup, ttap, vs] +
+                                      tgt +
+                                      [sim, elts, ris, z, o, v, b,
                                        self.status, body, time],
                                       "KONRAD: Ascent3D")
         self.update_vars()

@@ -283,17 +283,18 @@ class ObtPeriodGauge(OneLineGauge):
         self.addstr('%s: %s'%(label, text.rjust(width)[:width]))
 
 class BodyNameGauge(OneLineGauge):
-    def __init__(self, dl, cw, body):
+    def __init__(self, dl, cw, body, label=''):
         super(BodyNameGauge, self).__init__(dl, cw)
         self.add_prop('name', 'b.name[%d]'%(body,))
+        self.label = label
     def draw(self):
         super(BodyNameGauge, self).draw()
         name = self.get('name')
         if name is None:
-            self.addstr(self.centext("LINK DOWN"))
+            self.addstr(self.centext(self.label + "LINK DOWN"))
             self.chgat(0, self.width, curses.color_pair(2))
             return
-        self.addstr(self.centext(name))
+        self.addstr(self.centext(self.label + name))
 
 class BodyGauge(OneLineGauge):
     def __init__(self, dl, cw, body):
