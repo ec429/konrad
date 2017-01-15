@@ -1008,7 +1008,11 @@ class ApproachConsole(BaseAstroConsole):
                                     gauge.RSTimeParam(dl, swin.derwin(1, 14, 7, 1), 's', self.ms, 'lss', 'w'),
                                     ],
                              "SOI Entry")
-        return [elts, exit, appr, ris, entry, z, b, x, e, s]
+        if opts.target_body is not None:
+            tgt = [gauge.BodyNameGauge(dl, scr.derwin(3, 16, 16, 63), opts.target_body, label='Tgt:')]
+        else:
+            tgt = []
+        return [elts, exit, appr, ris, entry, z, b, x, e, s] + tgt
 
 class FlyByConsole(ApproachConsole):
     title = 'Fly-By Astrogation'
