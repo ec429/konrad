@@ -1195,7 +1195,7 @@ class TWRGauge(OneLineGauge):
         alt = self.get('alt')
         brad = self.get('brad')
         bgm = self.get('bgm')
-        twr = self.booster.twr
+        twr = self.booster.twr if self.booster is not None else None
         if None in (throttle, twr):
             tmr = None
         else:
