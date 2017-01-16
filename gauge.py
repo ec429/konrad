@@ -856,7 +856,7 @@ class RelLanGauge(AngleGauge):
         super(RelLanGauge, self).__init__(dl, cw)
         self.add_prop('lan', 'o.lan')
         if tgt is None:
-            self.add_prop('lan', 'tar.o.lan')
+            self.add_prop('tlan', 'tar.o.lan')
         else:
             self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
     @property
@@ -1627,23 +1627,57 @@ class UpdateTgtRI(Gauge):
         self.sim = sim
         self.keys = keys
         self.tgt = tgt
-        if tgt is not None:
-            self.set_tprops(tgt)
+        self.set_tprops(tgt)
     def set_tprops(self, tgt):
-        self.add_prop('tname', 'b.name[%d]'%(tgt,))
+        if tgt is None:
+            self.add_prop('tsma', 'tar.o.sma')
+            self.add_prop('tecc', 'tar.o.eccentricity')
+            self.add_prop('tmae', 'tar.o.maae')
+            self.add_prop('tinc', 'tar.o.inclination')
+            self.add_prop('tlan', 'tar.o.lan')
+            self.add_prop('tape', 'tar.o.argumentOfPeriapsis')
+            self.add_prop('tpcb', 'tar.o.orbitingBody')
+        else:
+            self.add_prop('tname', 'b.name[%d]'%(tgt,))
     def unset_tprops(self):
         self.del_prop('tname')
+        if self.tgt is None:
+            self.del_prop('tsma')
+            self.del_prop('tecc')
+            self.del_prop('tmae')
+            self.del_prop('tinc')
+            self.del_prop('tlan')
+            self.del_prop('tape')
+            self.del_prop('tpcb')
     def draw(self):
-        tname = self.get('tname')
-        tcb = orbit.celestial_bodies.get(tname)
-        if tcb is None:
-            return
-        # we will assume that you and the target have the same parent body as
-        # of the source event.  If not, then you should have patched out with
-        # an UpdateSoiExit, shouldn't you?
-        pcb = tcb.parent_body
-        if pcb is None:
-            return
+        if self.tgt is None:
+            tsma = self.get('tsma')
+            tecc = self.get('tecc')
+            tmae = self.get('tmae')
+            tinc = self.getrad('tinc')
+            tlan = self.getrad('tlan')
+            tape = self.getrad('tape')
+            tpcb = self.get('tpcb')
+            if None in (tsma, tecc, tmae, tinc, tlan, tape, tpcb):
+                return
+            tcb = orbit.CelestialBody('target', 0, 0)
+            tcb.orbit(tpcb, {'sma': tsma, 'ecc': tecc, 'maae': tmae,
+                             'inc': tinc, 'lan': tlan, 'ape': tape})
+            tcb.connect_parent()
+            pcb = tcb.parent_body
+            if pcb is None:
+                return
+        else:
+            tname = self.get('tname')
+            tcb = orbit.celestial_bodies.get(tname)
+            if tcb is None:
+                return
+            # we will assume that you and the target have the same parent body as
+            # of the source event.  If not, then you should have patched out with
+            # an UpdateSoiExit, shouldn't you?
+            pcb = tcb.parent_body
+            if pcb is None:
+                return
         ut0 = self.sim.UT - orbit.epoch
         for key in self.keys:
             if key not in self.sim.data:
@@ -1666,27 +1700,63 @@ class UpdateTgtCloseApproach(UpdateEventXform):
     def __init__(self, dl, cw, sim, tgt, frm, to):
         super(UpdateTgtCloseApproach, self).__init__(dl, cw, sim, frm, to)
         self.tgt = tgt
-        if tgt is not None:
-            self.set_tprops(tgt)
+        self.set_tprops(tgt)
     def set_tprops(self, tgt):
-        self.add_prop('tname', 'b.name[%d]'%(tgt,))
+        if tgt is None:
+            self.add_prop('tsma', 'tar.o.sma')
+            self.add_prop('tecc', 'tar.o.eccentricity')
+            self.add_prop('tmae', 'tar.o.maae')
+            self.add_prop('tinc', 'tar.o.inclination')
+            self.add_prop('tlan', 'tar.o.lan')
+            self.add_prop('tape', 'tar.o.argumentOfPeriapsis')
+            self.add_prop('tpcb', 'tar.o.orbitingBody')
+        else:
+            self.add_prop('tname', 'b.name[%d]'%(tgt,))
     def unset_tprops(self):
         self.del_prop('tname')
+        if self.tgt is None:
+            self.del_prop('tsma')
+            self.del_prop('tecc')
+            self.del_prop('tmae')
+            self.del_prop('tinc')
+            self.del_prop('tlan')
+            self.del_prop('tape')
+            self.del_prop('tpcb')
     def draw(self):
         if self.nokeys:
             return
-        tname = self.get('tname')
-        tcb = orbit.celestial_bodies.get(tname)
-        if tcb is None:
-            return
-        # we will assume that you and the target have the same parent body as
-        # of the source event.  If not, then you should have patched out with
-        # an UpdateSoiExit, shouldn't you?
-        pcb = tcb.parent_body
-        if pcb is None:
-            return
+        if self.tgt is None:
+            tsma = self.get('tsma')
+            tecc = self.get('tecc')
+            tmae = self.get('tmae')
+            tinc = self.getrad('tinc')
+            tlan = self.getrad('tlan')
+            tape = self.getrad('tape')
+            tpcb = self.get('tpcb')
+            if None in (tsma, tecc, tmae, tinc, tlan, tape, tpcb):
+                return
+            tcb = orbit.CelestialBody('target', 0, 0)
+            tcb.orbit(tpcb, {'sma': tsma, 'ecc': tecc, 'maae': tmae,
+                             'inc': tinc, 'lan': tlan, 'ape': tape})
+            tcb.connect_parent()
+            pcb = tcb.parent_body
+            if pcb is None:
+                return
+            epoch = 0
+        else:
+            tname = self.get('tname')
+            tcb = orbit.celestial_bodies.get(tname)
+            if tcb is None:
+                return
+            # we will assume that you and the target have the same parent body as
+            # of the source event.  If not, then you should have patched out with
+            # an UpdateSoiExit, shouldn't you?
+            pcb = tcb.parent_body
+            if pcb is None:
+                return
+            epoch = orbit.epoch
         self.sim.data[self.to] = {}
-        ut0 = self.sim.UT - orbit.epoch
+        ut0 = self.sim.UT - epoch
         time = self.sim_get('time')
         if time is None:
             return
@@ -1745,7 +1815,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
                 # we're at rest relative to the target.  Let's give up :'(
                 return
             w = -drdv / dvdv
-            if last_step_size is not None and abs(w) > last_step_size:
+            if last_step_size is not None and abs(w) > 1.2 * last_step_size:
                 # our step size just got bigger, we're probably diverging
                 # this is another of those 'give up' situations, isn't it?
                 return

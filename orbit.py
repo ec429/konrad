@@ -299,6 +299,7 @@ def ean_from_man(man, ecc, k):
     if ecc == 1.0:
         # XXX This is probably bogus.  But parabolae never happen anyway...
         return man
+    man = math.fmod(man, 2.0 * math.pi)
     ### Uses Newton's method, from https://en.wikipedia.org/wiki/Kepler%27s_equation
     if ecc > 0.8:
         ean = math.pi

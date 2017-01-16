@@ -956,49 +956,38 @@ class ApproachConsole(BaseAstroConsole):
         appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, opts.target_body, 'xb', 'e')
         ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'bxe', opts.target_body)
         entry = gauge.UpdateSoiEntry(dl, scr, self.ms, opts.target_body, 'e', 's')
-        zwin = scr.derwin(5, 14, 7, 1)
+        zwin = scr.derwin(6, 14, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 12, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 12, 2, 1), '0', self.ms),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 12, 3, 1), '0', self.ms, 'oh', 'hdg'),
+                                    gauge.RSAngleParam(dl, zwin.derwin(1, 12, 4, 1), '0', self.ms, 'inc', 'i'),
                                     ],
                              "Start")
         bwin = scr.derwin(10, 16, 7, 15)
-        if opts.target_body is None:
-            rinc = gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'inc', 'i')
-        else:
-            rinc = gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'i')
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
                                     gauge.RSApoapsis(dl, bwin.derwin(1, 14, 4, 1), 'b', self.ms),
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
-                                    rinc,
+                                    gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'ri'),
                                     gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
                                     ],
                              "End")
         xwin = scr.derwin(7, 16, 7, 31)
-        if opts.target_body is None:
-            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'inc', 'i')
-        else:
-            rinc = gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'ri', 'i')
         x = gauge.GaugeGroup(xwin, [gauge.RSTime(dl, xwin.derwin(1, 14, 1, 1), 'x', self.ms),
                                     gauge.RSApoapsis(dl, xwin.derwin(1, 14, 2, 1), 'x', self.ms),
                                     gauge.RSPeriapsis(dl, xwin.derwin(1, 14, 3, 1), 'x', self.ms),
                                     gauge.RSObtPeriod(dl, xwin.derwin(1, 14, 4, 1), 'x', self.ms),
-                                    rinc,
+                                    gauge.RSAngleParam(dl, xwin.derwin(1, 14, 5, 1), 'x', self.ms, 'ri', 'i'),
                                     ],
                              "SOI Exit")
         ewin = scr.derwin(8, 16, 7, 47)
-        if opts.target_body is None:
-            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'inc', 'i')
-        else:
-            rinc = gauge.RSAngleParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'ri', 'i')
         e = gauge.GaugeGroup(ewin, [gauge.RSTime(dl, ewin.derwin(1, 14, 1, 1), 'e', self.ms),
                                     gauge.RSSIParam(dl, ewin.derwin(1, 14, 2, 1), 'e', self.ms, 'edrvec', 'Re', 'm'),
                                     gauge.RSSIParam(dl, ewin.derwin(1, 14, 3, 1), 'e', self.ms, 'drvec', 'd', 'm'),
                                     gauge.RSSIParam(dl, ewin.derwin(1, 14, 4, 1), 'e', self.ms, 'dvvec', 'v', 'm/s'),
-                                    rinc,
+                                    gauge.RSAngleParam(dl, ewin.derwin(1, 14, 5, 1), 'e', self.ms, 'ri', 'i'),
                                     gauge.RSTimeParam(dl, ewin.derwin(1, 14, 6, 1), 'e', self.ms, 'lss', 'w'),
                                     ],
                              "Approach")
