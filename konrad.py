@@ -530,8 +530,12 @@ class AscentConsole3D(Console):
         elts = gauge.UpdateSimElements(dl, scr, self.rs, '0ovb')
         ris = gauge.UpdateTgtRI(dl, scr, self.rs, '0ovb', opts.target_body)
         zwin = scr.derwin(7, 16, 15, 1)
+        if opts.target_body:
+            zri = gauge.RSAngleParam(dl, zwin.derwin(1, 14, 2, 1), '0', self.rs, 'ri', 'ri')
+        else:
+            zri = gauge.RelIncGauge(dl, zwin.derwin(1, 14, 2, 1), None)
         z = gauge.GaugeGroup(zwin, [gauge.RSAngleParam(dl, zwin.derwin(1, 14, 1, 1), '0', self.rs, 'inc', 'i'),
-                                    gauge.RSAngleParam(dl, zwin.derwin(1, 14, 2, 1), '0', self.rs, 'ri', 'ri'),
+                                    zri,
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.rs, 'lan', 'L'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 4, 1), '0', self.rs, 'lon', 'lon'),
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 5, 1), '0', self.rs, 'oh', 'hdg'),

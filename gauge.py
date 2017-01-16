@@ -830,8 +830,8 @@ class RelIncGauge(AngleGauge):
         self.add_prop('inc', 'o.inclination')
         self.add_prop('lan', 'o.lan')
         if tgt is None:
-            self.add_prop('inc', 'tar.o.inclination')
-            self.add_prop('lan', 'tar.o.lan')
+            self.add_prop('tinc', 'tar.o.inclination')
+            self.add_prop('tlan', 'tar.o.lan')
         else:
             self.add_prop('tinc', 'b.o.inclination[%d]'%(tgt,))
             self.add_prop('tlan', 'b.o.lan[%d]'%(tgt,))
