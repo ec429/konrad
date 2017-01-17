@@ -651,7 +651,7 @@ class BaseAstroConsole(Console):
     def __init__(self, opts, scr, dl):
         super(BaseAstroConsole, self).__init__(opts, scr, dl)
         self.update = gauge.UpdateBooster(dl, scr, opts.booster)
-        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 24, 1, 28), opts.booster)
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
         maxtwr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 52), opts.booster, opts.body, use_throttle=0)
         maxtwr.label = 'MAX'
