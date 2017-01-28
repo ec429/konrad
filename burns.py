@@ -11,7 +11,7 @@ class ManeuverSim(sim.RocketSim3D):
     burnUT = 0
     burn_dur = -1
     burn_end = -1
-    def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+    def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=None):
         burnT = self.burnUT - self.UT
         burn_dur = self.burn_dur
         if self.burn_end >= 0:
@@ -22,6 +22,7 @@ class ManeuverSim(sim.RocketSim3D):
         man += mmo * burnT
         ean = orbit.ean_from_man(man, ecc, 24)
         self.sim_setup(booster, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma)
+        self.set_reflon(reflon)
         self.t = burnT
         self.data = {'0': self.encode()}
         self.dt = 0.2 # Use shorter time step for higher accuracy

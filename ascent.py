@@ -26,9 +26,10 @@ class AscentSim(sim.RocketSim):
                 print "%s"%(''.join(self.data.keys()),)
 
 class AscentSim3D(sim.RocketSim3D):
-    def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
+    def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=None):
         ean = orbit.ean_from_tan(tan, ecc)
         self.sim_setup(booster, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma)
+        self.set_reflon(reflon)
         iv_sgn = 1 if (self.vs >= 0) else -1
         self.data = {'0': self.encode()}
         while not (('o' in self.data and 'v' in self.data and 'b' in self.data) or

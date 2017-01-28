@@ -169,11 +169,14 @@ class RocketSim3D(object):
                 cls.MODE_RETROGRADE: "Retro", cls.MODE_LIVE: "LiveF",
                 cls.MODE_INERTIAL: "Inert", cls.MODE_LIVE_INERTIAL: "LiveI",
                 }.get(mode, "%r?"%(mode,))
-    def __init__(self, mode=0, debug=False):
+    def __init__(self, mode=0, debug=False, ground_alt=None, ground_map=None):
         self.data = {}
+        self.ground_alt = ground_alt
+        self.ground_map = ground_map
         self.mode = mode
         self.stagecap = 0
         self.debug = debug
+        self.reflon = None
     def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma):
         self.booster = booster.Booster.clone(bstr)
         self.pbody = orbit.ParentBody(brad, bgm)
@@ -190,6 +193,11 @@ class RocketSim3D(object):
         self.dt = 1.0
         # Total expended delta-V
         self.total_dv = 0
+    def set_reflon(self, lon):
+        if lon is None:
+            self.reflon = None
+            return
+        self.reflon = lon + self.lon
     def point(self, pit, hdg):
         # pointing vector in local co-ordinates
         pvec = matrix.Vector3((math.sin(pit),
@@ -203,8 +211,11 @@ class RocketSim3D(object):
     def downrange(self):
         return (self.rvec - self.init_rvec).mag
     @property
+    def hv(self):
+        return self.vvec.cross(self.rvec.hat)
+    @property
     def hs(self):
-        return self.vvec.cross(self.rvec.hat).mag
+        return self.hv.mag
     @property
     def vs(self):
         return self.vvec.dot(self.rvec.hat)
@@ -214,14 +225,33 @@ class RocketSim3D(object):
     @property
     def lat(self):
         return math.asin(self.rvec.hat.z)
+    @property
+    def ground_lon(self):
+        if self.reflon is None:
+            return None
+        return self.reflon - self.lon
+    @property
+    def local_ground_alt(self):
+        gl = self.ground_lon
+        if self.ground_map is not None and gl is not None:
+            mlat = int(round(math.degrees(self.lat) * 2))
+            mlon = int(round(math.degrees(gl) * 2)) % 720
+            mlat = min(mlat, 179)
+            if mlon >= 360: mlon -= 720
+            elif mlon < -360: mlon += 720
+            return self.ground_map[mlon][mlat]
+        if self.ground_alt is not None:
+            return self.ground_alt
+        return 0
     def encode(self):
         d = {'time': self.t, 'alt': self.alt, 'downrange': self.downrange,
              'hs': self.hs, 'vs': self.vs,
              'rvec': self.rvec, 'vvec': self.vvec,
              'lat': self.lat, 'lon': self.lon,
-             'dV': self.total_dv
+             'dV': self.total_dv, 'ground_lon': self.ground_lon,
+             'height': self.alt - self.local_ground_alt,
              }
-        return d
+        return dict((k,v) for k,v in d.iteritems() if v is not None)
     def step(self):
         self.t += self.dt
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)

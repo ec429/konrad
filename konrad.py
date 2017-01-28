@@ -408,6 +408,112 @@ class RetroConsole(Console):
     def connect_params(cls):
         return {'rate': 500} # update twice per second
 
+class RetroConsole3D(Console):
+    """The other Retrograde Propulsion console"""
+    def __init__(self, opts, scr, dl):
+        super(RetroConsole3D, self).__init__(opts, scr, dl)
+        self.update = gauge.UpdateBooster(dl, scr, opts.booster)
+        deltav = gauge.DeltaVGauge(dl, scr.derwin(3, 23, 1, 28), opts.booster)
+        throttle = gauge.ThrottleGauge(dl, scr.derwin(3, 17, 1, 51))
+        twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
+        self.stagecap = 0
+        self.mode = retro.RetroSim3D.MODE_FIXED
+        self.vars = {}
+        mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
+        scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
+        sim_blocks = []
+        self.rs = [None, None]
+        for i in xrange(2):
+            y = i * 6
+            use_throttle = not i
+            rs = retro.RetroSim3D(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
+            self.rs[i] = rs
+            sim = gauge.UpdateRocketSim3D(dl, scr, opts.body, opts.booster, use_throttle, rs)
+            wtext = "At 100% throttle" if i else "At current throttle"
+            wt = gauge.FixedLabel(dl, scr.derwin(1, 32, 7 + y, 1), wtext, centered=True)
+            hwin = scr.derwin(5, 16, 8 + y, 1)
+            h = gauge.GaugeGroup(hwin, [gauge.RSTime(dl, hwin.derwin(1, 14, 1, 1), 'h', rs),
+                                        gauge.RSAlt(dl, hwin.derwin(1, 14, 2, 1), 'h', rs),
+                                        gauge.RSDownrange(dl, hwin.derwin(1, 14, 3, 1), 'h', rs)],
+                                 "Horizontal")
+            vwin = scr.derwin(5, 16, 8 + y, 17)
+            v = gauge.GaugeGroup(vwin, [gauge.RSTime(dl, vwin.derwin(1, 14, 1, 1), 'v', rs),
+                                        gauge.RSAlt(dl, vwin.derwin(1, 14, 2, 1), 'v', rs),
+                                        gauge.RSDownrange(dl, vwin.derwin(1, 14, 3, 1), 'v', rs)],
+                                 "Vertical")
+            swin = scr.derwin(6, 16, 7 + y, 33)
+            s = gauge.GaugeGroup(swin, [gauge.RSTime(dl, swin.derwin(1, 14, 1, 1), 's', rs),
+                                        gauge.RSDownrange(dl, swin.derwin(1, 14, 3, 1), 's', rs),
+                                        gauge.RSVSpeed(dl, swin.derwin(1, 14, 2, 1), 's', rs),
+                                        gauge.RSHSpeed(dl, swin.derwin(1, 14, 4, 1), 's', rs)],
+                                 "Surface")
+            bwin = scr.derwin(6, 16, 7 + y, 49)
+            b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', rs),
+                                        gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', rs),
+                                        gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', rs),
+                                        gauge.RSHSpeed(dl, bwin.derwin(1, 14, 4, 1), 'b', rs)],
+                                 "Burnout")
+            twin = scr.derwin(4, 14, 7 + y, 65)
+            t = gauge.GaugeGroup(twin, [gauge.RSAngleParam(dl, twin.derwin(1, 12, 1, 1), 'sh', rs, 'lat', 'lat', True),
+                                        gauge.RSAngleParam(dl, twin.derwin(1, 12, 2, 1), 'sh', rs, 'ground_lon', 'lon')],
+                                 "Touchdown")
+            sim_blocks.extend([sim, wt, h, v, s, b, t])
+        alt = gauge.TerrainAltitudeGauge(dl, scr.derwin(3, 22, 19, 8))
+        dh = gauge.DeltaHGauge(dl, scr.derwin(3, 22, 19, 30), opts.ground_map, opts.ground_alt)
+        vs = gauge.VSpeedGauge(dl, scr.derwin(3, 21, 19, 52))
+        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
+        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        self.group = gauge.GaugeGroup(scr,
+                                      [self.update, deltav, throttle, twr, mode, scap, alt, dh, vs] +
+                                      sim_blocks +
+                                      [self.status, body, time],
+                                      "KONRAD: Retro")
+        self.update_vars()
+    def update_vars(self):
+        self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
+        self.vars['mode'] = 'Mode: %s'%(retro.RetroSim3D.modename(self.mode),)
+        for i in xrange(2):
+            if self.rs[i] is not None:
+                self.rs[i].mode = self.mode
+                self.rs[i].stagecap = self.stagecap
+    def input(self, key):
+        if key >= ord('1') and key <= ord('9'):
+            i = int(chr(key))
+            self.dl.send_msg({'run':['f.setThrottle[%f]'%(i/10.0,)]})
+            return
+        if key == ord('z'):
+            self.dl.send_msg({'run':['f.setThrottle[1.0]']})
+            return
+        if key == ord('x'):
+            self.dl.send_msg({'run':['f.setThrottle[0.0]']})
+            return
+        if key == ord(' '):
+            self.dl.send_msg({'run':['f.stage']})
+            return
+        if key == ord('f'):
+            self.mode = retro.RetroSim3D.MODE_FIXED
+            self.update_vars()
+            return
+        if key == ord('r'):
+            self.mode = retro.RetroSim3D.MODE_RETROGRADE
+            self.update_vars()
+            return
+        if key == curses.KEY_PPAGE:
+            self.stagecap += 1
+            self.update_vars()
+            return
+        if key == curses.KEY_NPAGE:
+            self.stagecap = max(self.stagecap - 1, 0)
+            self.update_vars()
+            return
+        if key == ord('?'):
+            self.update.reset()
+            return
+        return super(RetroConsole3D, self).input(key)
+    @classmethod
+    def connect_params(cls):
+        return {'rate': 1000} # update once per second
+
 class AscentConsole(Console):
     """Ascent Guidance console"""
     def __init__(self, opts, scr, dl):
@@ -1023,7 +1129,8 @@ class FlyByConsole(ApproachConsole):
         return super(FlyByConsole, self).outputs(opts, scr, dl) + [exit, y]
 
 consoles = {'fd': FDConsole, 'traj': TrajConsole, 'boost': BoosterConsole,
-            'retro': RetroConsole, 'asc': AscentConsole, 'a3d': AscentConsole3D,
+            'retro': RetroConsole, 'r3d': RetroConsole3D,
+            'asc': AscentConsole, 'a3d': AscentConsole3D,
             'mnv': AstroConsole, 'esc': ExitConsole, 'clo': ApproachConsole,
             'fba': FlyByConsole}
 

@@ -1299,6 +1299,7 @@ class UpdateRocketSim3D(Gauge):
         self.add_prop('ape', 'o.argumentOfPeriapsis')
         self.add_prop('ecc', 'o.eccentricity')
         self.add_prop('sma', 'o.sma')
+        self.add_prop('lon', 'v.long')
         self.add_prop('UT', 't.universalTime')
     def _changeopt(self, **kwargs):
         if 'body' in kwargs:
@@ -1315,6 +1316,8 @@ class UpdateRocketSim3D(Gauge):
         self.sim.UT = UT
         if self.use_throttle:
             throttle = self.get('throttle')
+            if throttle > 1.0:
+                throttle = None
         else:
             throttle = 1.0
         if self.want is not None and self.sim.mode == self.sim.MODE_FIXED:
@@ -1335,9 +1338,10 @@ class UpdateRocketSim3D(Gauge):
         ape = self.getrad('ape')
         ecc = self.get('ecc')
         sma = self.get('sma')
+        lon = self.getrad('lon')
         if None not in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
             try:
-                self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma)
+                self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=lon)
             except SimulationException:
                 pass
 
@@ -2183,9 +2187,10 @@ class RSTimeParam(RSTimeGauge):
         super(RSTimeParam, self).__init__(dl, cw, key, sim)
 
 class RSAngleParam(RSAngleGauge):
-    def __init__(self, dl, cw, key, sim, param, label):
+    def __init__(self, dl, cw, key, sim, param, label, signed=False):
         self.param = param
         self.label = label
+        self.signed = signed
         super(RSAngleParam, self).__init__(dl, cw, key, sim)
 
 class RSTgtAlt(SIGauge):
