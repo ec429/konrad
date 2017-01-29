@@ -367,7 +367,7 @@ class FractionGauge(OneLineGauge):
 class SIGauge(FractionGauge):
     unit = ''
     label = ''
-    maxwidth = 6
+    maxwidth = 7
     fracmode = 2
     def __init__(self, dl, cw, target=None):
         super(SIGauge, self).__init__(dl, cw)
@@ -381,7 +381,7 @@ class SIGauge(FractionGauge):
         sz = math.log10(abs(value)) if value else 1
         if sgn: sz += 1
         pfx = ('', 1)
-        if sz >= digits:
+        if sz >= min(digits, self.maxwidth - 1):
             pfx = ('k', 1000)
         if sz >= digits + 2:
             pfx = ('M', 1e6)
