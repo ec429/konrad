@@ -418,15 +418,18 @@ class RetroConsole3D(Console):
         twr = gauge.TWRGauge(dl, scr.derwin(3, 16, 1, 12), opts.booster, opts.body)
         self.stagecap = 0
         self.mode = retro.RetroSim3D.MODE_FIXED
+        self.radar = False
         self.vars = {}
         mode = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 25), self.vars, 'mode', centered=True)
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
+        dhm = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 55), self.vars, 'radar', centered=True)
         sim_blocks = []
         self.rs = [None, None]
         for i in xrange(2):
             y = i * 6
             use_throttle = not i
             rs = retro.RetroSim3D(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
+            rs.radar = self.radar
             self.rs[i] = rs
             sim = gauge.UpdateRocketSim3D(dl, scr, opts.body, opts.booster, use_throttle, rs)
             wtext = "At 100% throttle" if i else "At current throttle"
@@ -464,7 +467,7 @@ class RetroConsole3D(Console):
         body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
         time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
         self.group = gauge.GaugeGroup(scr,
-                                      [self.update, deltav, throttle, twr, mode, scap, alt, dh, vs] +
+                                      [self.update, deltav, throttle, twr, mode, scap, dhm, alt, dh, vs] +
                                       sim_blocks +
                                       [self.status, body, time],
                                       "KONRAD: Retro")
@@ -472,10 +475,12 @@ class RetroConsole3D(Console):
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
         self.vars['mode'] = 'Mode: %s'%(retro.RetroSim3D.modename(self.mode),)
+        self.vars['radar'] = "Height: RADAR" if self.radar else "Height: MAP"
         for i in xrange(2):
             if self.rs[i] is not None:
                 self.rs[i].mode = self.mode
                 self.rs[i].stagecap = self.stagecap
+                self.rs[i].radar = self.radar
     def input(self, key):
         if key >= ord('1') and key <= ord('9'):
             i = int(chr(key))
@@ -508,6 +513,10 @@ class RetroConsole3D(Console):
             return
         if key == ord('?'):
             self.update.reset()
+            return
+        if key == ord('H'):
+            self.radar = not self.radar
+            self.update_vars()
             return
         return super(RetroConsole3D, self).input(key)
     @classmethod

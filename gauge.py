@@ -1301,6 +1301,7 @@ class UpdateRocketSim3D(Gauge):
         self.add_prop('sma', 'o.sma')
         self.add_prop('lon', 'v.long')
         self.add_prop('UT', 't.universalTime')
+        self.add_prop('th', 'v.terrainHeight')
     def _changeopt(self, **kwargs):
         if 'body' in kwargs:
             self.del_prop('brad')
@@ -1320,7 +1321,7 @@ class UpdateRocketSim3D(Gauge):
                 throttle = None
         else:
             throttle = 1.0
-        if self.want is not None and self.sim.mode == self.sim.MODE_FIXED:
+        if self.want is not None and self.sim.mode in (self.sim.MODE_FIXED, self.sim.MODE_INERTIAL):
             pit = self.want.get('PIT')
             if pit is not None:
                 pit = math.radians(pit)
@@ -1339,6 +1340,12 @@ class UpdateRocketSim3D(Gauge):
         ecc = self.get('ecc')
         sma = self.get('sma')
         lon = self.getrad('lon')
+        radar = getattr(self.sim, 'radar', False)
+        if radar:
+            th = self.get('th')
+            self.sim.force_ground_alt = th
+        else:
+            self.sim.force_ground_alt = None
         if None not in (throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma):
             try:
                 self.sim.simulate(self.booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=lon)

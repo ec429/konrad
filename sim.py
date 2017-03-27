@@ -177,6 +177,7 @@ class RocketSim3D(object):
         self.stagecap = 0
         self.debug = debug
         self.reflon = None
+        self.force_ground_alt = None
     def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma):
         self.booster = booster.Booster.clone(bstr)
         self.pbody = orbit.ParentBody(brad, bgm)
@@ -232,6 +233,8 @@ class RocketSim3D(object):
         return self.reflon - self.lon
     @property
     def local_ground_alt(self):
+        if self.force_ground_alt:
+            return self.force_ground_alt
         gl = self.ground_lon
         if self.ground_map is not None and gl is not None:
             mlat = int(round(math.degrees(self.lat) * 2))
