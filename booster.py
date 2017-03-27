@@ -70,7 +70,8 @@ class Stage(object):
     @property
     def is_empty(self):
         if self.thrust == 0: return True # Always stage straight past this, it's dead weight
-        return any(p.mass <= 0 for p in self.props if p.mainEngine)
+        # Engines generally won't run if <0.01 in the tank
+        return any(p.filled <= 0.01 for p in self.props if p.mainEngine)
     @property
     def prop_mass(self):
         return sum(p.mass for p in self.props if p.mainEngine)
