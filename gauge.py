@@ -266,18 +266,21 @@ class ObtPeriodGauge(OneLineGauge):
             self.addstr('LINK DOWN')
             self.chgat(0, self.width, curses.color_pair(2))
             return
-        s = t % 60
-        m = (t / 60) % 60
-        h = (t / 3600) % 24
-        d = (t / 86400)
-        if t < 60:
-            text = '%ds'%(t,)
-        elif t < 3600:
-            text = '%dm%02ds'%(t / 60, t % 60)
-        elif t < 86400:
-            text = '%dh%02dm%02ds'%(h, m, s)
+        if t == u'Infinity':
+            text = 'n/a'
         else:
-            text = '%dd%02dh%02dm'%(d, h, m)
+            s = t % 60
+            m = (t / 60) % 60
+            h = (t / 3600) % 24
+            d = (t / 86400)
+            if t < 60:
+                text = '%ds'%(t,)
+            elif t < 3600:
+                text = '%dm%02ds'%(t / 60, t % 60)
+            elif t < 86400:
+                text = '%dh%02dm%02ds'%(h, m, s)
+            else:
+                text = '%dd%02dh%02dm'%(d, h, m)
         label = 'Period'
         width = self.width - len(label) - 2
         self.addstr('%s: %s'%(label, text.rjust(width)[:width]))
