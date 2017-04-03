@@ -80,7 +80,8 @@ class Stage(object):
         return self.dry + self.prop_mass
     @property
     def deltaV(self):
-        if self.thrust == 0: return 0 # dead weight
+        if self.thrust in (0, None): return 0 # dead weight
+        if self.veff in (0, None): return 0 # dead weight
         bt = self.burn_time(1.0)
         mdot = self.thrust / self.veff # tons/s
         residue = sum((p.filled - mdot * self.mfrac[p.name] * bt / p.density) * p.density
