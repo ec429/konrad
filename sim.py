@@ -179,7 +179,7 @@ class RocketSim3D(object):
         self.reflon = None
         self.force_ground_alt = None
     def sim_setup(self, bstr, throttle, pit, hdg, brad, bgm, inc, lan, ean, ape, ecc, sma):
-        self.booster = booster.Booster.clone(bstr)
+        self.booster = bstr.__class__.clone(bstr)
         self.pbody = orbit.ParentBody(brad, bgm)
         self.pit = pit
         self.hdg = hdg

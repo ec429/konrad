@@ -6,8 +6,8 @@ import matrix
 import cfg
 
 # Value of big-G used by Kopernicus
-# XXX Warning! this is for KSP 1.1.3; in 1.2.x, G = 6.67408e-11
-G = 6.674e-11
+# XXX Warning! this is for KSP 1.2.x; in 1.1.3, G = 6.674e-11
+G = 6.67408e-11
 
 renames = {}
 
@@ -48,6 +48,10 @@ class CelestialBody(object):
                                                   self.elts['ape'],
                                                   self.elts['inc'],
                                                   self.elts['lan'])
+    def tan_at_ut(self, ut):
+        man = self.elts['maae'] + ut * self.elts['mmo']
+        ean = ean_from_man(man, self.elts['ecc'], 16)
+        return tan_from_ean(ean, self.elts['ecc'])
     @property
     def samhat(self):
         """Returns orbit normal vector"""
@@ -67,6 +71,7 @@ if config is not None:
     bodies = kop['Body']
     for body in bodies:
         name = body['name']
+        # body['flightGlobalsIndex']!
         rename = body.get('cbNameLater')
         if rename is not None:
             renames[name] = rename

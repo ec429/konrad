@@ -193,6 +193,26 @@ class Booster(object):
         d = json.loads(j)
         return cls.from_dict(d)
 
+class FakeBooster(object):
+    """Implements enough of the Booster API for use in xfer console
+
+    Models a constant TMR of 10m/s^2."""
+    stages = []
+    @classmethod
+    def clone(cls, other):
+        return cls()
+    @property
+    def all_props(self):
+        return []
+    def stage(self):
+        return
+    def convert_throttle(self, throttle):
+        return throttle
+    @property
+    def deltaV(self):
+        return 10000
+    def simulate(self, throttle, dt, stagecap=0):
+        return dt * 10
 
 known_props = {}
 config = cfg.get_default_config()
