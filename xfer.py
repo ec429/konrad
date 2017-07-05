@@ -5,6 +5,7 @@ import downlink
 import gauge
 import curses, curses.ascii
 import optparse
+import math
 import booster
 import burns
 import orbit
@@ -24,7 +25,7 @@ class TransferConsole(konrad.Console):
         self.ms = burns.ManeuverSim(mode=self.mode)
         self.ms.stagecap = -1
         self.ms.burn_dur = 0
-        sim = gauge.UpdateManeuverSim(dl, scr, opts.body, opts.booster, False, self.ms, want=self.vars)
+        sim = gauge.UpdateManeuverSim(dl, scr, 0, opts.booster, False, self.ms, want=self.vars)
         oriwant = scr.derwin(3, 26, 19, 1)
         owgroup = gauge.GaugeGroup(oriwant, [
             gauge.PitchGauge(dl, oriwant.derwin(1, 11, 1, 1), want=self.vars),
@@ -32,13 +33,13 @@ class TransferConsole(konrad.Console):
             gauge.HeadingGauge(dl, oriwant.derwin(1, 12, 1, 13), want=self.vars),
             gauge.VariableLabel(dl, oriwant.derwin(1, 6, 0, 19), self.vars, 'fineness', centered=True),
             ], 'Orient')
-        body = gauge.BodyGauge(dl, scr.derwin(3, 12, 0, 0), opts.body)
-        time = gauge.TimeGauge(dl, scr.derwin(3, 12, 0, 68))
+        body = gauge.BodyNameGauge(dl, scr.derwin(3, 12, 0, 0), 1)
+        time = gauge.DateTimeGauge(dl, scr.derwin(3, 14, 0, 66))
         ## Outputs
         elts = gauge.UpdateSimElements(dl, scr, self.ms, '0b')
-        appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, opts.target_body, 'b', 'e')
-        ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'be', opts.target_body)
-        entry = gauge.UpdateSoiEntry(dl, scr, self.ms, opts.target_body, 'e', 's')
+        appr = gauge.UpdateTgtCloseApproach(dl, scr, self.ms, 2, 'b', 'e')
+        ris = gauge.UpdateTgtRI(dl, scr, self.ms, 'be', 2)
+        entry = gauge.UpdateSoiEntry(dl, scr, self.ms, 2, 'e', 's')
         zwin = scr.derwin(6, 14, 7, 1)
         z = gauge.GaugeGroup(zwin, [gauge.RSTime(dl, zwin.derwin(1, 12, 1, 1), '0', self.ms),
                                     gauge.RSAlt(dl, zwin.derwin(1, 12, 2, 1), '0', self.ms),
@@ -46,7 +47,7 @@ class TransferConsole(konrad.Console):
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 12, 4, 1), '0', self.ms, 'inc', 'i'),
                                     ],
                              "Start")
-        bwin = scr.derwin(10, 16, 7, 15)
+        bwin = scr.derwin(11, 16, 7, 15)
         b = gauge.GaugeGroup(bwin, [gauge.RSTime(dl, bwin.derwin(1, 14, 1, 1), 'b', self.ms),
                                     gauge.RSAlt(dl, bwin.derwin(1, 14, 2, 1), 'b', self.ms),
                                     gauge.RSVSpeed(dl, bwin.derwin(1, 14, 3, 1), 'b', self.ms),
@@ -54,7 +55,8 @@ class TransferConsole(konrad.Console):
                                     gauge.RSPeriapsis(dl, bwin.derwin(1, 14, 5, 1), 'b', self.ms),
                                     gauge.RSObtPeriod(dl, bwin.derwin(1, 14, 6, 1), 'b', self.ms),
                                     gauge.RSAngleParam(dl, bwin.derwin(1, 14, 7, 1), 'b', self.ms, 'ri', 'ri'),
-                                    gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'dV', 'm/s'),
+                                    gauge.RSSIParam(dl, bwin.derwin(1, 14, 8, 1), 'b', self.ms, 'dV', 'c3v', 'm/s'),
+                                    gauge.RSInjVel(dl, bwin.derwin(1, 14, 9, 1), 'b', self.ms, 1),
                                     ],
                              "End")
         ewin = scr.derwin(8, 16, 7, 47)
@@ -76,7 +78,7 @@ class TransferConsole(konrad.Console):
                                     gauge.RSTimeParam(dl, swin.derwin(1, 14, 7, 1), 's', self.ms, 'lss', 'w'),
                                     ],
                              "SOI Entry")
-        tgt = gauge.BodyNameGauge(dl, scr.derwin(3, 16, 16, 63), opts.target_body, label='Tgt:')
+        tgt = gauge.BodyNameGauge(dl, scr.derwin(3, 16, 16, 63), 2, label='Tgt:')
         self.group = gauge.GaugeGroup(scr,
                                       [mode, sim, owgroup,
                                        elts, appr, ris, entry, z, b, e, s, tgt,
@@ -87,19 +89,28 @@ class TransferConsole(konrad.Console):
         self.thou = False
         self.UT = 0
     def update_bodies(self):
+        if self.UT < 0:
+            self.UT = 0;
         self.dl.put('t.universalTime', self.UT)
         self.dl.put('b.radius[0]', self.frm.parent_body.rad)
         self.dl.put('b.o.gravParameter[0]', self.frm.parent_body.gm)
-        self.dl.put('b.radius[1]', self.to.rad)
-        self.dl.put('b.o.gravParameter[1]', self.to.gm)
-        self.dl.put('o.inclination', self.frm.elts['inc'])
-        self.dl.put('o.lan', self.frm.elts['lan'])
-        self.dl.put('o.trueAnomaly', self.frm.tan_at_ut(self.UT))
-        self.dl.put('o.argumentOfPeriapsis', self.frm.elts['ape'])
+        self.dl.put('b.name[1]', self.frm.name)
+        self.dl.put('b.radius[1]', self.frm.rad)
+        self.dl.put('b.o.gravParameter[1]', self.frm.gm)
+        self.dl.put('b.soi[1]', self.frm.soi)
+        self.dl.put('b.name[2]', self.to.name)
+        self.dl.put('b.radius[2]', self.to.rad)
+        self.dl.put('b.o.gravParameter[2]', self.to.gm)
+        self.dl.put('b.soi[2]', self.to.soi)
+        self.dl.put('o.inclination', math.degrees(self.frm.elts['inc']))
+        self.dl.put('o.lan', math.degrees(self.frm.elts['lan']))
+        self.dl.put('o.trueAnomaly', math.degrees(self.frm.tan_at_ut(self.UT)))
+        self.dl.put('o.argumentOfPeriapsis', math.degrees(self.frm.elts['ape']))
         self.dl.put('o.eccentricity', self.frm.elts['ecc'])
         self.dl.put('o.sma', self.frm.elts['sma'])
         self.dl.put('n.pitch2', 0)
         self.dl.put('n.heading2', 0)
+        self.ms.burnUT = self.UT
     def setfine(self, value):
         self.fine = value
         self.vars['fineness'] = {0: 'COARSE', 1: 'NORMAL', 2: 'FINE'}.get(value, 'Error?')
@@ -138,24 +149,24 @@ class TransferConsole(konrad.Console):
             self.thou = not self.thou
             self.update_vars()
             return
-        thou = 1000 if self.thou else 1
+        thou = [86400, 864000, 8640000] if self.thou else [60, 1800, 21600]
         if key == ord(')'):
-            self.ms.burnUT += thou
+            self.UT += thou[0]
             return
         if key == ord('('):
-            self.ms.burnUT -= thou
+            self.UT -= thou[0]
             return
         if key == ord(']'):
-            self.ms.burnUT += 10 * thou
+            self.UT += thou[1]
             return
         if key == ord('['):
-            self.ms.burnUT -= 10 * thou
+            self.UT -= thou[1]
             return
         if key == ord('}'):
-            self.ms.burnUT += 100 * thou
+            self.UT += thou[2]
             return
         if key == ord('{'):
-            self.ms.burnUT -= 100 * thou
+            self.UT -= thou[2]
             return
         if key == ord('0'):
             self.ms.burn_dur = 0

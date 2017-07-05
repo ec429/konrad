@@ -30,6 +30,8 @@ class CelestialBody(object):
             gm = self.gm + self.pb.gm
             # mean motion n = sqrt(mu / a^3)
             self.elts['mmo'] = math.sqrt(gm / self.elts['sma'] ** 3)
+            # soi = a(m/M)^0.4
+            self.soi = self.elts['sma'] * (self.gm / self.pb.gm) ** 0.4
     @property
     def parent_body(self):
         if self.pb is None:

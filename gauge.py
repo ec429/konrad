@@ -208,13 +208,15 @@ class TimeFormatterMixin(object):
         t /= 60
         h = t % 24
         t /= 24
-        d = t
-        return (d, h, m, s)
+        d = t % 365
+        t /= 365
+        y = t
+        return (y, d, h, m, s)
     @classmethod
     def fmt_time(cls, t, elts):
         """Return time formatted with at most elts elements"""
-        d,h,m,s = cls.mktime(abs(t))
-        parts = [(d, 'd'), (h, 'h'), (m, ':'), (s, None)]
+        y,d,h,m,s = cls.mktime(abs(t))
+        parts = [(y, 'y'), (d, 'd'), (h, 'h'), (m, ':'), (s, None)]
         while len(parts) > elts and not parts[0][0]:
             parts = parts[1:]
         ret = ""
@@ -239,6 +241,33 @@ class TimeGauge(OneLineGauge, TimeFormatterMixin):
             self.chgat(0, self.width, curses.color_pair(2))
             return
         self.addstr('T+%s'%(self.fmt_time(t, 3)))
+
+class DateTimeGauge(OneLineGauge, TimeFormatterMixin):
+    def __init__(self, dl, cw):
+        super(DateTimeGauge, self).__init__(dl, cw)
+        self.add_prop('T', 't.universalTime')
+    @classmethod
+    def fmt_time(cls, t, elts):
+        if t < 0:
+            return '#NEG#'
+        y,d,h,m,s = cls.mktime(t)
+        date = "y%dd%03d " % (y + 1, d + 1)
+        parts = [(h, ':'), (m, ':'), (s, None)]
+        ret = ""
+        for i,p in enumerate(parts):
+            if i >= elts: break
+            ret += '%02d'%(p[0],)
+            if i + 1 < elts and p[1] is not None:
+                ret += p[1]
+        return date + ret
+    def draw(self):
+        super(DateTimeGauge, self).draw()
+        t = self.get('T')
+        if t is None:
+            self.addstr('LINK DOWN')
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        self.addstr(self.fmt_time(t, 2))
 
 class TimeToApGauge(OneLineGauge, TimeFormatterMixin):
     label = "ttAp"
@@ -2244,6 +2273,31 @@ class RSSIParam(SIGauge):
             self.addstr(self.label+'-'*(self.olg_width - 1))
             col = 2
         self.chgat(0, self.width, curses.color_pair(col))
+
+class RSInjVel(SIGauge):
+    label = 'dV'
+    unit = 'm/s'
+    def __init__(self, dl, cw, key, sim, body):
+        super(RSInjVel, self).__init__(dl, cw)
+        self.sim = sim
+        self.key = key
+        self.body = body
+        self.add_prop('brad', orbit.ParentBody.rad_api(body))
+        self.add_prop('bgm', orbit.ParentBody.gm_api(body))
+    def draw(self):
+        c3v = self.sim.data.get(self.key, {}).get('dV', 0)
+        # soe = -mu/2a
+        # soe = v^2/2 - mu/r
+        soe = c3v*c3v / 2.0 # as r -> infinity
+        mu = self.get('bgm')
+        r = self.get('brad')
+        # Standard departure orbit at 180km
+        alt = 180e3
+        vpe = math.sqrt(2 * (soe + mu/(r + alt)))
+        vcirc = orbit.ParentBody(r, mu).vcirc(alt)
+        dV = vpe - vcirc
+        super(RSInjVel, self).draw(dV)
+        self.chgat(0, self.width, curses.color_pair(3))
 
 class RSLatitude(OneLineGauge):
     param = 'lat'
