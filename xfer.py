@@ -207,7 +207,7 @@ def parse_opts():
     x = optparse.OptionParser()
     x.add_option('--refresh-rate', type='float', help='Refresh interval in ms', default=500)
     x.add_option('-f', '--fallover', action="store_true", help='Fall over when exceptions encountered')
-    x.add_option('-b', '--body', type='string', help="Name of body to assume we're at", default=1)
+    x.add_option('-b', '--body', type='string', help="Name of body to assume we're at", default='Earth')
     x.add_option('-t', '--target-body', type='string', help="Name of body we want to intercept")
     opts, args = x.parse_args()
     if args:

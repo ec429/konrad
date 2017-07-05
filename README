@@ -139,6 +139,30 @@ console it should display.  So far we have the following:
     Escape, Close-Approach and Fly-By Astrogation (respectively).
     Same inputs as mnv, but different displayed info.
     See section "More Astrogation" below for more information.
+* xfer
+    The Transfer Window planning console is in a separate program, xfer.py,
+    because it doesn't use telemetry.  It generally works like a close-approach
+    astrogation console, except that rather than specifying the burn from a
+    parking orbit, you specify the hyperbolic excess velocity (also known, not
+    entirely correctly, as the C₃ velocity).  The delta-V to attain this from a
+    180km parking orbit (assuming no plane change) is also calculated and
+    displayed.
+    Note that this isn't designed to compute a burn for a specific vehicle;
+    consequently it does not require (or accept) a JSON Booster file.
+    Inputs:
+    - f to select 'Fixed' mode (attitude specified with PIT/HDG boxes)
+    - p to select 'Progd' mode (assume prograde hold)
+    - r to select 'Retro' mode (assume retrograde hold)
+    - w/a/s/d to set PIT/HDG boxes (shift for fine)
+    - ` (backtick) to cycle fine controls (COARSE is as above, NORMAL and then
+      FINE divide by 10 per step)
+    - (/) to change start time in 1-minute or 1-day increments
+    - [/] to change start time in 30-minute or 10-day increments
+    - {/} to change start time in 6-hour or 100-day increments
+    - # (toggle) to switch between the two modes for the above three
+    - ,/. to change burn duration in 1s increments (NORMAL; others scale 5x)
+    - </> to change burn duration in 10s increments (NORMAL; others scale 5x)
+    - 0 to set burn duration to zero
 
 Global Inputs
 -------------
