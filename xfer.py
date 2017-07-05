@@ -86,7 +86,7 @@ class TransferConsole(konrad.Console):
                                       "KONRAD: %s"%(self.title,))
         self.update_vars()
         self.setfine(1)
-        self.thou = False
+        self.thou = True
         self.UT = 0
     def update_bodies(self):
         if self.UT < 0:
