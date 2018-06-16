@@ -1440,7 +1440,7 @@ class UpdateSoiExit(UpdateEventXform):
         if tgt is not None:
             self.add_prop('tbn', 'b.name[%d]'%(tgt,))
     def _changeopt(self, **kwargs):
-        if 'body' in kwargs and self.tgt is None:
+        if 'body' in kwargs and self.bfrm is None:
             self.del_prop('soi')
             self.add_prop('soi', 'b.soi[%d]'%(kwargs['body'],))
         super(UpdateSoiExit, self)._changeopt(**kwargs)
@@ -1552,6 +1552,8 @@ class UpdateApoApsis(UpdateEventXform):
         rvec, vvec = self.sim.pbody.compute_3d_vector(sma, ecc, math.pi, ape, inc, lan)
         self.sim_set['rvec'] = rvec
         self.sim_set['vvec'] = vvec
+        self.sim_set['lon'] = math.atan2(rvec.hat.y, rvec.hat.x)
+        self.sim_set['lat'] = math.asin(rvec.hat.z)
         # copy orbital parameters
         self.sim_set['man'] = math.pi
         self.sim_set['ean'] = math.pi
