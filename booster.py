@@ -7,12 +7,13 @@ import os
 import cfg
 
 class Propellant(object):
-    def __init__(self, name, volume, density, mainEngine, filled=None):
+    def __init__(self, name, volume, density, mainEngine, filled=None, ratio=None):
         self.name = name
         self.volume = volume
         self.filled = volume if filled is None else filled
         self.density = density
         self.mainEngine = mainEngine
+        self.ratio = ratio
     @classmethod
     def clone(cls, other):
         return cls(other.name, other.volume, other.density, other.mainEngine, other.filled)
@@ -29,7 +30,7 @@ class Propellant(object):
         name = d['name']
         if 'density' not in d:
             d['density'] = known_props[name]
-        return cls(name, d['volume'], d['density'], d.get('mainEngine', True))
+        return cls(name, d['volume'], d['density'], d.get('mainEngine', True), ratio=d.get('ratio'))
 
 class Stage(object):
     def __init__(self, props, isp, dry, thrust=None, minThrottle=100.0):
@@ -44,9 +45,13 @@ class Stage(object):
         self._load = None
         self.mfrac = {}
         full_m = sum(p.full_mass for p in self.props if p.mainEngine)
+        full_r = sum(p.ratio * p.density for p in self.props if p.mainEngine and p.ratio is not None)
         for p in self.props:
             if not p.mainEngine: continue
-            self.mfrac[p.name] = p.full_mass / full_m
+            if p.ratio is not None:
+                self.mfrac[p.name] = p.ratio * p.density / full_r
+            else:
+                self.mfrac[p.name] = p.full_mass / full_m
     @classmethod
     def clone(cls, other): # does not clone link to payload!
         return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust, other.minThrottle)

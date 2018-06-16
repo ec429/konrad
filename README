@@ -205,6 +205,14 @@ A Propellant is a dictionary, with the following items:
   "mainEngine": optional boolean (defaults to true) indicating whether this
                  propellant is consumed by the main engine (and is thus part of
                  the interpretation of the Isp figure)
+  "ratio": optional volume flow fraction consumed by engine(s) of stage.  If
+            this is omitted, it will be calculated from the tank volumes in the
+            stage on the assumption that the engine depletes all mainEngine
+            propellants equally.  Normally this assumption is fine, but if you
+            have added extra, say, LH₂ to allow for boil-off, then it will lead
+            to overestimation of the stage delta-V.  Note that "ratio" should
+            be specified for _all_ mainEngine propellants in the stage, as
+            otherwise incorrect calculations will result.
 Some examples are in the jb_examples/ directory:
 * WAC.  Three TinyTim boosters and an Aerobee sustainer.
 * AtlasAgena.  An Agena-D (with hydrazine RCS) on an Atlas SLV-3.  This example
