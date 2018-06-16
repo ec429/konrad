@@ -71,6 +71,8 @@ console it should display.  So far we have the following:
     - z for 100% throttle
     - space for staging
     - ? to refresh stage detection
+    - / to override stage detection with a staging event (i.e. cause konrad to
+      pretend the vehicle has staged even though it doesn't believe it has.)
 * retro
     Retrograde Guidance.  For judging landings on airless bodies.
     See section "Landings" below for more information.
@@ -88,6 +90,11 @@ console it should display.  So far we have the following:
     - z for 100% throttle
     - space for staging
     - ? to refresh stage detection
+    - / to override stage detection
+* r3d
+    Retrograde Guidance 3D.  Like retro, but works in 3 dimensions, so can
+    handle off-retrograde headings, compute lat/long of landing site, etc.
+    Same inputs as retro, but different displayed info.
 * asc
     Ascent Guidance.  For judging launches to orbit (ignores air drag).
     See section "Ascent Guidance" below for more information.
@@ -102,6 +109,7 @@ console it should display.  So far we have the following:
     - z for 100% throttle
     - space for staging
     - ? to refresh stage detection
+    - / to override stage detection
 * a3d
     Ascent Guidance 3D.  Like asc, but works in 3 dimensions, so can handle
     off-prograde headings, compute inclination or relative inclination, etc.
@@ -135,6 +143,7 @@ console it should display.  So far we have the following:
     - B to unlimit burn duration (i.e. 'until burnout')
     - N to fix burn end (i.e. start counting down once Start is passed)
     - ? to refresh stage detection
+    - / to override stage detection
 * esc, clo, fba
     Escape, Close-Approach and Fly-By Astrogation (respectively).
     Same inputs as mnv, but different displayed info.
@@ -194,10 +203,9 @@ A Stage is a dictionary, with the following items:
   "props": list of Propellants
   "isp": main engine Isp in seconds
   "dry": stage dry mass in tons
-Two further items can optionally be specified; they are used only by the Retro
-and Ascent consoles:
   "thrust": main engine thrust in kN
-  "minThrottle": main engine minimum throttle setting in percent
+  "minThrottle": optional main engine minimum throttle setting in percent
+                 (defaults to 100, i.e. unthrottleable).
 A Propellant is a dictionary, with the following items:
   "name": the KSP resource name of the propellant
   "volume": the volume of the tank (this is in litres if using RealismOverhaul)
@@ -435,16 +443,17 @@ you re-adjust pitch (W/S, possibly switching to Fine controls with `) until it
 (End A) is just right.  You don't actually want End A to equal Apo Z, because
 once you enter the Moon's SOI it will pull you outwards a bit, so you want to
 aim for a point a few Mm short (finding the right fudge factor takes practice;
-it would be nice if Konrad could do the patched conics for you but it can't -
-yet).  When you finally get it spot on, the phase angle will probably be
-slightly wrong - you want to fine-tune it to minimise the apoapsis phase angle
-(Apo *), which you do by adjusting the burn time.  This in turn slightly
-changes the prograde heading (and possibly the orbital velocity, if your
-parking orbit is quite eccentric), so now you need to tweak HDG and maybe PIT
-again.  After a few rounds of successive approximation, you should be able to
-get phase angle (Apo *) and inclination (Apo i) under 0.1°.  Read off the PIT
-and HDG values and give them to whoever's steering the vessel (e.g. Traj
-console with MJ Fixed mode).  Now patiently wait for Start T to count down.
+if you want Konrad to do the patched conics for you you'll need to use one of
+the more advanced astrogation consoles, probably 'clo').  When you finally get
+it spot on, the phase angle will probably be slightly wrong - you want to fine-
+tune it to minimise the apoapsis phase angle (Apo *), which you do by adjusting
+the burn time.  This in turn slightly changes the prograde heading (and
+possibly the orbital velocity, if your parking orbit is quite eccentric), so
+now you need to tweak HDG and maybe PIT again.  After a few rounds of
+successive approximation, you should be able to get phase angle (Apo *) and
+inclination (Apo i) under 0.1°.  Read off the PIT and HDG values and give them
+to whoever's steering the vessel (e.g. Traj console with MJ Fixed mode).  Now
+patiently wait for Start T to count down.
 About four minutes before burn time (i.e. Start T = 240), have them start
 actively steering the vessel to the specified pitch and heading, then set your
 astrog console to LiveF mode (press 'l').  Now instead of using the pitch and
