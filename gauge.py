@@ -546,6 +546,46 @@ class TerrainAltitudeGauge(SIGauge):
             alt = alt - th
         super(TerrainAltitudeGauge, self).draw(alt)
 
+class TimeToInitPointGauge(OneLineGauge, TimeFormatterMixin):
+    label = "TTX"
+    def __init__(self, dl, cw):
+        super(TimeToInitPointGauge, self).__init__(dl, cw)
+        self.add_prop('dr', 'downrange.d')
+        self.add_prop('hs', 'v.surfaceSpeed')
+    def draw(self):
+        super(TimeToInitPointGauge, self).draw()
+        dr = self.get('dr')
+        hs = self.get('hs')
+        if None in (dr, hs) or hs < 1:
+            self.addstr('%s: NO DATA'%(self.label,))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        t = dr / hs # assumes inward radial heading
+        elts = (self.width-1-len(self.label))/3
+        self.addstr('%s: %s'%(self.label, self.fmt_time(t, elts)))
+
+class TimeToLandingGauge(OneLineGauge, TimeFormatterMixin):
+    label = "TTZ"
+    def __init__(self, dl, cw):
+        super(TimeToLandingGauge, self).__init__(dl, cw)
+        self.add_prop('alt', 'v.altitude')
+        self.add_prop('th', 'v.terrainHeight')
+        self.add_prop('vs', 'v.verticalSpeed')
+    def draw(self):
+        super(TimeToLandingGauge, self).draw()
+        alt = self.get('alt')
+        th = self.get('th')
+        if th < alt:
+            alt -= th
+        vs = self.get('vs')
+        if None in (th, vs) or vs >= 0:
+            self.addstr('%s: NO DATA'%(self.label,))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
+        t = alt / -vs
+        elts = (self.width-1-len(self.label))/3
+        self.addstr('%s: %s'%(self.label, self.fmt_time(t, elts)))
+
 class LandingPointGauge(SIGauge):
     unit = 'm'
     label = 'ILS'
