@@ -1192,7 +1192,10 @@ def parse_opts():
     x.add_option('--mj', action='store_true', help='Enable control via MechJeb (Trajectory console)')
     x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
     x.add_option('--ground-alt', type='si', help="Constant value to use for ground altitude")
+    x.add_option('--list-bodies', action='store_true', help="Display the IDs of known celestial bodies, then exit")
     opts, args = x.parse_args()
+    if opts.list_bodies:
+        return (opts, None)
     if len(args) != 1:
         x.error("Missing consname (choose from %s)"%('|'.join(consoles.keys()),))
     consname = args[0]
@@ -1241,6 +1244,17 @@ def parse_opts():
                 opts.ground_map.setdefault(lon, {})[lat] = alt
     return (opts, console)
 
+def list_bodies(dl):
+    dl.update()
+    for i in xrange(100):
+        key = 'b.name[%d]'%(i,)
+        dl.subscribe(key)
+        dl.update()
+        name = dl.get(key)
+        if name is None:
+            break
+        print '%d: %s' % (i, name)
+
 if __name__ == '__main__':
     opts, console = parse_opts()
     gauge.fallover = opts.fallover
@@ -1252,10 +1266,17 @@ if __name__ == '__main__':
         dl = downlink.FakeDownlink()
     else:
         connect_opts = {'host': opts.server, 'port': opts.port, 'logf': logf}
-        connect_opts.update(console.connect_params())
+        if console is not None:
+            connect_opts.update(console.connect_params())
+        else:
+            connect_opts['rate'] = 100
         if opts.refresh_rate:
             connect_opts['rate'] = opts.refresh_rate
         dl = downlink.connect_default(**connect_opts)
+    if opts.list_bodies:
+        import sys
+        list_bodies(dl)
+        sys.exit(0)
     vessel = None
     dl.subscribe('v.name')
     scr = curses.initscr()
