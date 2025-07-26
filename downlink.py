@@ -139,6 +139,8 @@ class FakeDownlink(object):
         pass
     def unsubscribe(self, key):
         pass
+    def disconnect(self):
+        pass
     def update(self):
         time.sleep(DEFAULT_RATE / 1000.0)
         return {}

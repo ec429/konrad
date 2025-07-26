@@ -1325,4 +1325,5 @@ if __name__ == '__main__':
                     console.status.push(m)
             scr.refresh()
     finally:
+        dl.disconnect()
         curses.endwin()
