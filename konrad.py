@@ -623,6 +623,9 @@ class AscentConsole(Console):
         if key == ord('?'):
             self.update.reset()
             return
+        if key == ord('/'):
+            self.update.booster.stage()
+            return
         return super(AscentConsole, self).input(key)
     @classmethod
     def connect_params(cls):
@@ -756,6 +759,9 @@ class AscentConsole3D(Console):
             return
         if key == ord('?'):
             self.update.reset()
+            return
+        if key == ord('/'):
+            self.update.booster.stage()
             return
         return super(AscentConsole3D, self).input(key)
     @classmethod
@@ -1193,6 +1199,7 @@ def parse_opts():
     x.add_option('--ground-map', type='string', help="Path to ground map CSV (in SCANsat format)")
     x.add_option('--ground-alt', type='si', help="Constant value to use for ground altitude")
     x.add_option('--list-bodies', action='store_true', help="Display the IDs of known celestial bodies, then exit")
+    x.add_option('-e', '--residuals', action='store_true', help='Attempt to allow for propellant residuals in booster calcs')
     opts, args = x.parse_args()
     if opts.list_bodies:
         return (opts, None)
@@ -1207,6 +1214,7 @@ def parse_opts():
         opts.booster = booster.Booster.from_json(opts.booster.read())
         if not opts.propellant:
             opts.propellant = opts.booster.all_props
+    booster.resid = opts.residuals
     consumable = ['ElectricCharge']
     if not opts.unmanned:
         consumable += ['Food', 'Water', 'Oxygen']

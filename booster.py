@@ -6,6 +6,8 @@ import json
 import os
 import cfg
 
+resid = False # Incorporate 1% propellant residuals into calculations
+
 class Propellant(object):
     def __init__(self, name, volume, density, mainEngine, filled=None, ratio=None):
         self.name = name
@@ -23,6 +25,9 @@ class Propellant(object):
     @property
     def full_mass(self):
         return self.volume * self.density
+    @property
+    def residuals(self): # assume 1% typical; in fact it varies between engines
+        return self.full_mass * 0.01 if resid else 0.0
     def __str__(self):
         return self.name if self.mainEngine else '(%s)'%(self.name,)
     @classmethod
@@ -57,7 +62,7 @@ class Stage(object):
         return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust, other.minThrottle)
     @property
     def dry(self):
-        return self._dry + self.load + sum(p.mass for p in self.props if not p.mainEngine)
+        return self._dry + self.load + sum(p.residuals if p.mainEngine else p.mass for p in self.props)
     def add_payload(self, load):
         self._load = load
     @property
@@ -76,7 +81,7 @@ class Stage(object):
     def is_empty(self):
         if self.thrust == 0: return True # Always stage straight past this, it's dead weight
         # Engines generally won't run if <0.01 in the tank
-        return any(p.filled <= 0.01 for p in self.props if p.mainEngine)
+        return any(p.mass - p.residuals <= 0 for p in self.props if p.mainEngine)
     @property
     def prop_mass(self):
         return sum(p.mass for p in self.props if p.mainEngine)
@@ -140,8 +145,9 @@ class Stage(object):
         for p in self.props:
             if not p.mainEngine: continue
             need = dm * self.mfrac[p.name] / p.density
+            fr = p.filled - p.residuals
             if need > p.filled and need > 0:
-                max_dm = min(max_dm, dm * p.filled / need)
+                max_dm = min(max_dm, dm * fr / need)
         for p in self.props:
             if not p.mainEngine: continue
             p.filled -= max_dm * self.mfrac[p.name] / p.density
@@ -168,7 +174,8 @@ class Booster(object):
     def convert_throttle(self, throttle):
         return self.stages[0].convert_throttle(throttle) if self.stages else throttle
     def stage(self):
-        del self.stages[0]
+        if self.stages:
+            del self.stages[0]
     @property
     def all_props(self):
         # All propellants, sorted by which stage they appear in first
@@ -232,6 +239,7 @@ if config is not None:
 
 if __name__ == '__main__':
     import sys
+    resid = '-e' in sys.argv[1:]
     j = sys.stdin.read()
     b = Booster.from_json(j)
     print "Wet mass: %.3ft"%(b.wet,)
