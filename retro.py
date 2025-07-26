@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Simulates airless descent, for Retro
 
 import sim
@@ -29,9 +29,9 @@ class RetroSim(sim.RocketSim):
             if len(self.booster.stages) <= self.stagecap and 'b' not in self.data:
                 self.data['b'] = self.encode()
             if self.debug:
-                print "time %d"%(self.t,)
-                print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
-                print "%s"%(''.join(self.data.keys()),)
+                print("time %d"%(self.t,))
+                print("(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs))
+                print("%s"%(''.join(self.data.keys()),))
 
 class RetroSim3D(sim.RocketSim3D):
     def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=None):
@@ -60,6 +60,6 @@ class RetroSim3D(sim.RocketSim3D):
             if len(self.booster.stages) <= self.stagecap and 'b' not in self.data:
                 self.data['b'] = self.encode()
             if self.debug:
-                print "time %d"%(self.t,)
-                print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
-                print "%s"%(''.join(self.data.keys()),)
+                print("time %d"%(self.t,))
+                print("(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs))
+                print("%s"%(''.join(self.data.keys()),))

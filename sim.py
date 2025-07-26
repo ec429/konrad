@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Simulation engine for RetroSim and AscentSim
 
 import math

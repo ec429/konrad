@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Simulates (airless) maneuver burn, for Astrogation console
 
 import sim
@@ -37,6 +37,6 @@ class ManeuverSim(sim.RocketSim3D):
             if (burnout or timeout) and 'b' not in self.data:
                 self.data['b'] = self.encode()
             if self.debug:
-                print "time %d"%(self.t,)
-                print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
-                print "%s"%(''.join(self.data.keys()),)
+                print("time %d"%(self.t,))
+                print("(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs))
+                print("%s"%(''.join(self.data.keys()),))

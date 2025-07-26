@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Simulates (airless) ascent-to-orbit, for Ascent console
 
 import sim
@@ -21,9 +21,9 @@ class AscentSim(sim.RocketSim):
             if len(self.booster.stages) <= self.stagecap and 'b' not in self.data:
                 self.data['b'] = self.encode()
             if self.debug:
-                print "time %d"%(self.t,)
-                print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
-                print "%s"%(''.join(self.data.keys()),)
+                print("time %d"%(self.t,))
+                print("(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs))
+                print("%s"%(''.join(self.data.keys()),))
 
 class AscentSim3D(sim.RocketSim3D):
     def simulate(self, booster, throttle, pit, hdg, brad, bgm, inc, lan, tan, ape, ecc, sma, reflon=None):
@@ -44,6 +44,6 @@ class AscentSim3D(sim.RocketSim3D):
             if len(self.booster.stages) <= self.stagecap and 'b' not in self.data:
                 self.data['b'] = self.encode()
             if self.debug:
-                print "time %d"%(self.t,)
-                print "(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs)
-                print "%s"%(''.join(self.data.keys()),)
+                print("time %d"%(self.t,))
+                print("(%g, %g) -> (%g, %g)"%(self.downrange, self.alt, self.hs, self.vs))
+                print("%s"%(''.join(self.data.keys()),))

@@ -9,12 +9,11 @@ incorporated herein by reference.
 
 Dependencies
 ------------
-* Python
-  - tested with 2.7.11 but should work on any 2.6 or later
-  - doesn't work with Python3 yet
+* Python3
+  - tested with 3.11
 * curses
-* websocket-client, https://pypi.python.org/pypi/websocket-client/
-  - can be found in Debian package "python-websocket"
+* websockets Python library
+  - tested with 15.0.1
 * Telemachus, https://github.com/richardbunt/Telemachus
 
 Arguments

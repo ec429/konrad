@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # For computing how much delta-V your rocket has left, and other goodness
 
 import math
@@ -161,7 +161,7 @@ class Stage(object):
 class Booster(object):
     def __init__(self, stages):
         self.stages = list(stages) # list of Stage instances
-        for i in xrange(len(self.stages) - 1, 0, -1):
+        for i in range(len(self.stages) - 1, 0, -1):
             self.stages[i - 1].add_payload(self.stages[i])
     @classmethod
     def clone(cls, other):
@@ -242,13 +242,13 @@ if __name__ == '__main__':
     resid = '-e' in sys.argv[1:]
     j = sys.stdin.read()
     b = Booster.from_json(j)
-    print "Wet mass: %.3ft"%(b.wet,)
-    print "Delta-V : %.3fm/s"%(b.deltaV,)
-    print "Breakdown by Stage"
+    print("Wet mass: %.3ft"%(b.wet,))
+    print("Delta-V : %.3fm/s"%(b.deltaV,))
+    print("Breakdown by Stage")
     for i,s in enumerate(b.stages):
-        print "  Stage %d:"%(i,)
-        print "    Wet mass: %.3ft"%(s.wet - s.load,)
-        print "    Dry mass: %.3ft"%(s.dry - s.load,)
+        print("  Stage %d:"%(i,))
+        print("    Wet mass: %.3ft"%(s.wet - s.load,))
+        print("    Dry mass: %.3ft"%(s.dry - s.load,))
         if s.load:
-            print "    Nxt mass: %.3ft"%(s.load,)
-        print "    Delta-V : %.3fm/s"%(s.deltaV,)
+            print("    Nxt mass: %.3ft"%(s.load,))
+        print("    Delta-V : %.3fm/s"%(s.deltaV,))

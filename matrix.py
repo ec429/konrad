@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Why don't we just use numpy?  Well, it's an extra dependency, and we don't
 # need very much or very fast linear algebra.  So we'll roll our own...
@@ -6,7 +6,8 @@
 import math
 
 class Vector3(object):
-    def __init__(self, (x, y, z)):
+    def __init__(self, tup):
+        (x, y, z) = tup
         self.data = tuple(float(r) for r in (x, y, z))
     def __add__(self, other):
         return Vector3((a + b for a,b in zip(self.data, other.data)))
@@ -54,9 +55,9 @@ class Matrix3(object):
         self.by_row = tuple(tuple(map(float, r)) for r in by_row)
     def __mul__(self, other):
         if isinstance(other, Vector3):
-            return Vector3((sum(self.by_row[i][j] * other.data[j] for j in xrange(3)) for i in xrange(3)))
+            return Vector3((sum(self.by_row[i][j] * other.data[j] for j in range(3)) for i in range(3)))
         if isinstance(other, Matrix3):
-            return Matrix3(((sum(self.by_row[i][j] * other.by_row[j][k] for j in xrange(3)) for k in xrange(3)) for i in xrange(3)))
+            return Matrix3(((sum(self.by_row[i][j] * other.by_row[j][k] for j in range(3)) for k in range(3)) for i in range(3)))
         return NotImplemented
 
 def RotationMatrix(axis, angle):

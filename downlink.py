@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-import websocket, socket
+import websockets.sync.client
 import json
 import time
 
@@ -19,10 +19,13 @@ class Downlink(object):
         self.subscribe('v.missionTime')
         self.body_ids = {} # name => ID
         self.bodies_subscribed = False
+    @property
+    def timeout(self):
+        return self.rate / 500.0
     def reconnect(self):
         try:
-            self.ws = websocket.create_connection(self.uri)
-        except socket.error:
+            self.ws = websockets.sync.client.connect(self.uri)
+        except KeyboardInterrupt:
             # Failed to connect; enter 'link down' state
             self.ws = None
             self.data = {}
@@ -50,23 +53,21 @@ class Downlink(object):
             self.ws.send(s)
     def set_rate(self):
         self.send_msg({'rate': self.rate})
-        if self.ws is not None:
-            self.ws.settimeout(self.rate / 500.0)
     def resubscribe(self):
         for key in self.subscriptions:
             self._subscribe(key)
     def listen(self):
         msg = '{}'
-        for i in xrange(3):
+        for i in range(3):
             try:
                 if self.ws is None:
                     self.reconnect()
                 else:
-                    msg = self.ws.recv()
+                    msg = self.ws.recv(timeout=self.timeout)
                     break
-            except websocket.WebSocketTimeoutException:
+            except TimeoutError:
                 break
-            except websocket.WebSocketConnectionClosedException:
+            except websockets.exceptions.ConnectionClosed:
                 time.sleep(self.rate / 2000.0)
                 continue
             except KeyboardInterrupt:
@@ -91,11 +92,11 @@ class Downlink(object):
         if nbodies is None:
             return # can't do anything
         if not self.bodies_subscribed:
-            for i in xrange(nbodies):
+            for i in range(nbodies):
                 self.subscribe('b.name[%d]'%(i,))
             self.bodies_subscribed = True
             return # have to wait till next time
-        for i in xrange(nbodies):
+        for i in range(nbodies):
             n = self.get('b.name[%d]'%(i,))
             if n is not None:
                 self.body_ids[n] = i

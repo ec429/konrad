@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import curses
 import math
@@ -80,8 +80,8 @@ class NavBall(Gauge):
                           'X': matrix.Vector3((0, 0, 1)),
                           }
         self.size = min(self.height * 2, self.width) - 1
-        self.half_size = self.size / 2
-        self.center = (self.width / 2, self.height / 2)
+        self.half_size = self.size // 2
+        self.center = (self.width // 2, self.height // 2)
     def draw(self):
         self.cw.clear()
         pit = self.getrad('pit')
@@ -98,7 +98,7 @@ class NavBall(Gauge):
             p = final * v
             if p.data[0] >= -0.05:
                 x = p.data[1] * self.half_size + self.center[0]
-                y = p.data[2] * self.half_size / 2 + self.center[1]
+                y = p.data[2] * self.half_size // 2 + self.center[1]
                 self.cw.addch(int(y), int(x), k)
 
 class OneLineGauge(Gauge):
@@ -203,13 +203,13 @@ class TimeFormatterMixin(object):
     def mktime(cls, t):
         t = max(int(t), 0)
         s = t % 60
-        t /= 60
+        t //= 60
         m = t % 60
-        t /= 60
+        t //= 60
         h = t % 24
-        t /= 24
+        t //= 24
         d = t % 365
-        t /= 365
+        t //= 365
         y = t
         return (y, d, h, m, s)
     @classmethod
@@ -406,9 +406,17 @@ class SIGauge(FractionGauge):
         self.target=target
     def draw(self, value):
         super(SIGauge, self).draw()
+        width = self.width - len(self.label) - len(self.unit) - 2
+        if value is None or math.isnan(value) or math.isinf(value):
+            bad = 'NO DATA'
+            if width < 8:
+                bad = '-'*(width - 1)
+            bad = bad.rjust(width - 1)[:width - 1]
+            self.addstr('%s: %s %s'%(self.label, bad, self.unit))
+            self.chgat(0, self.width, curses.color_pair(2))
+            return
         sgn = '' if value >= 0 else '-'
         sgnval = -1 if sgn else 1
-        width = self.width - len(self.label) - len(self.unit) - 2
         digits = min(width, self.maxwidth)
         sz = math.log10(abs(value)) if value else 1
         if sgn: sz += 1
@@ -421,17 +429,9 @@ class SIGauge(FractionGauge):
             pfx = ('G', 1e9)
         if sz >= digits + 8:
             pfx = ('T', 1e12)
-        if value is None or math.isnan(value) or math.isinf(value):
-            bad = 'NO DATA'
-            if width < 8:
-                bad = '-'*(width - 1)
-            bad = bad.rjust(width - 1)[:width - 1]
-            self.addstr('%s: %s %s'%(self.label, bad, self.unit))
-            self.chgat(0, self.width, curses.color_pair(2))
-        else:
-            self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), int(value / pfx[1] + 0.5*sgnval), pfx[0], self.unit))
-            if self.target is not None:
-                self.colour(value, self.target)
+        self.addstr('%s: %*d%s%s'%(self.label, width - len(pfx[0]), int(value / pfx[1] + 0.5*sgnval), pfx[0], self.unit))
+        if self.target is not None:
+            self.colour(value, self.target)
 
 class DownrangeGauge(SIGauge):
     unit = 'm'
@@ -575,13 +575,13 @@ class TimeToLandingGauge(OneLineGauge, TimeFormatterMixin):
         super(TimeToLandingGauge, self).draw()
         alt = self.get('alt')
         th = self.get('th')
-        if th < alt:
-            alt -= th
         vs = self.get('vs')
         if None in (th, vs) or vs >= 0:
             self.addstr('%s: NO DATA'%(self.label,))
             self.chgat(0, self.width, curses.color_pair(2))
             return
+        if th < alt:
+            alt -= th
         t = alt / -vs
         elts = (self.width-1-len(self.label))/3
         self.addstr('%s: %s'%(self.label, self.fmt_time(t, elts)))
@@ -1892,7 +1892,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         mind = None
         argmind = None
         # Let's find the rough region first
-        for i in xrange(self.COARSE_STEPS):
+        for i in range(self.COARSE_STEPS):
             it = i * search / float(self.COARSE_STEPS)
             t = time + it
             ut = ut1 + it
@@ -1910,7 +1910,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
         self.sim_set['rough'] = time + dt
         # Now we Newton it in
         last_step_size = None
-        for i in xrange(self.FINE_ITERS):
+        for i in range(self.FINE_ITERS):
             t = time + dt
             ut = ut1 + dt
             man = man0 + dt * mmo
@@ -2014,7 +2014,7 @@ class UpdateSoiEntry(UpdateEventXform):
             return
         last_step_size = None
         dt = 0
-        for i in xrange(self.FINE_ITERS):
+        for i in range(self.FINE_ITERS):
             t = time + dt
             ut = ut1 + dt
             man = man0 + dt * mmo
@@ -2414,7 +2414,7 @@ class GaugeGroup(object):
             self.cw.border()
             _, width = self.cw.getmaxyx()
             title = self.title[:width]
-            mid = (width - len(title)) / 2
+            mid = (width - len(title)) // 2
             self.cw.addstr(0, mid, title)
         messages = []
         for g in self.gl:

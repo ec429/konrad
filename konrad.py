@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import downlink
 import gauge
@@ -319,7 +319,7 @@ class RetroConsole(Console):
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 40), self.vars, 'stagecap', centered=True)
         sim_blocks = []
         self.rs = [None, None]
-        for i in xrange(2):
+        for i in range(2):
             y = i * 6
             use_throttle = not i
             rs = retro.RetroSim(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
@@ -368,7 +368,7 @@ class RetroConsole(Console):
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
         self.vars['mode'] = 'Mode: %s'%(retro.RetroSim.modename(self.mode),)
-        for i in xrange(2):
+        for i in range(2):
             if self.rs[i] is not None:
                 self.rs[i].mode = self.mode
                 self.rs[i].stagecap = self.stagecap
@@ -427,7 +427,7 @@ class RetroConsole3D(Console):
         dhm = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 55), self.vars, 'radar', centered=True)
         sim_blocks = []
         self.rs = [None, None]
-        for i in xrange(2):
+        for i in range(2):
             y = i * 6
             use_throttle = not i
             rs = retro.RetroSim3D(ground_map=opts.ground_map, ground_alt=opts.ground_alt, mode=self.mode)
@@ -478,7 +478,7 @@ class RetroConsole3D(Console):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
         self.vars['mode'] = 'Mode: %s'%(retro.RetroSim3D.modename(self.mode),)
         self.vars['radar'] = "Height: RADAR" if self.radar else "Height: MAP"
-        for i in xrange(2):
+        for i in range(2):
             if self.rs[i] is not None:
                 self.rs[i].mode = self.mode
                 self.rs[i].stagecap = self.stagecap
@@ -540,7 +540,7 @@ class AscentConsole(Console):
         scap = gauge.VariableLabel(dl, scr.derwin(3, 15, 4, 64), self.vars, 'stagecap', centered=True)
         sim_blocks = []
         self.rs = [None, None]
-        for i in xrange(2):
+        for i in range(2):
             y = i * 7
             use_throttle = not i
             rs = ascent.AscentSim(mode=self.mode)
@@ -586,7 +586,7 @@ class AscentConsole(Console):
     def update_vars(self):
         self.vars['stagecap'] = 'Rsvd. Stg.: %d'%(self.stagecap,)
         self.vars['mode'] = 'Mode: %s'%(ascent.AscentSim.modename(self.mode),)
-        for i in xrange(2):
+        for i in range(2):
             if self.rs[i] is not None:
                 self.rs[i].mode = self.mode
                 self.rs[i].stagecap = self.stagecap
@@ -1260,14 +1260,14 @@ def parse_opts():
 
 def list_bodies(dl):
     dl.update()
-    for i in xrange(100):
+    for i in range(100):
         key = 'b.name[%d]'%(i,)
         dl.subscribe(key)
         dl.update()
         name = dl.get(key)
         if name is None:
             break
-        print '%d: %s' % (i, name)
+        print('%d: %s' % (i, name))
 
 if __name__ == '__main__':
     opts, console = parse_opts()

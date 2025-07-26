@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Calculations for target orbits
 
 import math
@@ -300,7 +300,7 @@ def ean_from_man(man, ecc, k):
     if ecc > 1.0:
         ### Uses Newton's method on hyperbolic eqn, from http://control.asu.edu/Classes/MAE462/462Lecture05.pdf
         ean = man
-        for i in xrange(k):
+        for i in range(k):
             ean += (man - ecc * math.sinh(ean) + ean) / (ecc * math.cosh(ean) - 1.0)
         return ean
     if ecc == 1.0:
@@ -312,7 +312,7 @@ def ean_from_man(man, ecc, k):
         ean = math.pi
     else:
         ean = man
-    for i in xrange(k):
+    for i in range(k):
         ean -= (ean - ecc * math.sin(ean) - man) / (1.0 - ecc * math.cos(ean))
     return ean
 
@@ -395,18 +395,18 @@ if __name__ == "__main__":
     for k,v in elts.iteritems():
         if ecc < 1.0 and ('an' in k or k in ('inc', 'ape', 'mmo')):
             v = math.degrees(v)
-        print k, v
-    print
+        print(k, v)
+    print()
     ean = ean_from_tan(elts['tan'], elts['ecc'])
     out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], ean, elts['ape'], elts['inc'], elts['lan'])
-    print out_r
-    print out_v
-    print
-    print "Stepping dT =", in_dt
+    print(out_r)
+    print(out_v)
+    print()
+    print("Stepping dT =", in_dt)
     man = man_from_ean(elts['ean'], elts['ecc'])
     man += elts['mmo'] * in_dt
     elts['man'] = man
     ean = ean_from_man(man, elts['ecc'], 12)
     out_r, out_v = pbody.compute_3d_vector(elts['sma'], elts['ecc'], ean, elts['ape'], elts['inc'], elts['lan'])
-    print out_r
-    print out_v
+    print(out_r)
+    print(out_v)
