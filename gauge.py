@@ -897,10 +897,12 @@ class PhaseAngleGauge(AngleGauge):
 class RelIncGauge(AngleGauge):
     label = 'RI'
     fsd = 5
-    def __init__(self, dl, cw, tgt):
+    def __init__(self, dl, cw, tgt, tinc=None, tlan=None):
         super(RelIncGauge, self).__init__(dl, cw)
         self.add_prop('inc', 'o.inclination')
         self.add_prop('lan', 'o.lan')
+        self.tinc = None if tinc is None else math.radians(tinc)
+        self.tlan = None if tlan is None else math.radians(tlan)
         if tgt is None:
             self.add_prop('tinc', 'tar.o.inclination')
             self.add_prop('tlan', 'tar.o.lan')
@@ -911,8 +913,12 @@ class RelIncGauge(AngleGauge):
     def angle(self):
         inc = self.getrad('inc')
         lan = self.getrad('lan')
-        tinc = self.getrad('tinc')
-        tlan = self.getrad('tlan')
+        if None not in (self.tinc, self.tlan):
+            tinc = self.tinc
+            tlan = self.tlan
+        else:
+            tinc = self.getrad('tinc')
+            tlan = self.getrad('tlan')
         if None in (inc, lan, tinc, tlan):
             return None
         w = (math.sin(inc) * math.cos(lan), math.sin(inc) * math.sin(lan), math.cos(inc))
@@ -1051,9 +1057,11 @@ class AngleRateGauge(OneLineGauge):
     def rate(self):
         t = self.get('T')
         a = self.get('angle')
+        if None in (t, a):
+            return None
         ot, oa = self.old
         self.old = (t, a)
-        if None in (t, a, ot, oa):
+        if None in (ot, oa):
             return None
         dt = t - ot
         da = a - oa
@@ -1707,11 +1715,13 @@ class UpdateTgtProximity(Gauge):
             self.sim.data[key]['pa1'] = orbit.angle_between(txr.hat, apvec.hat)
 
 class UpdateTgtRI(Gauge):
-    def __init__(self, dl, cw, sim, keys, tgt):
+    def __init__(self, dl, cw, sim, keys, tgt, tinc=None, tlan=None):
         super(UpdateTgtRI, self).__init__(dl, cw)
         self.sim = sim
         self.keys = keys
         self.tgt = tgt
+        self.tinc = None if tinc is None else math.radians(tinc)
+        self.tlan = None if tlan is None else math.radians(tlan)
         self.set_tprops(tgt)
     def set_tprops(self, tgt):
         if tgt is None:
@@ -1735,7 +1745,15 @@ class UpdateTgtRI(Gauge):
             self.del_prop('tape')
             self.del_prop('tpcb')
     def draw(self):
-        if self.tgt is None:
+        if None not in (self.tinc, self.tlan):
+            tcb = orbit.CelestialBody('target', 0, 0)
+            pcb = u'Earth'
+            tcb.orbit(pcb, {'sma': 1e6, 'ecc': 0.0, 'maae': 0.0,
+                             'inc': self.tinc, 'lan': self.tlan, 'ape': 0.0})
+            tcb.connect_parent()
+            if pcb is None:
+                return
+        elif self.tgt is None:
             tsma = self.get('tsma')
             tecc = self.get('tecc')
             tmae = self.get('tmae')
@@ -1797,6 +1815,7 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             self.add_prop('tpcb', 'tar.o.orbitingBody')
         else:
             self.add_prop('tname', 'b.name[%d]'%(tgt,))
+            self.add_prop('tmae', 'b.o.maae[%d]'%(tgt,))
     def unset_tprops(self):
         self.del_prop('tname')
         if self.tgt is None:
@@ -1840,6 +1859,15 @@ class UpdateTgtCloseApproach(UpdateEventXform):
             if pcb is None:
                 return
             epoch = orbit.epoch
+            # Horrid monkeypatch needed in RSS v20 because of #285
+            # https://github.com/KSP-RO/RealSolarSystem/pull/285
+            # Mean anomaly from cfg is no longer used by the game!
+            # But this doesn't actually work because Telemachus happily gives us
+            # the one from the cfg, rather than what's actually running ???
+            # (Which is odd, as the tar.o.* version works fine.)
+            #tmae = self.get('tmae')
+            #if tmae is not None:
+            #    tcb.elts['maae'] = tmae
         self.sim.data[self.to] = {}
         ut0 = self.sim.UT - epoch
         time = self.sim_get('time')

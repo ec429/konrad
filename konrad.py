@@ -648,12 +648,12 @@ class AscentConsole3D(Console):
         self.rs = ascent.AscentSim3D(mode=self.mode)
         sim = gauge.UpdateRocketSim3D(dl, scr, opts.body, opts.booster, False, self.rs)
         elts = gauge.UpdateSimElements(dl, scr, self.rs, '0ovb')
-        ris = gauge.UpdateTgtRI(dl, scr, self.rs, '0ovb', opts.target_body)
+        ris = gauge.UpdateTgtRI(dl, scr, self.rs, '0ovb', opts.target_body, opts.target_inc, opts.target_lan)
         zwin = scr.derwin(7, 16, 15, 1)
         if opts.target_body:
             zri = gauge.RSAngleParam(dl, zwin.derwin(1, 14, 2, 1), '0', self.rs, 'ri', 'ri')
         else:
-            zri = gauge.RelIncGauge(dl, zwin.derwin(1, 14, 2, 1), None)
+            zri = gauge.RelIncGauge(dl, zwin.derwin(1, 14, 2, 1), None, opts.target_inc, opts.target_lan)
         z = gauge.GaugeGroup(zwin, [gauge.RSAngleParam(dl, zwin.derwin(1, 14, 1, 1), '0', self.rs, 'inc', 'i'),
                                     zri,
                                     gauge.RSAngleParam(dl, zwin.derwin(1, 14, 3, 1), '0', self.rs, 'lan', 'L'),
@@ -1165,7 +1165,7 @@ def parse_si(option, opt, value):
         try:
             v = float(value)
         except ValueError:
-            raise optparse.OptionValueError("%s: invalid numeric value %s"%(opt,v))
+            raise optparse.OptionValueError("%s: invalid numeric value %s"%(opt,value))
     return v * (10**l)
 
 class Option(optparse.Option):
@@ -1183,6 +1183,8 @@ def parse_opts():
     x.add_option('--target-alt', type='si', help="Target altitude above MSL (m)")
     x.add_option('--target-peri', type='si', help="Target periapsis altitude (m)")
     x.add_option('--target-apo', type='si', help="Target apoapsis altitude (m)")
+    x.add_option('--target-inc', type='float', help="Target inclination (degrees)")
+    x.add_option('--target-lan', type='float', help="Target longitude of ascending node (degrees)")
     x.add_option('-t', '--target-body', type='int', help="ID of body we want to intercept")
     x.add_option('-p', '--propellant', action='append', help="Propellants to track")
     x.add_option('-c', '--consumable', action='append', help="Additional consumables to track (CapSys) ('-c -' to clear defaults)", default=[])
@@ -1192,6 +1194,7 @@ def parse_opts():
     x.add_option('--init-lat', type='float', help="Latitude of launch (or target) site")
     x.add_option('--init-long', type='float', help="Longitude of launch (or target) site")
     x.add_option('--ccafs', action='store_true', help="Set --init-{lat,long} to Cape Canaveral")
+    x.add_option('--kodiak', action='store_true', help="Set --init-{lat,long} to Kodiak, Alaska")
     x.add_option('-n', '--dry-run', action='store_true', help="Don't connect to telemetry, just show layout") # for testing
     x.add_option('-L', '--log-to', type='string', help="File path to write telemetry logs to")
     x.add_option('--booster', type='string', help="Path to JSON Booster spec file")
@@ -1238,6 +1241,9 @@ def parse_opts():
     if opts.ccafs:
         opts.init_lat = 28.608389
         opts.init_long = -80.604333
+    elif opts.kodiak:
+        opts.init_lat = 57.435
+        opts.init_long = -152.33
     if opts.ground_map:
         with file(opts.ground_map, "r") as f:
             map_csv = csv.reader(f)

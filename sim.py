@@ -198,7 +198,7 @@ class RocketSim3D(object):
         if lon is None:
             self.reflon = None
             return
-        self.reflon = lon + self.lon
+        self.reflon = lon - self.lon
     def point(self, pit, hdg):
         # pointing vector in local co-ordinates
         pvec = matrix.Vector3((math.sin(pit),
@@ -230,7 +230,7 @@ class RocketSim3D(object):
     def ground_lon(self):
         if self.reflon is None:
             return None
-        return self.reflon - self.lon
+        return self.reflon + self.lon
     @property
     def local_ground_alt(self):
         if self.force_ground_alt:
