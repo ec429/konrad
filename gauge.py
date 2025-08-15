@@ -873,15 +873,20 @@ class AngleGauge(FractionGauge):
         return self.want.get(self.label)
     def draw(self):
         angle = self.angle
-        width = self.width - len(self.label) - 2
+        width = self.width - len(self.label) - (2 if self.signed else 1)
         prec = min(3, width - 4)
+        if not self.signed:
+            width = min(width, 4 + prec)
         if angle in (None, u'NaN'):
             self.addstr(self.centext('NO DATA'))
             self.chgat(0, self.width, curses.color_pair(2))
         else:
             if angle < (-180 if self.signed else 0):
                 angle += 360
-            self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+            if self.signed:
+                self.addstr('%s:%+*.*f'%(self.label, width, prec, angle))
+            else:
+                self.addstr('%s:%0*.*f'%(self.label, width, prec, angle))
             self.colour(abs(angle), self.fsd)
         self.addch(self.width - 1, curses.ACS_DEGREE, curses.A_ALTCHARSET)
 
@@ -961,6 +966,7 @@ class HeadingGauge(AngleGauge):
     label = 'HDG'
     fsd = 360
     api = 'n.heading2'
+    signed = False
     def colour(self, n, d):
         super(HeadingGauge, self).colour((n + 90) % self.fsd, self.fsd)
 
