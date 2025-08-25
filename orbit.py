@@ -29,7 +29,7 @@ class CelestialBody(object):
             # mu = G(M+m)
             gm = self.gm + self.pb.gm
             # mean motion n = sqrt(mu / a^3)
-            self.elts['mmo'] = math.sqrt(gm / self.elts['sma'] ** 3)
+            self.elts['mmo'] = math.sqrt(self.pb.gm / self.elts['sma'] ** 3)
             # soi = a(m/M)^0.4
             self.soi = self.elts['sma'] * (self.gm / self.pb.gm) ** 0.4
     @property
