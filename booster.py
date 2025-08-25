@@ -62,7 +62,7 @@ class Stage(object):
         return cls([Propellant.clone(prop) for prop in other.props], other.isp, other._dry, other.thrust, other.minThrottle)
     @property
     def dry(self):
-        return self._dry + self.load + sum(p.residuals if p.mainEngine else p.mass for p in self.props)
+        return self._dry + self.load + sum(p.mass for p in self.props if not p.mainEngine)
     def add_payload(self, load):
         self._load = load
     @property
@@ -125,7 +125,7 @@ class Stage(object):
         if throttle is None: return None
         mdot = self.thrust * throttle / self.veff # tons/s
         if mdot <= 0: return None
-        return min(p.filled * p.density / (mdot * self.mfrac[p.name])
+        return min((p.filled * p.density - p.residuals) / (mdot * self.mfrac[p.name])
                    for p in self.props if p.mainEngine)
     def convert_throttle(self, throttle):
         if throttle is None: return None
