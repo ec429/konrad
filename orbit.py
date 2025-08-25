@@ -392,7 +392,7 @@ if __name__ == "__main__":
     pbody = ParentBody(in_rad, in_gm)
     elts = pbody.compute_3d_elements(in_r, in_v)
     ecc = elts['ecc']
-    for k,v in elts.iteritems():
+    for k,v in elts.items():
         if ecc < 1.0 and ('an' in k or k in ('inc', 'ape', 'mmo')):
             v = math.degrees(v)
         print(k, v)

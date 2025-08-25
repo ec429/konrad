@@ -254,7 +254,7 @@ class RocketSim3D(object):
              'dV': self.total_dv, 'ground_lon': self.ground_lon,
              'height': self.alt - self.local_ground_alt,
              }
-        return dict((k,v) for k,v in d.iteritems() if v is not None)
+        return dict((k,v) for k,v in d.items() if v is not None)
     def step(self):
         self.t += self.dt
         dv = self.booster.simulate(self.throttle, self.dt, stagecap=self.stagecap)
