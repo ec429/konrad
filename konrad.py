@@ -1245,7 +1245,7 @@ def parse_opts():
         opts.init_lat = 57.435
         opts.init_long = -152.33
     if opts.ground_map:
-        with file(opts.ground_map, "r") as f:
+        with open(opts.ground_map, "r") as f:
             map_csv = csv.reader(f)
             opts.ground_map = {}
             for i,row in enumerate(map_csv):
